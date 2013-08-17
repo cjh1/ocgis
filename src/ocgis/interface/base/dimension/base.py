@@ -19,6 +19,12 @@ class AbstractDimension(AbstractSourcedVariable):
         self._uid = get_empty_or_pass_1d(uid,dtype=constants.np_int)
         self._data = data
     
+    @abc.abstractproperty
+    def resolution(self): 'number'
+    
+    @abc.abstractproperty
+    def shape(self): tuple
+    
     @property
     def uid(self):
         if get_isempty(self._uid):
@@ -37,7 +43,7 @@ class VectorDimension(AbstractDimension):
         
         if self.name_bounds is None:
             self.name_bounds = '{0}_bnds'.format(self.name)
-            
+                        
     def __getitem__(self,slc):
         ret_value = self._value[slc]
         ret_uid = self.uid[slc]
@@ -66,16 +72,25 @@ class VectorDimension(AbstractDimension):
             yield(yld)
     
     @property
-    def value(self):
-        return(super(VectorDimension,self).value)
-    
-    @property
     def bounds(self):
         if self._bounds is None:
             self._bounds = np.zeros((self.value.shape[0],2),dtype=self.value.dtype)
             self._bounds[:,0] = self.value
             self._bounds[:,1] = self.value
         return(self._bounds)
+    
+    @property
+    def resolution(self):
+        if self.value.shape[0] < 2:
+            ret = None
+        else:
+            if self.bounds[0,0] == self.bounds[0,1]:
+                res_array = np.diff(self.value[0:constants.resolution_limit])
+            else:
+                res_bounds = self.bounds[0:constants.resolution_limit]
+                res_array = res_bounds[:,1] - res_bounds[:,0]
+            ret = (res_array.mean(),self.units)
+        return(ret)
     
     @property
     def shape(self):
