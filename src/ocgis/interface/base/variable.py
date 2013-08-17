@@ -7,6 +7,9 @@ from ocgis.util.helpers import get_isempty
 class AbstractSourcedVariable(object):
     __metaclass__ = abc.ABCMeta
     
+    @abc.abstractproperty
+    def isempty(self): pass
+    
     @property
     def value(self):
         if get_isempty(self._value):
@@ -14,7 +17,7 @@ class AbstractSourcedVariable(object):
         return(self._value)
     
     def _get_value_(self):
-        if self._data is None:
+        if self._data is None and self.isempty is False:
             ocgis_lh(exc=ValueError('Values were requested from data source, but no data source is available.'))
         else:
             ret = self.__get_value__()

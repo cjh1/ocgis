@@ -16,6 +16,12 @@ class InterpreterNotRecognized(InterpreterException):
     pass
 
 
+class EmptyIterationError(OcgException):
+    
+    def __init__(self,obj):
+        self.message = 'Iteration on the object "{0}" requested, but the object is empty.'.format(obj)
+
+
 class DefinitionValidationError(OcgException):
     """Raised when validation fails on :class:`~ocgis.OcgOperations`.
     

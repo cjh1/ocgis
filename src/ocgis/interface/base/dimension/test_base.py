@@ -1,6 +1,7 @@
 import unittest
 from base import VectorDimension
 import numpy as np
+from ocgis.exc import EmptyIterationError
 
 
 class TestVectorDimension(unittest.TestCase):
@@ -48,6 +49,31 @@ class TestVectorDimension(unittest.TestCase):
     def test_empty(self):
         vdim = VectorDimension()
         self.assertTrue(len(vdim.uid) == 0)
+        
+    def test_get_between_empty(self):
+        vdim = VectorDimension()
+        vdim_between = vdim.get_between(0,100)
+        self.assertNotEqual(id(vdim),id(vdim_between))
+        
+    def test_get_between(self):
+        vdim = VectorDimension(value=[0])
+        vdim_between = vdim.get_between(100,200)
+        self.assertTrue(vdim_between.isempty)
+        
+        vdim = VectorDimension(value=[100,200,300,400])
+        vdim_between = vdim.get_between(100,200)
+        self.assertEqual(len(vdim_between),2)
+    
+    def test_get_between_bounds(self):
+        vdim = VectorDimension(value=[0,5,10],bounds=[[-2.5,2.5],[2.5,7.5],[7.5,12.5]])
+        vdim_between = vdim.get_between(1,3)
+        self.assertEqual(len(vdim_between),2)
+        self.assertEqual(vdim.resolution,(5.0,None))
+        
+    def test_iter_empty(self):
+        vdim = VectorDimension()
+        with self.assertRaises(EmptyIterationError):
+            list(vdim)
         
 
 if __name__ == "__main__":

@@ -3,6 +3,9 @@ import numpy as np
 from ocgis.interface.base.variable import AbstractSourcedVariable
 from ocgis.util.helpers import get_empty_or_pass_1d, get_isempty, get_none_or_2d
 from ocgis import constants
+from copy import deepcopy
+from ocgis.exc import EmptyIterationError
+from ocgis.util.logging_ocgis import ocgis_lh
 
 
 class AbstractDimension(AbstractSourcedVariable):
@@ -18,6 +21,13 @@ class AbstractDimension(AbstractSourcedVariable):
         self._value = get_empty_or_pass_1d(value,dtype=constants.np_float)
         self._uid = get_empty_or_pass_1d(uid,dtype=constants.np_int)
         self._data = data
+        
+    def __len__(self):
+        return(self.shape[0])
+    
+    @property
+    def isempty(self):
+        return(get_isempty(self.uid))
     
     @abc.abstractproperty
     def resolution(self): 'number'
@@ -30,6 +40,9 @@ class AbstractDimension(AbstractSourcedVariable):
         if get_isempty(self._uid):
             self._uid = np.arange(1,self._value.shape[0]+1,dtype=constants.np_int)
         return(self._uid)
+    
+    @abc.abstractmethod
+    def get_between(self,lower,upper): self.__class__
 
 
 class VectorDimension(AbstractDimension):
@@ -47,9 +60,18 @@ class VectorDimension(AbstractDimension):
     def __getitem__(self,slc):
         ret_value = self._value[slc]
         ret_uid = self.uid[slc]
-        ret_src_idx = self._src_idx[slc]
         ret_bounds = self._bounds[slc]
         ret_attrs = self.attrs.copy()
+        
+        try:
+            ret_src_idx = self._src_idx[slc]
+        ## the source index is not necessary. if other slices worked, then it is
+        ## empty.
+        except (IndexError,ValueError):
+            if get_isempty(self._src_idx):
+                ret_src_idx = None
+            else:
+                raise
         
         return(self.__class__(value=ret_value,attrs=ret_attrs,uid=ret_uid,
          data=self._data,src_idx=ret_src_idx,bounds=ret_bounds,
@@ -57,6 +79,8 @@ class VectorDimension(AbstractDimension):
          units=self.units))
 
     def __iter__(self):
+        if self.isempty:
+            ocgis_lh(exc=EmptyIterationError(self))
         ref_value = self.value
         ref_bounds = self.bounds
         ref_uid = self.uid
@@ -101,6 +125,22 @@ class VectorDimension(AbstractDimension):
         if get_isempty(super(VectorDimension,self).uid):
             self._uid = np.atleast_1d(np.arange(1,self._src_idx.shape[0]+1,dtype=constants.np_int))
         return(self._uid)
+    
+    def get_between(self,lower,upper):
+        if self.isempty:
+            ret = deepcopy(self)
+        else:
+            ref_bounds = self.bounds
+            ref_logical_or = np.logical_or
+            ref_logical_and = np.logical_and
+            
+            select = np.zeros(ref_bounds.shape[0],dtype=bool)
+            for idx in range(ref_bounds.shape[0]):
+                select_lower = ref_logical_and(lower >= ref_bounds[idx,0],lower <= ref_bounds[idx,1])
+                select_upper = ref_logical_and(upper >= ref_bounds[idx,0],upper <= ref_bounds[idx,1])
+                select[idx] = ref_logical_or(select_lower,select_upper)
+            ret = self[select]
+        return(ret)
     
     def __get_value__(self):
         if not get_isempty(self._src_idx):
