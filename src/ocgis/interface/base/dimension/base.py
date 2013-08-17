@@ -8,16 +8,16 @@ from ocgis import constants
 class AbstractDimension(AbstractSourcedVariable):
     __metaclass__ = abc.ABCMeta
     
-    def __init__(self,value=None,attrs=None,uid=None,data=None,name=None,name_uid=None):
+    def __init__(self,value=None,attrs=None,uid=None,data=None,name=None,
+                 name_uid=None,units=None):
         self.attrs = attrs or {}
         self.name = name or self.__class__.__name__
+        self.name_uid = name_uid or '{0}_uid'.format(self.name)
+        self.units = units
         
-        self.value = value
+        self._value = get_empty_or_pass_1d(value,dtype=constants.np_float)
         self._uid = get_empty_or_pass_1d(uid,dtype=constants.np_int)
         self._data = data
-        
-        if name_uid is None:
-            self.name_uid = '{0}_uid'.format(self.name)
     
     @property
     def uid(self):
@@ -47,7 +47,8 @@ class VectorDimension(AbstractDimension):
         
         return(self.__class__(value=ret_value,attrs=ret_attrs,uid=ret_uid,
          data=self._data,src_idx=ret_src_idx,bounds=ret_bounds,
-         name=self.name,name_uid=self.name_uid,name_bounds=self.name_bounds))
+         name=self.name,name_uid=self.name_uid,name_bounds=self.name_bounds,
+         units=self.units))
 
     def __iter__(self):
         ref_value = self.value
@@ -67,9 +68,6 @@ class VectorDimension(AbstractDimension):
     @property
     def value(self):
         return(super(VectorDimension,self).value)
-    @value.setter
-    def value(self,value):
-        self._value = get_empty_or_pass_1d(value,dtype=constants.np_float)
     
     @property
     def bounds(self):

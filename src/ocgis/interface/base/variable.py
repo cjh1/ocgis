@@ -12,9 +12,6 @@ class AbstractSourcedVariable(object):
         if get_isempty(self._value):
             self._value = self._get_value_()
         return(self._value)
-    @value.setter
-    def value(self,value):
-        self._value = value
     
     def _get_value_(self):
         if self._data is None:
