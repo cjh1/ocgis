@@ -62,12 +62,6 @@ class TestBase(unittest.TestCase):
         finally:
             if self._reset_env: env.reset()
             
-    def assertNumpyAll(self,arr1,arr2):
-        return(self.assertTrue(np.all(arr1 == arr2)))
-    
-    def assertNumpyNotAll(self,arr1,arr2):
-        return(self.assertFalse(np.all(arr1 == arr2)))
-            
             
 class TestData(OrderedDict):
     
