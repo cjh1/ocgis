@@ -34,6 +34,18 @@ class TestVectorDimension(unittest.TestCase):
         self.assertTrue(len(list(vdim)),3)
         self.assertEqual(vdim.resolution,(2.0,None))
     
+    def test_boolean_slice(self):
+        vdim = VectorDimension(value=[4,5,6],bounds=[[3,5],[4,6],[5,7]])
+        vdim_slc = vdim[np.array([True,False,True])]
+        self.assertFalse(len(vdim_slc) > 2)
+        self.assertNumpyAll(vdim_slc.value,[4,6])
+        self.assertNumpyAll(vdim_slc.bounds,[[3,5],[5,7]])
+    
+    def test_slice_source_idx_only(self):
+        vdim = VectorDimension(src_idx=[4,5,6])
+        vdim_slice = vdim[0]
+        self.assertEqual(vdim_slice._src_idx[0],4)
+    
     def test_resolution_with_units(self):
         vdim = VectorDimension(value=[5,10,15],units='large')
         self.assertEqual(vdim.resolution,(5.0,'large'))
@@ -69,6 +81,9 @@ class TestVectorDimension(unittest.TestCase):
         vdim_between = vdim.get_between(1,3)
         self.assertEqual(len(vdim_between),2)
         self.assertEqual(vdim.resolution,(5.0,None))
+        
+        vdim_between = vdim.get_between(2.5,2.5)
+        self.assertEqual(len(vdim_between),2)
         
     def test_iter_empty(self):
         vdim = VectorDimension()

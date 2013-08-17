@@ -58,20 +58,24 @@ class VectorDimension(AbstractDimension):
             self.name_bounds = '{0}_bnds'.format(self.name)
                         
     def __getitem__(self,slc):
-        ret_value = self._value[slc]
         ret_uid = self.uid[slc]
-        ret_bounds = self._bounds[slc]
-        ret_attrs = self.attrs.copy()
         
-        try:
+        if get_isempty(self._value):
+            ret_value = self._value
+        else:
+            ret_value = self._value[slc]
+            
+        if self._bounds is None:
+            ret_bounds = self._bounds
+        else:
+            ret_bounds = self._bounds[slc]
+        
+        if get_isempty(self._src_idx):
+            ret_src_idx = self._src_idx
+        else:
             ret_src_idx = self._src_idx[slc]
-        ## the source index is not necessary. if other slices worked, then it is
-        ## empty.
-        except (IndexError,ValueError):
-            if get_isempty(self._src_idx):
-                ret_src_idx = None
-            else:
-                raise
+            
+        ret_attrs = self.attrs.copy()
         
         return(self.__class__(value=ret_value,attrs=ret_attrs,uid=ret_uid,
          data=self._data,src_idx=ret_src_idx,bounds=ret_bounds,
