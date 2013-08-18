@@ -1,7 +1,7 @@
 import abc
 import numpy as np
 from ocgis.interface.base.variable import AbstractSourcedVariable
-from ocgis.util.helpers import get_as_none_or_array
+from ocgis.util.helpers import get_isempty, get_as_empty_dim
 from ocgis import constants
 from copy import deepcopy
 from ocgis.exc import EmptyIterationError
@@ -31,14 +31,7 @@ class AbstractDimension(object):
     
     @property
     def isempty(self):
-        if self.uid is None:
-            ret = True
-        else:
-            if self.uid.shape[0] == 0:
-                ret = True
-            else:
-                ret = False
-        return(ret)
+        return(get_isempty(self.uid))
     
     def resolution(self):
         raise(NotImplementedError)
@@ -69,8 +62,8 @@ class AbstractDimension(object):
 class VectorDimension(AbstractSourcedVariable,AbstractDimension):
     
     def __init__(self,*args,**kwds):
-        self._src_idx = get_as_none_or_array(kwds.pop('src_idx',None),1)
-        self._bounds = get_as_none_or_array(kwds.pop('bounds',None),2)
+        self._src_idx = get_as_empty_dim(kwds.pop('src_idx',None),1,dtype=constants.np_int)
+        self._bounds = get_as_empty_dim(kwds.pop('bounds',None),2,dtype=constants.np_float)
         self.name_bounds = kwds.pop('name_bounds',None)
         
         AbstractSourcedVariable.__init__(self,kwds.pop('data',None))
@@ -82,17 +75,17 @@ class VectorDimension(AbstractSourcedVariable,AbstractDimension):
     def __getitem__(self,slc):
         ret_uid = self.uid[slc]
         
-        if self._value is None:
+        if get_isempty(self._value):
             ret_value = self._value
         else:
             ret_value = self._value[slc]
             
-        if self._bounds is None:
+        if get_isempty(self._bounds):
             ret_bounds = self._bounds
         else:
             ret_bounds = self._bounds[slc]
         
-        if self._src_idx is None:
+        if get_isempty(self._src_idx):
             ret_src_idx = self._src_idx
         else:
             ret_src_idx = self._src_idx[slc]
@@ -107,6 +100,7 @@ class VectorDimension(AbstractSourcedVariable,AbstractDimension):
     def __iter__(self):
         if self.isempty:
             ocgis_lh(exc=EmptyIterationError(self))
+            
         ref_value = self.value
         ref_bounds = self.bounds
         ref_uid = self.uid
@@ -123,7 +117,7 @@ class VectorDimension(AbstractSourcedVariable,AbstractDimension):
     
     @property
     def bounds(self):
-        if self._bounds is None:
+        if get_isempty(self._bounds):
             ret = np.zeros((self.value.shape[0],2),dtype=self.value.dtype)
             ret[:,0] = self.value
             ret[:,1] = self.value
@@ -150,26 +144,23 @@ class VectorDimension(AbstractSourcedVariable,AbstractDimension):
     @uid.setter
     def uid(self,value):
         if value is None:
-            if self._value is not None:
+            if not get_isempty(self._value):
                 upper = self._value.shape[0]
-            elif self._src_idx is not None:
+            elif not get_isempty(self._src_idx):
                 upper = self._src_idx.shape[0]
             else:
-                upper = None
-            if upper is None:
-                ret = None
-            else:
-                ret = np.arange(1,upper+1,dtype=constants.np_int)
+                upper = 0
+            ret = np.arange(1,upper+1,dtype=constants.np_int)
         else:
             ret = value
-        self._uid = get_as_none_or_array(ret,1)
+        self._uid = np.atleast_1d(ret)
             
     @property
     def value(self):
         return(super(self.__class__,self).value)
     @value.setter
     def value(self,value):
-        self._value = get_as_none_or_array(value,1)
+        self._value = get_as_empty_dim(value,1,dtype=constants.np_float)
     
     def get_between(self,lower,upper):
         if self.isempty:
@@ -188,7 +179,7 @@ class VectorDimension(AbstractSourcedVariable,AbstractDimension):
         return(ret)
     
     def __get_value__(self):
-        if self._src_idx is not None:
+        if not get_isempty(self._src_idx):
             ret = self._get_from_source_()
         else:
             ret = self._value
