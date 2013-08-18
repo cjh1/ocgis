@@ -17,7 +17,8 @@ class SpatialDimension(AbstractDimension):
         self._geom = kwds.pop('geom',None)
         
         if self.grid is None and self._geom is None:
-            self.grid = SpatialGridDimension(row=kwds.pop('row'),col=kwds.pop('col'))
+            self.grid = SpatialGridDimension(row=kwds.pop('row',None),
+                                             col=kwds.pop('col',None))
         
         super(SpatialDimension,self).__init__(*args,**kwds)
             

@@ -73,7 +73,8 @@ class TestVectorDimension(unittest.TestCase):
 
     def test_empty(self):
         vdim = VectorDimension()
-        self.assertTrue(len(vdim.uid) == 0)
+        self.assertTrue(vdim.uid is None)
+        self.assertTrue(vdim.isempty)
         
     def test_get_between_empty(self):
         vdim = VectorDimension()

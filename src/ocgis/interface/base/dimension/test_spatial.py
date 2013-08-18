@@ -103,6 +103,10 @@ class TestSpatialDimension(unittest.TestCase):
         shp = sdim.grid.shape
         self.assertEqual(shp,(3,4))
         
+    def test_empty(self):
+        sd = SpatialDimension()
+        
+        
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']

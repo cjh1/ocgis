@@ -1,7 +1,7 @@
 import abc
 import numpy as np
 from ocgis.interface.base.variable import AbstractSourcedVariable
-from ocgis.util.helpers import get_empty_or_pass_1d, get_isempty, get_none_or_2d
+from ocgis.util.helpers import get_as_none_or_array
 from ocgis import constants
 from copy import deepcopy
 from ocgis.exc import EmptyIterationError
@@ -31,14 +31,25 @@ class AbstractDimension(object):
     
     @property
     def isempty(self):
-        return(get_isempty(self.uid))
+        if self.uid is None:
+            ret = True
+        else:
+            if self.uid.shape[0] == 0:
+                ret = True
+            else:
+                ret = False
+        return(ret)
     
     def resolution(self):
         raise(NotImplementedError)
     
     @property
     def shape(self):
-        return(self.uid.shape)
+        if self.uid is None:
+            ret = (0,)
+        else:
+            ret = self.uid.shape
+        return(ret)
     
     @property
     def value(self):
@@ -58,21 +69,20 @@ class AbstractDimension(object):
 class VectorDimension(AbstractSourcedVariable,AbstractDimension):
     
     def __init__(self,*args,**kwds):
-        self._src_idx = get_empty_or_pass_1d(kwds.pop('src_idx',None),dtype=constants.np_int)
-        self._bounds = get_none_or_2d(kwds.pop('bounds',None))
+        self._src_idx = get_as_none_or_array(kwds.pop('src_idx',None),1)
+        self._bounds = get_as_none_or_array(kwds.pop('bounds',None),2)
         self.name_bounds = kwds.pop('name_bounds',None)
         
         AbstractSourcedVariable.__init__(self,kwds.pop('data',None))
         AbstractDimension.__init__(self,*args,**kwds)
         
-        self._value = get_empty_or_pass_1d(self._value,dtype=constants.np_float)
         if self.name_bounds is None:
             self.name_bounds = '{0}_bnds'.format(self.name)
                         
     def __getitem__(self,slc):
         ret_uid = self.uid[slc]
         
-        if get_isempty(self._value):
+        if self._value is None:
             ret_value = self._value
         else:
             ret_value = self._value[slc]
@@ -82,7 +92,7 @@ class VectorDimension(AbstractSourcedVariable,AbstractDimension):
         else:
             ret_bounds = self._bounds[slc]
         
-        if get_isempty(self._src_idx):
+        if self._src_idx is None:
             ret_src_idx = self._src_idx
         else:
             ret_src_idx = self._src_idx[slc]
@@ -140,23 +150,26 @@ class VectorDimension(AbstractSourcedVariable,AbstractDimension):
     @uid.setter
     def uid(self,value):
         if value is None:
-            if get_isempty(self._value) is False:
+            if self._value is not None:
                 upper = self._value.shape[0]
-            elif get_isempty(self._src_idx) is False:
+            elif self._src_idx is not None:
                 upper = self._src_idx.shape[0]
             else:
-                upper = 0
-            ret = np.arange(1,upper+1,dtype=constants.np_int)
+                upper = None
+            if upper is None:
+                ret = None
+            else:
+                ret = np.arange(1,upper+1,dtype=constants.np_int)
         else:
             ret = value
-        self._uid = np.atleast_1d(ret)
+        self._uid = get_as_none_or_array(ret,1)
             
     @property
     def value(self):
         return(super(self.__class__,self).value)
     @value.setter
     def value(self,value):
-        self._value = get_empty_or_pass_1d(value,dtype=constants.np_float)
+        self._value = get_as_none_or_array(value,1)
     
     def get_between(self,lower,upper):
         if self.isempty:
@@ -175,7 +188,7 @@ class VectorDimension(AbstractSourcedVariable,AbstractDimension):
         return(ret)
     
     def __get_value__(self):
-        if not get_isempty(self._src_idx):
+        if self._src_idx is not None:
             ret = self._get_from_source_()
         else:
             ret = self._value
