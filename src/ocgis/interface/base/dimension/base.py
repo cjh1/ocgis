@@ -113,7 +113,7 @@ class VectorDimension(AbstractSourcedVariable,AbstractDimension):
             yld = {ref_name:ref_value[ii],ref_name_uid:ref_uid[ii],
                    ref_name_bounds_lower:ref_bounds[ii,0],
                    ref_name_bounds_upper:ref_bounds[ii,1]}
-            yield(yld)
+            yield(ii,yld)
     
     @property
     def bounds(self):

@@ -105,7 +105,19 @@ class TestSpatialDimension(unittest.TestCase):
         
     def test_empty(self):
         sd = SpatialDimension()
+        self.assertTrue(sd.grid.value.shape[0] == 0)
+        self.assertTrue(sd.isempty)
+        self.assertEqual(sd.uid.shape[0],0)
         
+    def test_try_iter_on_spatial(self):
+        sdim = self.get_sdim(bounds=True)
+        with self.assertRaises(NotImplementedError):
+            for row in sdim: print row
+            
+    def test_iter_point(self):
+        sdim = self.get_sdim(bounds=False)
+        for row in sdim.geom.point:
+            import ipdb;ipdb.set_trace()
         
 
 if __name__ == "__main__":

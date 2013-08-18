@@ -2,11 +2,12 @@ from base import AbstractDimension
 import numpy as np
 from copy import copy
 from ocgis.util.logging_ocgis import ocgis_lh
-from ocgis.util.helpers import iter_array, get_isempty
+from ocgis.util.helpers import iter_array, get_isempty, get_as_empty_dim
 from shapely.geometry.point import Point
 from ocgis import constants
 import itertools
 from shapely.geometry.polygon import Polygon
+from ocgis.exc import EmptyIterationError
 
 
 class SpatialDimension(AbstractDimension):
@@ -26,7 +27,7 @@ class SpatialDimension(AbstractDimension):
         raise(NotImplementedError)
     
     def __iter__(self):
-        raise(NotImplementedError)
+        ocgis_lh(exc=NotImplementedError('Spatial dimensions do not have a direct iterator choose from "geom" or "grid".'))
     
     @property
     def geom(self):
@@ -36,14 +37,14 @@ class SpatialDimension(AbstractDimension):
     
     @property
     def uid(self):
-        raise(NotImplementedError)
+        return(self.grid.uid)
     @uid.setter
     def uid(self,value):
-        self._uid = value
+        self._uid = get_as_empty_dim(value,1,dtype=constants.np_int)
     
     @property
     def value(self):
-        raise(NotImplementedError)
+        ocgis_lh(exc=NotImplementedError('Spatial dimension values should be accessed through "grid" and/or "geom".'))
     @value.setter
     def value(self,value):
         self._value = value
@@ -98,19 +99,33 @@ class SpatialGridDimension(AbstractDimension):
         
     @property
     def uid(self):
-        if self._uid is None:
-            self._uid = np.arange(1,self.value.shape[1]*self.value.shape[2]+1,dtype=constants.np_int).\
-                        reshape(self.value.shape[1],self.value.shape[2])
+        if get_isempty(self._uid):
+            try:
+                self._uid = np.arange(1,self.value.shape[1]*self.value.shape[2]+1,dtype=constants.np_int).\
+                            reshape(self.value.shape[1],self.value.shape[2])
+            except IndexError:
+                ## value likely not present
+                if get_isempty(self.value):
+                    pass
+                else:
+                    raise
         return(self._uid)
     @uid.setter
     def uid(self,value):
-        self._uid = value
+        self._uid = get_as_empty_dim(value,1,dtype=constants.np_int)
     
     @property
     def value(self):
-        if self._value is None:
+        if get_isempty(self._value):
             ## fill the value
-            fill = np.empty((2,self.row.shape[0],self.col.shape[0]),dtype=self.row.value.dtype)
+            try:
+                fill = np.empty((2,self.row.shape[0],self.col.shape[0]),dtype=self.row.value.dtype)
+            ## there is likely no row and column
+            except AttributeError:
+                if self.row is None:
+                    return(self._value)
+                else:
+                    raise
             fill = np.ma.array(fill,mask=False)
             col_coords,row_coords = np.meshgrid(self.col.value,self.row.value)
             fill[0,:,:] = row_coords
@@ -119,7 +134,7 @@ class SpatialGridDimension(AbstractDimension):
         return(self._value)
     @value.setter
     def value(self,value):
-        self._value = value
+        self._value = get_as_empty_dim(value,1,dtype=constants.np_float)
     
     
 class SpatialGeometryDimension(AbstractDimension):
@@ -165,9 +180,6 @@ class SpatialGeometryPointDimension(AbstractDimension):
         super(SpatialGeometryPointDimension,self).__init__(*args,**kwds)
     
     def __getitem__(self,slc):
-        raise(NotImplementedError)
-    
-    def __iter__(self):
         raise(NotImplementedError)
     
     @property
