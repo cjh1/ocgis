@@ -16,25 +16,18 @@ import sys
 import datetime
 
 
-def get_as_empty_dim(target,dims,dtype=None):
-    mp = {1:np.atleast_1d,2:np.atleast_2d}
+def get_none_or_1d(target):
     if target is None:
-        ret = np.array([],dtype=dtype)
-        if dims == 1:
-            pass
-        elif dims == 2:
-            ret = ret.reshape(0,2)
-        else:
-            raise(NotImplementedError)
+        ret = None
     else:
-        ret = mp[dims](target)
+        ret = np.atleast_1d(target)
     return(ret)
 
-def get_isempty(target):
-    if target.shape[0] == 0:
-        ret = True
+def get_none_or_2d(target):
+    if target is None:
+        ret = None
     else:
-        ret = False
+        ret = np.atleast_2d(target)
     return(ret)
 
 def iter_arg(arg):

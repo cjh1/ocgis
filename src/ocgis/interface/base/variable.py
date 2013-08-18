@@ -1,6 +1,5 @@
 import abc
 from ocgis.util.logging_ocgis import ocgis_lh
-from ocgis.util.helpers import get_isempty
 
 
 class AbstractSourcedVariable(object):
@@ -11,9 +10,12 @@ class AbstractSourcedVariable(object):
     
     @property
     def value(self):
-        if get_isempty(self._value):
+        if self._value is None:
             self._value = self._get_value_()
         return(self._value)
+    @value.setter
+    def value(self,value):
+        self._value = value
     
     def _get_value_(self):
         if self._data is None and self.isempty is False:
