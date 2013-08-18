@@ -2,6 +2,7 @@ import unittest
 import numpy as np
 from base import VectorDimension
 from ocgis.interface.base.dimension.spatial import SpatialDimension
+from ocgis.util.helpers import iter_array
 
 
 class TestSpatialDimension(unittest.TestCase):
@@ -71,6 +72,37 @@ class TestSpatialDimension(unittest.TestCase):
         sdim_slc = sdim.grid[1:3,0:3]
         self.assertNumpyAll(sdim_slc.value,np.ma.array([[[39,39,39],[38,38,38]],[[-100,-99,-98],[-100,-99,-98]]],mask=False))
         self.assertNumpyAll(sdim_slc.row.value,np.array([39,38]))
+        
+    def test_geom_point(self):
+        sdim = self.get_sdim(bounds=True)
+        with self.assertRaises(NotImplementedError):
+            sdim.geom.value
+        pt = sdim.geom.point.value
+        fill = np.ma.array(np.zeros((2,3,4)),mask=False)
+        for idx_row,idx_col in iter_array(pt):
+            fill[0,idx_row,idx_col] = pt[idx_row,idx_col].y
+            fill[1,idx_row,idx_col] = pt[idx_row,idx_col].x
+        self.assertNumpyAll(fill,sdim.grid.value)
+        
+    def test_geom_polygon_no_bounds(self):
+        sdim = self.get_sdim(bounds=False)
+        with self.assertRaises(ValueError):
+            sdim.geom.polygon.value
+            
+    def test_geom_polygon_bounds(self):
+        sdim = self.get_sdim(bounds=True)
+        poly = sdim.geom.polygon.value
+        fill = np.ma.array(np.zeros((2,3,4)),mask=False)
+        for idx_row,idx_col in iter_array(poly):
+            fill[0,idx_row,idx_col] = poly[idx_row,idx_col].centroid.y
+            fill[1,idx_row,idx_col] = poly[idx_row,idx_col].centroid.x
+        self.assertNumpyAll(fill,sdim.grid.value)   
+        
+    def test_grid_shape(self):
+        sdim = self.get_sdim()
+        shp = sdim.grid.shape
+        self.assertEqual(shp,(3,4))
+        
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']

@@ -17,8 +17,8 @@ class AbstractDimension(object):
         self.name_uid = name_uid or '{0}_uid'.format(self.name)
         self.units = units
         
-        self._value = value
-        self._uid = get_empty_or_pass_1d(uid,dtype=constants.np_int)
+        self.value = value
+        self.uid = uid
         
     @abc.abstractmethod
     def __getitem__(self,slc): pass
@@ -33,21 +33,26 @@ class AbstractDimension(object):
     def isempty(self):
         return(get_isempty(self.uid))
     
-    @abc.abstractproperty
-    def resolution(self): 'number'
+    def resolution(self):
+        raise(NotImplementedError)
     
     @property
     def shape(self):
         return(self.uid.shape)
     
-    @abc.abstractproperty
-    def value(self): pass
+    @property
+    def value(self):
+        return(self._value)
+    @value.setter
+    def value(self,value):
+        self._value = value
     
     @property
     def uid(self):
-        if get_isempty(self._uid):
-            self._uid = np.arange(1,self._value.shape[0]+1,dtype=constants.np_int)
         return(self._uid)
+    @uid.setter
+    def uid(self,value):
+        self._uid = value
 
 
 class VectorDimension(AbstractSourcedVariable,AbstractDimension):
@@ -131,9 +136,27 @@ class VectorDimension(AbstractSourcedVariable,AbstractDimension):
     
     @property
     def uid(self):
-        if get_isempty(super(VectorDimension,self).uid):
-            self._uid = np.atleast_1d(np.arange(1,self._src_idx.shape[0]+1,dtype=constants.np_int))
         return(self._uid)
+    @uid.setter
+    def uid(self,value):
+        if value is None:
+            if get_isempty(self._value) is False:
+                upper = self._value.shape[0]
+            elif get_isempty(self._src_idx) is False:
+                upper = self._src_idx.shape[0]
+            else:
+                upper = 0
+            ret = np.arange(1,upper+1,dtype=constants.np_int)
+        else:
+            ret = value
+        self._uid = np.atleast_1d(ret)
+            
+    @property
+    def value(self):
+        return(super(self.__class__,self).value)
+    @value.setter
+    def value(self,value):
+        self._value = get_empty_or_pass_1d(value,dtype=constants.np_float)
     
     def get_between(self,lower,upper):
         if self.isempty:
