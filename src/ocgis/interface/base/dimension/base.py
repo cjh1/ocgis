@@ -23,8 +23,23 @@ class AbstractDimension(object):
     @abc.abstractmethod
     def __getitem__(self,slc): pass
     
-    @abc.abstractmethod
-    def __iter__(self): pass
+    def __iter__(self):
+        if self.isempty:
+            ocgis_lh(exc=EmptyIterationError(self))
+            
+        ref_value = self.value
+        ref_bounds = self.bounds
+        ref_uid = self.uid
+        ref_name = self.name
+        ref_name_uid = self.name_uid
+        ref_name_bounds_lower = '{0}_lower'.format(self.name_bounds)
+        ref_name_bounds_upper = '{0}_upper'.format(self.name_bounds)
+        
+        for ii in range(self.value.shape[0]):
+            yld = {ref_name:ref_value[ii],ref_name_uid:ref_uid[ii],
+                   ref_name_bounds_lower:ref_bounds[ii,0],
+                   ref_name_bounds_upper:ref_bounds[ii,1]}
+            yield(ii,yld)
         
     def __len__(self):
         return(self.shape[0])
@@ -96,24 +111,6 @@ class VectorDimension(AbstractSourcedVariable,AbstractDimension):
          data=self._data,src_idx=ret_src_idx,bounds=ret_bounds,
          name=self.name,name_uid=self.name_uid,name_bounds=self.name_bounds,
          units=self.units))
-
-    def __iter__(self):
-        if self.isempty:
-            ocgis_lh(exc=EmptyIterationError(self))
-            
-        ref_value = self.value
-        ref_bounds = self.bounds
-        ref_uid = self.uid
-        ref_name = self.name
-        ref_name_uid = self.name_uid
-        ref_name_bounds_lower = '{0}_lower'.format(self.name_bounds)
-        ref_name_bounds_upper = '{0}_upper'.format(self.name_bounds)
-        
-        for ii in range(self.value.shape[0]):
-            yld = {ref_name:ref_value[ii],ref_name_uid:ref_uid[ii],
-                   ref_name_bounds_lower:ref_bounds[ii,0],
-                   ref_name_bounds_upper:ref_bounds[ii,1]}
-            yield(ii,yld)
     
     @property
     def bounds(self):

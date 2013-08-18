@@ -27,17 +27,27 @@ class SpatialDimension(AbstractDimension):
         raise(NotImplementedError)
     
     def __iter__(self):
-        ocgis_lh(exc=NotImplementedError('Spatial dimensions do not have a direct iterator choose from "geom" or "grid".'))
+        ocgis_lh(exc=NotImplementedError('Spatial dimensions do not have a direct iterator.'))
     
     @property
     def geom(self):
         if self._geom is None:
             self._geom = SpatialGeometryDimension(grid=self.grid)
         return(self._geom)
-    
+        
     @property
     def uid(self):
-        return(self.grid.uid)
+        if get_isempty(self._uid):
+            try:
+                self._uid = np.arange(1,self.value.shape[1]*self.value.shape[2]+1,dtype=constants.np_int).\
+                            reshape(self.value.shape[1],self.value.shape[2])
+            except IndexError:
+                ## value likely not present
+                if get_isempty(self.value):
+                    pass
+                else:
+                    raise
+        return(self._uid)
     @uid.setter
     def uid(self,value):
         self._uid = get_as_empty_dim(value,1,dtype=constants.np_int)
@@ -48,10 +58,7 @@ class SpatialDimension(AbstractDimension):
     @value.setter
     def value(self,value):
         self._value = value
-    
-    def __get_value__(self):
-        raise(NotImplementedError)
-    
+
     
 class SpatialGridDimension(AbstractDimension):
     
@@ -96,23 +103,10 @@ class SpatialGridDimension(AbstractDimension):
     @property
     def resolution(self):
         raise(NotImplementedError)
-        
+    
     @property
-    def uid(self):
-        if get_isempty(self._uid):
-            try:
-                self._uid = np.arange(1,self.value.shape[1]*self.value.shape[2]+1,dtype=constants.np_int).\
-                            reshape(self.value.shape[1],self.value.shape[2])
-            except IndexError:
-                ## value likely not present
-                if get_isempty(self.value):
-                    pass
-                else:
-                    raise
-        return(self._uid)
-    @uid.setter
-    def uid(self,value):
-        self._uid = get_as_empty_dim(value,1,dtype=constants.np_int)
+    def shape(self):
+        return(self.value.shape)
     
     @property
     def value(self):
@@ -198,7 +192,7 @@ class SpatialGeometryPointDimension(AbstractDimension):
         self._value = value
     
     def _get_geometry_fill_(self):
-        fill = np.ma.array(np.zeros(self.grid.shape),
+        fill = np.ma.array(np.zeros((self.grid.shape[1],self.grid.shape[2])),
                            mask=self.grid.value[0].mask,dtype=object)
         return(fill)
     

@@ -101,7 +101,7 @@ class TestSpatialDimension(unittest.TestCase):
     def test_grid_shape(self):
         sdim = self.get_sdim()
         shp = sdim.grid.shape
-        self.assertEqual(shp,(3,4))
+        self.assertEqual(shp,(2,3,4))
         
     def test_empty(self):
         sd = SpatialDimension()
@@ -116,7 +116,7 @@ class TestSpatialDimension(unittest.TestCase):
             
     def test_iter_point(self):
         sdim = self.get_sdim(bounds=False)
-        for row in sdim.geom.point:
+        for row in sdim.iter_point():
             import ipdb;ipdb.set_trace()
         
 
