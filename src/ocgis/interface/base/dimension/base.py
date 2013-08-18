@@ -8,19 +8,23 @@ from ocgis.exc import EmptyIterationError
 from ocgis.util.logging_ocgis import ocgis_lh
 
 
-class AbstractDimension(AbstractSourcedVariable):
+class AbstractDimension(object):
     __metaclass__ = abc.ABCMeta
     
-    def __init__(self,value=None,attrs=None,uid=None,data=None,name=None,
-                 name_uid=None,units=None):
+    def __init__(self,value=None,attrs=None,uid=None,name=None,name_uid=None,units=None):
         self.attrs = attrs or {}
         self.name = name or self.__class__.__name__
         self.name_uid = name_uid or '{0}_uid'.format(self.name)
         self.units = units
         
-        self._value = get_empty_or_pass_1d(value,dtype=constants.np_float)
+        self._value = value
         self._uid = get_empty_or_pass_1d(uid,dtype=constants.np_int)
-        self._data = data
+        
+    @abc.abstractmethod
+    def __getitem__(self,slc): pass
+    
+    @abc.abstractmethod
+    def __iter__(self): pass
         
     def __len__(self):
         return(self.shape[0])
@@ -32,28 +36,31 @@ class AbstractDimension(AbstractSourcedVariable):
     @abc.abstractproperty
     def resolution(self): 'number'
     
+    @property
+    def shape(self):
+        return(self.uid.shape)
+    
     @abc.abstractproperty
-    def shape(self): tuple
+    def value(self): pass
     
     @property
     def uid(self):
         if get_isempty(self._uid):
             self._uid = np.arange(1,self._value.shape[0]+1,dtype=constants.np_int)
         return(self._uid)
-    
-    @abc.abstractmethod
-    def get_between(self,lower,upper): self.__class__
 
 
-class VectorDimension(AbstractDimension):
+class VectorDimension(AbstractSourcedVariable,AbstractDimension):
     
     def __init__(self,*args,**kwds):
         self._src_idx = get_empty_or_pass_1d(kwds.pop('src_idx',None),dtype=constants.np_int)
         self._bounds = get_none_or_2d(kwds.pop('bounds',None))
         self.name_bounds = kwds.pop('name_bounds',None)
         
-        super(VectorDimension,self).__init__(*args,**kwds)
+        AbstractSourcedVariable.__init__(self,kwds.pop('data',None))
+        AbstractDimension.__init__(self,*args,**kwds)
         
+        self._value = get_empty_or_pass_1d(self._value,dtype=constants.np_float)
         if self.name_bounds is None:
             self.name_bounds = '{0}_bnds'.format(self.name)
                         
@@ -102,10 +109,12 @@ class VectorDimension(AbstractDimension):
     @property
     def bounds(self):
         if self._bounds is None:
-            self._bounds = np.zeros((self.value.shape[0],2),dtype=self.value.dtype)
-            self._bounds[:,0] = self.value
-            self._bounds[:,1] = self.value
-        return(self._bounds)
+            ret = np.zeros((self.value.shape[0],2),dtype=self.value.dtype)
+            ret[:,0] = self.value
+            ret[:,1] = self.value
+        else:
+            ret = self._bounds
+        return(ret)
     
     @property
     def resolution(self):
@@ -119,10 +128,6 @@ class VectorDimension(AbstractDimension):
                 res_array = res_bounds[:,1] - res_bounds[:,0]
             ret = (res_array.mean(),self.units)
         return(ret)
-    
-    @property
-    def shape(self):
-        return(self.uid.shape)
     
     @property
     def uid(self):

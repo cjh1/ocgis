@@ -1,5 +1,4 @@
 import abc
-import numpy as np
 from ocgis.util.logging_ocgis import ocgis_lh
 from ocgis.util.helpers import get_isempty
 
@@ -7,8 +6,8 @@ from ocgis.util.helpers import get_isempty
 class AbstractSourcedVariable(object):
     __metaclass__ = abc.ABCMeta
     
-    @abc.abstractproperty
-    def isempty(self): pass
+    def __init__(self,data):
+        self._data = data
     
     @property
     def value(self):

@@ -41,6 +41,19 @@ class TestVectorDimension(unittest.TestCase):
         self.assertNumpyAll(vdim_slc.value,[4,6])
         self.assertNumpyAll(vdim_slc.bounds,[[3,5],[5,7]])
     
+    def test_set_reference(self):
+        vdim = VectorDimension(value=[4,5,6])
+        vdim_slc = vdim[1]
+        self.assertEqual(vdim_slc.uid[0],2)
+        vdim_slc2 = vdim[:]
+        self.assertNumpyAll(vdim_slc2.value,vdim.value)
+        vdim._value[1] = 500
+        self.assertNumpyAll(vdim.value,[4,500,6])
+        self.assertNumpyAll(vdim.bounds[1,:],[500,500])
+        self.assertNumpyAll(vdim.value,vdim_slc2.value)
+        vdim_slc2._value[2] = 1000
+        self.assertNumpyAll(vdim.value,vdim_slc2.value)
+    
     def test_slice_source_idx_only(self):
         vdim = VectorDimension(src_idx=[4,5,6])
         vdim_slice = vdim[0]
