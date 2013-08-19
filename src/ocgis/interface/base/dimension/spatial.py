@@ -2,12 +2,11 @@ from base import AbstractDimension
 import numpy as np
 from copy import copy
 from ocgis.util.logging_ocgis import ocgis_lh
-from ocgis.util.helpers import iter_array, get_isempty, get_as_empty_dim
+from ocgis.util.helpers import iter_array
 from shapely.geometry.point import Point
 from ocgis import constants
 import itertools
 from shapely.geometry.polygon import Polygon
-from ocgis.exc import EmptyIterationError
 
 
 class SpatialDimension(AbstractDimension):
@@ -32,25 +31,8 @@ class SpatialDimension(AbstractDimension):
     @property
     def geom(self):
         if self._geom is None:
-            self._geom = SpatialGeometryDimension(grid=self.grid)
+            self._geom = SpatialGeometryDimension(grid=self.grid,uid=self.grid.uid)
         return(self._geom)
-        
-    @property
-    def uid(self):
-        if get_isempty(self._uid):
-            try:
-                self._uid = np.arange(1,self.value.shape[1]*self.value.shape[2]+1,dtype=constants.np_int).\
-                            reshape(self.value.shape[1],self.value.shape[2])
-            except IndexError:
-                ## value likely not present
-                if get_isempty(self.value):
-                    pass
-                else:
-                    raise
-        return(self._uid)
-    @uid.setter
-    def uid(self,value):
-        self._uid = get_as_empty_dim(value,1,dtype=constants.np_int)
     
     @property
     def value(self):
@@ -58,6 +40,16 @@ class SpatialDimension(AbstractDimension):
     @value.setter
     def value(self,value):
         self._value = value
+        
+    def _format_uid_(self,value):
+        return(np.atleast_2d(value))
+        
+    def _get_uid_(self):
+        if self._geom is not None:
+            ret = self._geom.uid
+        else:
+            ret = self.grid.uid
+        return(ret)
 
     
 class SpatialGridDimension(AbstractDimension):
@@ -110,7 +102,7 @@ class SpatialGridDimension(AbstractDimension):
     
     @property
     def value(self):
-        if get_isempty(self._value):
+        if self._value is None:
             ## fill the value
             try:
                 fill = np.empty((2,self.row.shape[0],self.col.shape[0]),dtype=self.row.value.dtype)
@@ -128,18 +120,25 @@ class SpatialGridDimension(AbstractDimension):
         return(self._value)
     @value.setter
     def value(self,value):
-        self._value = get_as_empty_dim(value,1,dtype=constants.np_float)
+        self._value = value
+        
+    def _format_uid_(self,value):
+        return(np.atleast_2d(value))
+        
+    def _get_uid_(self):
+        ret = np.arange(1,(self.value.shape[1]*self.value.shape[2])+1,dtype=constants.np_int)
+        ret = ret.reshape(self.value.shape[1],self.value.shape[2])
+        return(ret)
     
     
 class SpatialGeometryDimension(AbstractDimension):
     
     def __init__(self,*args,**kwds):
         self.grid = kwds.pop('grid',None)
+        self._point = kwds.pop('point',None)
+        self._polygon = kwds.pop('polygon',None)
         
         super(SpatialGeometryDimension,self).__init__(*args,**kwds)
-        
-        self._point = None
-        self._polygon = None
         
     def __getitem__(self,slc):
         raise(NotImplementedError)
@@ -149,14 +148,14 @@ class SpatialGeometryDimension(AbstractDimension):
     
     @property
     def point(self):
-        if self._point == None:
-            self._point = SpatialGeometryPointDimension(grid=self.grid)
+        if self._point == None and self.grid is not None:
+            self._point = SpatialGeometryPointDimension(grid=self.grid,uid=self.grid.uid)
         return(self._point)
     
     @property
     def polygon(self):
-        if self._polygon == None:
-            self._polygon = SpatialGeometryPolygonDimension(grid=self.grid)
+        if self._polygon == None and self.grid is not None:
+            self._polygon = SpatialGeometryPolygonDimension(grid=self.grid,uid=self.grid.uid)
         return(self._polygon)
     
     @property
@@ -165,7 +164,20 @@ class SpatialGeometryDimension(AbstractDimension):
     @value.setter
     def value(self,value):
         self._value = value
-    
+        
+    def _format_uid_(self,value):
+        return(np.atleast_2d(value))
+        
+    def _get_uid_(self):
+        if self.grid is not None:
+            ret = self.grid
+        elif self._point is not None:
+            ret = self._point.uid
+        else:
+            ret = self._polygon.uid
+        return(ret)
+
+
 class SpatialGeometryPointDimension(AbstractDimension):
     
     def __init__(self,*args,**kwds):
@@ -190,11 +202,18 @@ class SpatialGeometryPointDimension(AbstractDimension):
     @value.setter
     def value(self,value):
         self._value = value
+        
+    def _format_uid_(self,value):
+        return(np.atleast_2d(value))
     
     def _get_geometry_fill_(self):
         fill = np.ma.array(np.zeros((self.grid.shape[1],self.grid.shape[2])),
                            mask=self.grid.value[0].mask,dtype=object)
         return(fill)
+    
+    def _get_uid_(self):
+        ret = np.arange(1,len(self.value.flatten())+1,dtype=constants.np_int)
+        return(ret)
     
     
 class SpatialGeometryPolygonDimension(SpatialGeometryPointDimension):
@@ -202,11 +221,12 @@ class SpatialGeometryPolygonDimension(SpatialGeometryPointDimension):
     def __init__(self,*args,**kwds):
         super(SpatialGeometryPolygonDimension,self).__init__(*args,**kwds)
         
-        if self.grid.row is None:
-            ocgis_lh(exc=ValueError('Polygon dimensions require a row and column dimension with bounds.'))
-        else:
-            if self.grid.row.bounds[0,0] == self.grid.row.bounds[0,1]:
-                ocgis_lh(exc=ValueError('Polygon dimensions require row and column dimension bounds to have delta > 0.'))
+        if self._value is None:
+            if self.grid.row is None:
+                ocgis_lh(exc=ValueError('Polygon dimensions require a row and column dimension with bounds.'))
+            else:
+                if self.grid.row.bounds[0,0] == self.grid.row.bounds[0,1]:
+                    ocgis_lh(exc=ValueError('Polygon dimensions require row and column dimension bounds to have delta > 0.'))
     
     @property
     def value(self):

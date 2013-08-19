@@ -1,8 +1,11 @@
 import unittest
 import numpy as np
 from base import VectorDimension
-from ocgis.interface.base.dimension.spatial import SpatialDimension
+from ocgis.interface.base.dimension.spatial import SpatialDimension,\
+    SpatialGeometryDimension, SpatialGeometryPolygonDimension
 from ocgis.util.helpers import iter_array
+import fiona
+from shapely.geometry import mapping, shape
 
 
 class TestSpatialDimension(unittest.TestCase):
@@ -104,20 +107,19 @@ class TestSpatialDimension(unittest.TestCase):
         self.assertEqual(shp,(2,3,4))
         
     def test_empty(self):
-        sd = SpatialDimension()
-        self.assertTrue(sd.grid.value.shape[0] == 0)
-        self.assertTrue(sd.isempty)
-        self.assertEqual(sd.uid.shape[0],0)
-        
-    def test_try_iter_on_spatial(self):
-        sdim = self.get_sdim(bounds=True)
-        with self.assertRaises(NotImplementedError):
-            for row in sdim: print row
+        with self.assertRaises(AttributeError):
+            SpatialDimension()
             
-    def test_iter_point(self):
-        sdim = self.get_sdim(bounds=False)
-        for row in sdim.iter_point():
-            import ipdb;ipdb.set_trace()
+    def test_geoms_only(self):
+        geoms = []
+        with fiona.open('/home/local/WX/ben.koziol/Dropbox/nesii/project/ocg/bin/shp/state_boundaries/state_boundaries.shp','r') as source:
+            for row in source:
+                geoms.append(shape(row['geometry']))
+        geoms = np.atleast_2d(geoms)
+        poly_dim = SpatialGeometryPolygonDimension(value=geoms)
+        sg_dim = SpatialGeometryDimension(polygon=poly_dim)
+        sdim = SpatialDimension(geom=sg_dim)
+        import ipdb;ipdb.set_trace()
         
 
 if __name__ == "__main__":
