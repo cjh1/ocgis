@@ -16,7 +16,6 @@ class AbstractDimension(object):
         self.name = name or self.__class__.__name__
         self.name_uid = name_uid or '{0}_uid'.format(self.name)
         self.units = units
-        
         self.value = value
         self.uid = uid
         
@@ -77,8 +76,8 @@ class AbstractDimension(object):
     @abc.abstractmethod
     def _get_uid_(self): pass
     
-    def _get_value_(self):
-        return(self._value)
+    @abc.abstractmethod
+    def _get_value_(self): pass
     
     
 class Abstract1d(object):

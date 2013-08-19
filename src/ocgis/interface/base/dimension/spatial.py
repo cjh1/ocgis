@@ -89,20 +89,6 @@ class SpatialGridDimension(Abstract2d,AbstractDimension):
     @property
     def shape(self):
         return(self.uid.shape)
-    
-    @property
-    def value(self):
-        if self._value is None:
-            fill = np.empty((2,self.row.shape[0],self.col.shape[0]),dtype=self.row.value.dtype)
-            fill = np.ma.array(fill,mask=False)
-            col_coords,row_coords = np.meshgrid(self.col.value,self.row.value)
-            fill[0,:,:] = row_coords
-            fill[1,:,:] = col_coords
-            self._value = fill
-        return(self._value)
-    @value.setter
-    def value(self,value):
-        self._value = value
         
     def get_subset_bbox(self,min_row,min_col,max_row,max_col):
         if self.row is None:
@@ -142,6 +128,14 @@ class SpatialGridDimension(Abstract2d,AbstractDimension):
             except Exception as e:
                 ocgis_lh(exc=e)
         return(ret)
+    
+    def _get_value_(self):
+        fill = np.empty((2,self.row.shape[0],self.col.shape[0]),dtype=self.row.value.dtype)
+        fill = np.ma.array(fill,mask=False)
+        col_coords,row_coords = np.meshgrid(self.col.value,self.row.value)
+        fill[0,:,:] = row_coords
+        fill[1,:,:] = col_coords
+        return(fill)
     
     
 class SpatialGeometryDimension(Abstract2d,AbstractDimension):
@@ -203,9 +197,10 @@ class SpatialGeometryPointDimension(Abstract2d,AbstractDimension):
                 assert(len(value.shape) == 2)
             except (AssertionError,AttributeError):
                 ocgis_lh(exc=ValueError('Geometry values must come in as 2-d NumPy arrays to avoid array interface modifications by shapely.'))
+        if value is not None:
             if not isinstance(value,np.ma.MaskedArray):
                 value = np.ma.array(value,mask=False)
-        ret = super(self.__class__,self)._format_value_(value)
+        ret = Abstract2d._format_value_(self,value)
         return(ret)
     
     def _get_geometry_fill_(self):
@@ -238,22 +233,6 @@ class SpatialGeometryPolygonDimension(SpatialGeometryPointDimension):
             else:
                 if self.grid.row.bounds[0,0] == self.grid.row.bounds[0,1]:
                     ocgis_lh(exc=ValueError('Polygon dimensions require row and column dimension bounds to have delta > 0.'))
-    
-    @property
-    def value(self):
-        if self._value is None:
-            ref_row_bounds = self.grid.row.bounds
-            ref_col_bounds = self.grid.col.bounds
-            fill = self._get_geometry_fill_()
-            for idx_row,idx_col in itertools.product(range(ref_row_bounds.shape[0]),range(ref_col_bounds.shape[0])):
-                row_min,row_max = ref_row_bounds[idx_row,:]
-                col_min,col_max = ref_col_bounds[idx_col,:]
-                fill[idx_row,idx_col] = Polygon([(col_min,row_min),(col_min,row_max),(col_max,row_max),(col_max,row_min)])
-            self._value = fill
-        return(self._value)
-    @value.setter
-    def value(self,value):
-        self._value = value
         
     def _get_value_(self):
         ref_row_bounds = self.grid.row.bounds

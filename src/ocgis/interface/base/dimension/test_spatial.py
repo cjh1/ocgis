@@ -19,6 +19,14 @@ class TestSpatialDimension(unittest.TestCase):
     def assertNumpyNotAll(self,arr1,arr2):
         return(self.assertFalse(np.all(arr1 == arr2)))
     
+    def get_2d_state_boundaries(self):
+        geoms = []
+        with fiona.open('/home/local/WX/ben.koziol/Dropbox/nesii/project/ocg/bin/shp/state_boundaries/state_boundaries.shp','r') as source:
+            for row in source:
+                geoms.append(shape(row['geometry']))
+        geoms = np.atleast_2d(geoms)
+        return(geoms)
+    
     def get_col(self,bounds=True):
         value = [-100,-99,-98,-97]
         if bounds:
@@ -42,6 +50,14 @@ class TestSpatialDimension(unittest.TestCase):
         col = self.get_col(bounds=bounds)
         sdim = SpatialDimension(row=row,col=col)
         return(sdim)
+    
+    def test_geom_subset_polygon(self):
+        geoms = self.get_2d_state_boundaries()
+        spdim = SpatialGeometryPolygonDimension(value=geoms)
+        ref = spdim.value.mask
+        self.assertEqual(ref.shape,(1,51))
+        self.assertFalse(ref.any())
+        import ipdb;ipdb.set_trace()
 
     def test_grid_value(self):
         for b in [True,False]:
