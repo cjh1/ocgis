@@ -8,24 +8,15 @@ class AbstractSourcedVariable(object):
     def __init__(self,data):
         self._data = data
     
-    @property
-    def value(self):
-        if self._value is None:
-            self._value = self._get_value_()
-        return(self._value)
-    @value.setter
-    def value(self,value):
-        self._value = value
-    
     def _get_value_(self):
-        if self._data is None and self.isempty is False:
+        if self._data is None and self._value is None:
             ocgis_lh(exc=ValueError('Values were requested from data source, but no data source is available.'))
         else:
-            ret = self.__get_value__()
+            ret = self._get_value_from_source_()
         return(ret)
             
     @abc.abstractmethod
-    def __get_value__(self): pass
+    def _get_value_from_source_(self): pass
 
 
 class AbstractVariable(object):

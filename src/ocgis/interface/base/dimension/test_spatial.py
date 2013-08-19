@@ -2,7 +2,8 @@ import unittest
 import numpy as np
 from base import VectorDimension
 from ocgis.interface.base.dimension.spatial import SpatialDimension,\
-    SpatialGeometryDimension, SpatialGeometryPolygonDimension
+    SpatialGeometryDimension, SpatialGeometryPolygonDimension,\
+    SpatialGridDimension
 from ocgis.util.helpers import iter_array
 import fiona
 from shapely.geometry import mapping, shape
@@ -107,7 +108,7 @@ class TestSpatialDimension(unittest.TestCase):
         self.assertEqual(shp,(2,3,4))
         
     def test_empty(self):
-        with self.assertRaises(AttributeError):
+        with self.assertRaises(ValueError):
             SpatialDimension()
             
     def test_geoms_only(self):
@@ -120,6 +121,30 @@ class TestSpatialDimension(unittest.TestCase):
         sg_dim = SpatialGeometryDimension(polygon=poly_dim)
         sdim = SpatialDimension(geom=sg_dim)
         self.assertEqual(sdim.shape,(1,51))
+        
+    def test_slicing(self):
+        sdim = self.get_sdim(bounds=True)
+        self.assertEqual(sdim.shape,(3,4))
+        self.assertEqual(sdim._geom,None)
+        self.assertEqual(sdim.geom.point.shape,(3,4))
+        self.assertEqual(sdim.geom.polygon.shape,(3,4))
+        self.assertEqual(sdim.grid.shape,(2,3,4))
+        with self.assertRaises(IndexError):
+            sdim[0]
+        sdim_slc = sdim[0,1]
+        import ipdb;ipdb.set_trace()
+        self.assertNotEqual(sdim_slc,None)
+        import ipdb;ipdb.set_trace()
+        
+    def test_load_from_source_grid_slicing(self):
+        row = VectorDimension(src_idx=[10,20,30,40],name='row')
+        col = VectorDimension(src_idx=[100,200,300],name='col')
+        grid = SpatialGridDimension(row=row,col=col,name='grid')
+        self.assertEqual(grid.shape,(4,3))
+        self.assertEqual(grid.uid.mean(),6.5)
+        self.assertEqual(grid.uid.shape,(4,3))
+        grid_slc = grid[1,2]
+        import ipdb;ipdb.set_trace()
         
 
 if __name__ == "__main__":

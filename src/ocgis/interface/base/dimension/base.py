@@ -5,6 +5,7 @@ from ocgis import constants
 from ocgis.exc import EmptyIterationError
 from ocgis.util.logging_ocgis import ocgis_lh
 from ocgis.util.helpers import get_none_or_1d, get_none_or_2d
+import copy
 
 
 class AbstractDimension(object):
@@ -16,12 +17,14 @@ class AbstractDimension(object):
         self.name_uid = name_uid or '{0}_uid'.format(self.name)
         self.units = units
         
-        self.value = self._format_value_(value)
-        if uid is None:
-            self.uid = self._get_uid_()
-        else:
-            self.uid = uid
-        self.uid = self._format_uid_(self.uid)
+        self.value = value
+        self.uid = uid
+#        self.value = self._format_value_(value)
+#        if uid is None:
+#            self.uid = self._get_uid_()
+#        else:
+#            self.uid = uid
+#        self.uid = self._format_uid_(self.uid)
         
     @abc.abstractmethod
     def __getitem__(self,slc): pass
@@ -53,12 +56,21 @@ class AbstractDimension(object):
         return(self.uid.shape)
     
     @property
+    def uid(self):
+        return(self._uid)
+    @uid.setter
+    def uid(self,value):
+        if value is None:
+            value = self._get_uid_()
+        self._uid = self._format_uid_(value)
+    
+    @property
     def value(self):
-        return(self._value)
+        return(self._get_value_())
     @value.setter
     def value(self,value):
-        self._value = value
-        
+        self._value = self._format_value_(value)
+    
     def _format_uid_(self,value):
         assert(value is not None)
         return(value)
@@ -68,6 +80,9 @@ class AbstractDimension(object):
     
     @abc.abstractmethod
     def _get_uid_(self): pass
+    
+    def _get_value_(self):
+        return(self._value)
     
     
 class Abstract1d(object):
@@ -87,6 +102,28 @@ class Abstract1d(object):
 
 class Abstract2d(object):
     __metaclass__ = abc.ABCMeta
+    
+    def __getitem__(self,slc):
+        try:
+            assert(len(slc) == 2)
+        except (AssertionError,TypeError):
+            ocgis_lh(exc=IndexError('Abstract2d dimensions only support two-dimensional slicing.'))
+            
+        def _get_as_slice_(target):
+            if type(target) == int:
+                ret = slice(target,target+1)
+            elif type(target) == slice:
+                ret = target
+            else:
+                raise(NotImplementedError)
+            return(ret)
+        
+        slc = map(_get_as_slice_,slc)
+        ret = copy(self)
+        
+        ret._value = ret.value[slc[0],slc[1]]
+        
+        return(ret)
     
     def _format_uid_(self,value):
         return(np.atleast_2d(value))
@@ -175,9 +212,6 @@ class VectorDimension(AbstractSourcedVariable,Abstract1d,AbstractDimension):
         
         return(ret)
     
-    def _get_from_source_(self):
-        raise(NotImplementedError)
-    
     def _get_uid_(self):
         if self._value is not None:
             shp = self._value.shape[0]
@@ -187,9 +221,9 @@ class VectorDimension(AbstractSourcedVariable,Abstract1d,AbstractDimension):
         ret = np.atleast_1d(ret)
         return(ret)
     
-    def __get_value__(self):
-        if self._src_idx is not None:
-            ret = self._get_from_source_()
+    def _get_value_from_source_(self):
+        if self._value is None:
+            raise(NotImplementedError)
         else:
             ret = self._value
         return(ret)

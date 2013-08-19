@@ -2,7 +2,7 @@ from base import AbstractDimension
 import numpy as np
 from copy import copy
 from ocgis.util.logging_ocgis import ocgis_lh
-from ocgis.util.helpers import iter_array
+from ocgis.util.helpers import iter_array, get_none_or_slice
 from shapely.geometry.point import Point
 from ocgis import constants
 import itertools
@@ -18,13 +18,24 @@ class SpatialDimension(AbstractDimension):
         self._geom = kwds.pop('geom',None)
         
         if self.grid is None and self._geom is None:
-            self.grid = SpatialGridDimension(row=kwds.pop('row',None),
-                                             col=kwds.pop('col',None))
+            try:
+                self.grid = SpatialGridDimension(row=kwds.pop('row'),
+                                                 col=kwds.pop('col'))
+            except KeyError:
+                ocgis_lh(exc=ValueError('A SpatialDimension without "grid" or "geom" arguments requires a "row" and "column".'))
         
         super(SpatialDimension,self).__init__(*args,**kwds)
             
     def __getitem__(self,slc):
-        raise(NotImplementedError)
+        try:
+            assert(len(slc) == 2)
+        except (AssertionError,TypeError):
+            ocgis_lh(exc=IndexError('SpatialDimensions only support two-dimensional slicing.'))
+            
+        ret = copy(self)
+        ret.grid = get_none_or_slice(ret.grid,slc)
+        ret._geom = get_none_or_slice(ret._geom,slc)
+        import ipdb;ipdb.set_trace()
     
     def __iter__(self):
         ocgis_lh(exc=NotImplementedError('Spatial dimensions do not have a direct iterator.'))
@@ -82,8 +93,12 @@ class SpatialGridDimension(Abstract2d,AbstractDimension):
         
         slc = map(_get_as_slice_,slc)
         ret = copy(self)
+        import ipdb;ipdb.set_trace()
         
-        ret._value = ret.value[:,slc[0],slc[1]]
+        if self._value is None:
+            ret._value = None
+        else:
+            ret._value = ret.value[:,slc[0],slc[1]]
         if ret.row is not None:
             ret.row = ret.row[slc[0]]
             ret.col = ret.col[slc[1]]
@@ -99,20 +114,12 @@ class SpatialGridDimension(Abstract2d,AbstractDimension):
     
     @property
     def shape(self):
-        return(self.value.shape)
+        return(self.uid.shape)
     
     @property
     def value(self):
         if self._value is None:
-            ## fill the value
-            try:
-                fill = np.empty((2,self.row.shape[0],self.col.shape[0]),dtype=self.row.value.dtype)
-            ## there is likely no row and column
-            except AttributeError:
-                if self.row is None:
-                    return(self._value)
-                else:
-                    raise
+            fill = np.empty((2,self.row.shape[0],self.col.shape[0]),dtype=self.row.value.dtype)
             fill = np.ma.array(fill,mask=False)
             col_coords,row_coords = np.meshgrid(self.col.value,self.row.value)
             fill[0,:,:] = row_coords
@@ -124,8 +131,17 @@ class SpatialGridDimension(Abstract2d,AbstractDimension):
         self._value = value
         
     def _get_uid_(self):
-        ret = np.arange(1,(self.value.shape[1]*self.value.shape[2])+1,dtype=constants.np_int)
-        ret = ret.reshape((self.value.shape[1],self.value.shape[2]))
+        try:
+            shp = (self.value.shape[1]*self.value.shape[2])
+            ret = np.arange(1,(shp[0]*shp[1])+1,dtype=constants.np_int)
+            ret = ret.reshape(shp)
+        except:
+            try:
+                shp = (self.row.shape[0],self.col.shape[0])
+                ret = np.arange(1,(shp[0]*shp[1])+1,dtype=constants.np_int)
+                ret = ret.reshape(shp)
+            except Exception as e:
+                ocgis_lh(exc=e)
         return(ret)
     
     
@@ -137,9 +153,6 @@ class SpatialGeometryDimension(Abstract2d,AbstractDimension):
         self._polygon = kwds.pop('polygon',None)
         
         super(SpatialGeometryDimension,self).__init__(*args,**kwds)
-        
-    def __getitem__(self,slc):
-        raise(NotImplementedError)
     
     def __iter__(self):
         raise(NotImplementedError)
@@ -179,9 +192,6 @@ class SpatialGeometryPointDimension(Abstract2d,AbstractDimension):
         self.grid = kwds.pop('grid',None)
         
         super(SpatialGeometryPointDimension,self).__init__(*args,**kwds)
-    
-    def __getitem__(self,slc):
-        raise(NotImplementedError)
     
     @property
     def value(self):

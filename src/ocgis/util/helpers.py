@@ -30,6 +30,13 @@ def get_none_or_2d(target):
         ret = np.atleast_2d(target)
     return(ret)
 
+def get_none_or_slice(target,slc):
+    if target is None:
+        ret = None
+    else:
+        ret = target[slc]
+    return(ret)
+
 def iter_arg(arg):
     if isinstance(arg,basestring):
         itr = [arg]
