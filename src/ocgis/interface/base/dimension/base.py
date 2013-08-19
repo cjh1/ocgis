@@ -3,7 +3,7 @@ import numpy as np
 from ocgis.interface.base.variable import AbstractSourcedVariable
 from ocgis import constants
 from ocgis.util.logging_ocgis import ocgis_lh
-from ocgis.util.helpers import get_none_or_1d, get_none_or_2d
+from ocgis.util.helpers import get_none_or_1d, get_none_or_2d, get_none_or_slice
 from copy import copy
 
 
@@ -137,8 +137,8 @@ class Abstract2d(object):
 class VectorDimension(AbstractSourcedVariable,Abstract1d,AbstractDimension):
     
     def __init__(self,*args,**kwds):
-        self._src_idx = get_none_or_1d(kwds.pop('src_idx',None))
-        self._bounds = get_none_or_2d(kwds.pop('bounds',None))
+        self._src_idx = kwds.pop('src_idx',None)
+        self.bounds = kwds.pop('bounds',None)
         self.name_bounds = kwds.pop('name_bounds',None)
         
         AbstractSourcedVariable.__init__(self,kwds.pop('data',None))
@@ -147,30 +147,14 @@ class VectorDimension(AbstractSourcedVariable,Abstract1d,AbstractDimension):
         if self.name_bounds is None:
             self.name_bounds = '{0}_bnds'.format(self.name)
                         
-    def __getitem__(self,slc):
-        ret_uid = self.uid[slc]
+    def __getitem__(self,slc):        
+        ret = copy(self)
+        ret.uid = self.uid[slc]
+        ret.value = get_none_or_slice(ret._value,slc)
+        ret.bounds = get_none_or_slice(ret._bounds,slc)
+        ret._src_idx = get_none_or_slice(ret._src_idx,slc)
         
-        if self._value is None:
-            ret_value = self._value
-        else:
-            ret_value = self._value[slc]
-            
-        if self._bounds is None:
-            ret_bounds = self._bounds
-        else:
-            ret_bounds = self._bounds[slc]
-        
-        if self._src_idx is None:
-            ret_src_idx = self._src_idx
-        else:
-            ret_src_idx = self._src_idx[slc]
-            
-        ret_attrs = self.attrs.copy()
-        
-        return(self.__class__(value=ret_value,attrs=ret_attrs,uid=ret_uid,
-         data=self._data,src_idx=ret_src_idx,bounds=ret_bounds,
-         name=self.name,name_uid=self.name_uid,name_bounds=self.name_bounds,
-         units=self.units))
+        return(ret)
     
     @property
     def bounds(self):
@@ -181,6 +165,9 @@ class VectorDimension(AbstractSourcedVariable,Abstract1d,AbstractDimension):
         else:
             ret = self._bounds
         return(ret)
+    @bounds.setter
+    def bounds(self,value):
+        self._bounds = get_none_or_2d(value)
     
     @property
     def resolution(self):
@@ -194,6 +181,13 @@ class VectorDimension(AbstractSourcedVariable,Abstract1d,AbstractDimension):
                 res_array = res_bounds[:,1] - res_bounds[:,0]
             ret = (res_array.mean(),self.units)
         return(ret)
+    
+    @property
+    def _src_idx(self):
+        return(self.__src_idx)
+    @_src_idx.setter
+    def _src_idx(self,value):
+        self.__src_idx = get_none_or_1d(value)
     
     def get_between(self,lower,upper):
         ref_bounds = self.bounds
