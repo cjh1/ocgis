@@ -1,7 +1,7 @@
 import unittest
 from base import VectorDimension
 import numpy as np
-from ocgis.exc import EmptyIterationError
+from ocgis.exc import EmptyIterationError, EmptySubsetError
 
 
 class TestVectorDimension(unittest.TestCase):
@@ -77,8 +77,8 @@ class TestVectorDimension(unittest.TestCase):
         
     def test_get_between(self):
         vdim = VectorDimension(value=[0])
-        vdim_between = vdim.get_between(100,200)
-        self.assertEqual(vdim_between.shape[0],0)
+        with self.assertRaises(EmptySubsetError):
+            vdim.get_between(100,200)
         
         vdim = VectorDimension(value=[100,200,300,400])
         vdim_between = vdim.get_between(100,200)

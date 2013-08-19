@@ -37,6 +37,11 @@ def get_none_or_slice(target,slc):
         ret = target[slc]
     return(ret)
 
+def get_slice(arr):
+    start = arr.min()
+    stop = arr.max() + 1
+    return(slice(start,stop))
+
 def iter_arg(arg):
     if isinstance(arg,basestring):
         itr = [arg]
@@ -409,7 +414,7 @@ def make_poly(rtup,ctup):
                     (ctup[1],rtup[1]),
                     (ctup[1],rtup[0])))
     
-def sub_range(a):
+def get_sub_range(a):
     """
     >>> vec = np.array([2,5,9])
     >>> sub_range(vec)

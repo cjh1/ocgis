@@ -5,6 +5,7 @@ from ocgis import constants
 from ocgis.util.logging_ocgis import ocgis_lh
 from ocgis.util.helpers import get_none_or_1d, get_none_or_2d, get_none_or_slice
 from copy import copy
+from ocgis.exc import EmptySubsetError
 
 
 class AbstractDimension(object):
@@ -189,17 +190,26 @@ class VectorDimension(AbstractSourcedVariable,Abstract1d,AbstractDimension):
     def _src_idx(self,value):
         self.__src_idx = get_none_or_1d(value)
     
-    def get_between(self,lower,upper):
+    def get_between(self,lower,upper,return_indices=False):
+        assert(lower <= upper)
         ref_bounds = self.bounds
         ref_logical_or = np.logical_or
         ref_logical_and = np.logical_and
         
         select = np.zeros(ref_bounds.shape[0],dtype=bool)
+        indices = np.arange(0,select.shape[0])
         for idx in range(ref_bounds.shape[0]):
             select_lower = ref_logical_and(lower >= ref_bounds[idx,0],lower <= ref_bounds[idx,1])
             select_upper = ref_logical_and(upper >= ref_bounds[idx,0],upper <= ref_bounds[idx,1])
             select[idx] = ref_logical_or(select_lower,select_upper)
+        
+        if select.any() == False:
+            ocgis_lh(exc=EmptySubsetError(origin=self.name))
+            
         ret = self[select]
+        
+        if return_indices:
+            ret = (ret,indices[select])
         
         return(ret)
     

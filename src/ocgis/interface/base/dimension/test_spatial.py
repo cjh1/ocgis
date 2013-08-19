@@ -8,6 +8,7 @@ from ocgis.util.helpers import iter_array
 import fiona
 from shapely.geometry import mapping, shape
 from shapely.geometry.point import Point
+from ocgis.exc import EmptySubsetError
 
 
 class TestSpatialDimension(unittest.TestCase):
@@ -201,6 +202,18 @@ class TestSpatialDimension(unittest.TestCase):
         self.assertNumpyAll(grid_slc.col._src_idx,np.array([300]))
         self.assertEqual(grid_slc.row.name,'row')
         self.assertEqual(grid_slc.uid,np.array([[6]],dtype=np.int32))
+        
+    def test_grid_between(self):
+        sdim = self.get_sdim(bounds=False)
+        bg = sdim.grid.get_subset_bbox(39,-99,39,-98)
+        self.assertEqual(bg._value,None)
+        self.assertEqual(bg.uid.shape,(1,2))
+        self.assertNumpyAll(bg.uid,np.array([[6,7]]))
+        with self.assertRaises(EmptySubsetError):
+            sdim.grid.get_subset_bbox(1000,1000,1001,10001)
+        
+#        import ipdb;ipdb.set_trace()
+    
         
 
 if __name__ == "__main__":

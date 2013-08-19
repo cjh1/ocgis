@@ -113,3 +113,12 @@ class EmptyData(SubsetException):
     def __init__(self,message=None,origin=None):
         self.message = message or 'Empty data returned.'
         self.origin = origin
+        
+class EmptySubsetError(SubsetException):
+    
+    def __init__(self,origin=None):
+        self.origin = origin
+        
+    def __str__(self):
+        msg = 'A subset operation on dimension "{0}" returned empty.'.format(self.origin)
+        return(msg)

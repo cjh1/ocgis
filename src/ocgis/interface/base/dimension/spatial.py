@@ -1,7 +1,7 @@
 from base import AbstractDimension
 import numpy as np
 from ocgis.util.logging_ocgis import ocgis_lh
-from ocgis.util.helpers import iter_array, get_none_or_slice
+from ocgis.util.helpers import iter_array, get_none_or_slice, get_slice
 from shapely.geometry.point import Point
 from ocgis import constants
 import itertools
@@ -103,6 +103,19 @@ class SpatialGridDimension(Abstract2d,AbstractDimension):
     @value.setter
     def value(self,value):
         self._value = value
+        
+    def get_subset_bbox(self,min_row,min_col,max_row,max_col):
+        if self.row is None:
+            raise(NotImplementedError)
+        else:
+            ret = copy(self)
+            ret.value = None
+            ret.row,row_indices = self.row.get_between(min_row,max_row,return_indices=True)
+            ret.col,col_indices = self.col.get_between(min_col,max_col,return_indices=True)
+            row_slc = get_slice(row_indices)
+            col_slc = get_slice(col_indices)
+            ret.uid = ret.uid[row_slc,col_slc]
+        return(ret)
         
     def _get_slice_(self,state,slc):
 
