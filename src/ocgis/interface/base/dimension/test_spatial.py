@@ -3,10 +3,11 @@ import numpy as np
 from base import VectorDimension
 from ocgis.interface.base.dimension.spatial import SpatialDimension,\
     SpatialGeometryDimension, SpatialGeometryPolygonDimension,\
-    SpatialGridDimension
+    SpatialGridDimension, SpatialGeometryPointDimension
 from ocgis.util.helpers import iter_array
 import fiona
 from shapely.geometry import mapping, shape
+from shapely.geometry.point import Point
 
 
 class TestSpatialDimension(unittest.TestCase):
@@ -105,7 +106,7 @@ class TestSpatialDimension(unittest.TestCase):
     def test_grid_shape(self):
         sdim = self.get_sdim()
         shp = sdim.grid.shape
-        self.assertEqual(shp,(2,3,4))
+        self.assertEqual(shp,(3,4))
         
     def test_empty(self):
         with self.assertRaises(ValueError):
@@ -128,14 +129,61 @@ class TestSpatialDimension(unittest.TestCase):
         self.assertEqual(sdim._geom,None)
         self.assertEqual(sdim.geom.point.shape,(3,4))
         self.assertEqual(sdim.geom.polygon.shape,(3,4))
-        self.assertEqual(sdim.grid.shape,(2,3,4))
+        self.assertEqual(sdim.grid.shape,(3,4))
         with self.assertRaises(IndexError):
             sdim[0]
         sdim_slc = sdim[0,1]
-        import ipdb;ipdb.set_trace()
+        self.assertEqual(sdim_slc.shape,(1,1))
+        self.assertEqual(sdim_slc.uid,np.array([[2]],dtype=np.int32))
+        self.assertNumpyAll(sdim_slc.grid.value,np.ma.array([[[40]],[[-99]]],mask=False))
         self.assertNotEqual(sdim_slc,None)
-        import ipdb;ipdb.set_trace()
+        to_test = sdim_slc.geom.point.value[0,0].y,sdim_slc.geom.point.value[0,0].x
+        self.assertEqual((40.0,-99.0),(to_test))
+        to_test = sdim_slc.geom.polygon.value[0,0].centroid.y,sdim_slc.geom.polygon.value[0,0].centroid.x
+        self.assertEqual((40.0,-99.0),(to_test))
         
+        refs = [sdim_slc.geom.point.value,sdim_slc.geom.polygon.value]
+        for ref in refs:
+            self.assertIsInstance(ref,np.ma.MaskedArray)
+        
+        sdim_all = sdim[:,:]
+        self.assertNumpyAll(sdim_all.grid.value,sdim.grid.value)
+        
+    def test_slicing_1d_none(self):
+        sdim = self.get_sdim(bounds=True)
+        sdim_slc = sdim[1,:]
+        self.assertEqual(sdim_slc.shape,(1,4))
+    
+    def test_singletons(self):
+        row = VectorDimension(value=10,name='row')
+        col = VectorDimension(value=100,name='col')
+        grid = SpatialGridDimension(row=row,col=col,name='grid')
+        self.assertNumpyAll(grid.value,np.ma.array([[[10]],[[100]]],mask=False))
+        sdim = SpatialDimension(grid=grid)
+        to_test = sdim.geom.point.value[0,0].y,sdim.geom.point.value[0,0].x
+        self.assertEqual((10.0,100.0),(to_test))
+        
+    def test_point_as_value(self):
+        pt = Point(100.0,10.0)
+        pt2 = Point(200.0,20.0)
+        with self.assertRaises(ValueError):
+            SpatialGeometryPointDimension(value=Point(100.0,10.0))
+        with self.assertRaises(ValueError):
+            SpatialGeometryPointDimension(value=[pt,pt])
+        
+        pts = np.array([[pt,pt2]],dtype=object)
+        g = SpatialGeometryPointDimension(value=pts)
+        self.assertEqual(g.value.mask.any(),False)
+        self.assertNumpyAll(g.uid,np.array([[1,2]]))
+        
+        sgdim = SpatialGeometryDimension(point=g)
+        sdim = SpatialDimension(geom=sgdim)
+        self.assertEqual(sdim.shape,(1,2))
+        self.assertNumpyAll(sdim.uid,np.array([[1,2]]))
+        sdim_slc = sdim[:,1]
+        self.assertEqual(sdim_slc.shape,(1,1))
+        self.assertTrue(sdim_slc.geom.point.value[0,0].almost_equals(pt2))
+      
     def test_load_from_source_grid_slicing(self):
         row = VectorDimension(src_idx=[10,20,30,40],name='row')
         col = VectorDimension(src_idx=[100,200,300],name='col')
@@ -144,7 +192,15 @@ class TestSpatialDimension(unittest.TestCase):
         self.assertEqual(grid.uid.mean(),6.5)
         self.assertEqual(grid.uid.shape,(4,3))
         grid_slc = grid[1,2]
-        import ipdb;ipdb.set_trace()
+        self.assertEqual(grid_slc.shape,(1,1))
+        with self.assertRaises(ValueError):
+            grid_slc.value
+        with self.assertRaises(ValueError):
+            grid_slc.row.bounds
+        self.assertNumpyAll(grid_slc.row._src_idx,np.array([20]))
+        self.assertNumpyAll(grid_slc.col._src_idx,np.array([300]))
+        self.assertEqual(grid_slc.row.name,'row')
+        self.assertEqual(grid_slc.uid,np.array([[6]],dtype=np.int32))
         
 
 if __name__ == "__main__":

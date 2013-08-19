@@ -1,6 +1,5 @@
 from base import AbstractDimension
 import numpy as np
-from copy import copy
 from ocgis.util.logging_ocgis import ocgis_lh
 from ocgis.util.helpers import iter_array, get_none_or_slice
 from shapely.geometry.point import Point
@@ -8,6 +7,8 @@ from ocgis import constants
 import itertools
 from shapely.geometry.polygon import Polygon
 from ocgis.interface.base.dimension.base import Abstract2d
+from copy import copy
+from shapely.geometry.base import BaseGeometry
 
 
 class SpatialDimension(AbstractDimension):
@@ -31,11 +32,13 @@ class SpatialDimension(AbstractDimension):
             assert(len(slc) == 2)
         except (AssertionError,TypeError):
             ocgis_lh(exc=IndexError('SpatialDimensions only support two-dimensional slicing.'))
-            
+        
         ret = copy(self)
+        ret.uid = ret.uid[slc[0],slc[1]]
         ret.grid = get_none_or_slice(ret.grid,slc)
         ret._geom = get_none_or_slice(ret._geom,slc)
-        import ipdb;ipdb.set_trace()
+        
+        return(ret)
     
     def __iter__(self):
         ocgis_lh(exc=NotImplementedError('Spatial dimensions do not have a direct iterator.'))
@@ -76,35 +79,6 @@ class SpatialGridDimension(Abstract2d,AbstractDimension):
         
         super(SpatialGridDimension,self).__init__(*args,**kwds)
         
-    def __getitem__(self,slc):
-        try:
-            assert(len(slc) == 2)
-        except (AssertionError,TypeError):
-            ocgis_lh(exc=IndexError('Grid dimensions only support two-dimensional slicing.'))
-            
-        def _get_as_slice_(target):
-            if type(target) == int:
-                ret = slice(target,target+1)
-            elif type(target) == slice:
-                ret = target
-            else:
-                raise(NotImplementedError)
-            return(ret)
-        
-        slc = map(_get_as_slice_,slc)
-        ret = copy(self)
-        import ipdb;ipdb.set_trace()
-        
-        if self._value is None:
-            ret._value = None
-        else:
-            ret._value = ret.value[:,slc[0],slc[1]]
-        if ret.row is not None:
-            ret.row = ret.row[slc[0]]
-            ret.col = ret.col[slc[1]]
-        
-        return(ret)
-        
     def __iter__(self):
         raise(NotImplementedError)
         
@@ -129,6 +103,18 @@ class SpatialGridDimension(Abstract2d,AbstractDimension):
     @value.setter
     def value(self,value):
         self._value = value
+        
+    def _get_slice_(self,state,slc):
+
+        if self._value is None:
+            state._value = None
+        else:
+            state._value = state.value[:,slc[0],slc[1]]
+        if state.row is not None:
+            state.row = state.row[slc[0]]
+            state.col = state.col[slc[1]]
+        
+        return(state)
         
     def _get_uid_(self):
         try:
@@ -176,6 +162,11 @@ class SpatialGeometryDimension(Abstract2d,AbstractDimension):
     def value(self,value):
         self._value = value
         
+    def _get_slice_(self,state,slc):
+        state._point = get_none_or_slice(state._point,slc)
+        state._polygon = get_none_or_slice(state._polygon,slc)
+        return(state)
+        
     def _get_uid_(self):
         if self.grid is not None:
             ret = self.grid.uid
@@ -192,25 +183,34 @@ class SpatialGeometryPointDimension(Abstract2d,AbstractDimension):
         self.grid = kwds.pop('grid',None)
         
         super(SpatialGeometryPointDimension,self).__init__(*args,**kwds)
-    
-    @property
-    def value(self):
-        if self._value is None:
-            ref_grid = self.grid.value
-            fill = self._get_geometry_fill_()
-            for idx_row,idx_col in iter_array(ref_grid[0]):
-                y = ref_grid[0,idx_row,idx_col]
-                x = ref_grid[1,idx_row,idx_col]
-                fill[idx_row,idx_col] = Point(x,y)
-            self._value = fill
-        return(self._value)
-    @value.setter
-    def value(self,value):
-        self._value = value
+        
+    def _format_value_(self,value):
+        if value is not None:
+            try:
+                assert(len(value.shape) == 2)
+            except (AssertionError,AttributeError):
+                ocgis_lh(exc=ValueError('Geometry values must come in as 2-d NumPy arrays to avoid array interface modifications by shapely.'))
+            if not isinstance(value,np.ma.MaskedArray):
+                value = np.ma.array(value,mask=False)
+        ret = super(self.__class__,self)._format_value_(value)
+        return(ret)
     
     def _get_geometry_fill_(self):
-        fill = np.ma.array(np.zeros((self.grid.shape[1],self.grid.shape[2])),
+        fill = np.ma.array(np.zeros((self.grid.shape[0],self.grid.shape[1])),
                            mask=self.grid.value[0].mask,dtype=object)
+        return(fill)
+    
+    def _get_slice_(self,state,slc):
+        state.value = state.value[slc[0],slc[1]]
+        return(state)
+    
+    def _get_value_(self):
+        ref_grid = self.grid.value
+        fill = self._get_geometry_fill_()
+        for idx_row,idx_col in iter_array(ref_grid[0]):
+            y = ref_grid[0,idx_row,idx_col]
+            x = ref_grid[1,idx_row,idx_col]
+            fill[idx_row,idx_col] = Point(x,y)
         return(fill)
     
     
@@ -241,3 +241,13 @@ class SpatialGeometryPolygonDimension(SpatialGeometryPointDimension):
     @value.setter
     def value(self,value):
         self._value = value
+        
+    def _get_value_(self):
+        ref_row_bounds = self.grid.row.bounds
+        ref_col_bounds = self.grid.col.bounds
+        fill = self._get_geometry_fill_()
+        for idx_row,idx_col in itertools.product(range(ref_row_bounds.shape[0]),range(ref_col_bounds.shape[0])):
+            row_min,row_max = ref_row_bounds[idx_row,:]
+            col_min,col_max = ref_col_bounds[idx_col,:]
+            fill[idx_row,idx_col] = Polygon([(col_min,row_min),(col_min,row_max),(col_max,row_max),(col_max,row_min)])
+        return(fill)

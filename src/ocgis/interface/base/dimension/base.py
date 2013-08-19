@@ -2,10 +2,9 @@ import abc
 import numpy as np
 from ocgis.interface.base.variable import AbstractSourcedVariable
 from ocgis import constants
-from ocgis.exc import EmptyIterationError
 from ocgis.util.logging_ocgis import ocgis_lh
 from ocgis.util.helpers import get_none_or_1d, get_none_or_2d
-import copy
+from copy import copy
 
 
 class AbstractDimension(object):
@@ -19,12 +18,6 @@ class AbstractDimension(object):
         
         self.value = value
         self.uid = uid
-#        self.value = self._format_value_(value)
-#        if uid is None:
-#            self.uid = self._get_uid_()
-#        else:
-#            self.uid = uid
-#        self.uid = self._format_uid_(self.uid)
         
     @abc.abstractmethod
     def __getitem__(self,slc): pass
@@ -66,7 +59,9 @@ class AbstractDimension(object):
     
     @property
     def value(self):
-        return(self._get_value_())
+        if self._value is None:
+            self._value = self._get_value_()
+        return(self._value)
     @value.setter
     def value(self,value):
         self._value = self._format_value_(value)
@@ -119,17 +114,19 @@ class Abstract2d(object):
             return(ret)
         
         slc = map(_get_as_slice_,slc)
-        ret = copy(self)
+        state = copy(self)
+        state.uid = state.uid[slc[0],slc[1]]
         
-        ret._value = ret.value[slc[0],slc[1]]
-        
-        return(ret)
+        return(self._get_slice_(state,slc))
     
     def _format_uid_(self,value):
         return(np.atleast_2d(value))
     
     def _format_value_(self,value):
         return(get_none_or_2d(value))
+    
+    @abc.abstractmethod
+    def _get_slice_(self,state,slc): pass
     
     def _get_uid_(self):
         ret = np.arange(1,(self.value.shape[0]*self.value.shape[1])+1,dtype=constants.np_int)
