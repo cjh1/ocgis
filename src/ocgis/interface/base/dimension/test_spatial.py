@@ -119,7 +119,7 @@ class TestSpatialDimension(unittest.TestCase):
         poly_dim = SpatialGeometryPolygonDimension(value=geoms)
         sg_dim = SpatialGeometryDimension(polygon=poly_dim)
         sdim = SpatialDimension(geom=sg_dim)
-        import ipdb;ipdb.set_trace()
+        self.assertEqual(sdim.shape,(1,51))
         
 
 if __name__ == "__main__":

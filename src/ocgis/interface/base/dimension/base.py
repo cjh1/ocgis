@@ -68,9 +68,39 @@ class AbstractDimension(object):
     
     @abc.abstractmethod
     def _get_uid_(self): pass
+    
+    
+class Abstract1d(object):
+    __metaclass__ = abc.ABCMeta
+    
+    def _format_uid_(self,value):
+        return(np.atleast_1d(value))
+    
+    def _format_value_(self,value):
+        return(get_none_or_1d(value))
+    
+    def _get_uid_(self):
+        ret = np.arange(1,self.value.shape[0]+1,dtype=constants.np_int)
+        ret = np.atleast_1d(ret)
+        return(ret)
+    
+
+class Abstract2d(object):
+    __metaclass__ = abc.ABCMeta
+    
+    def _format_uid_(self,value):
+        return(np.atleast_2d(value))
+    
+    def _format_value_(self,value):
+        return(get_none_or_2d(value))
+    
+    def _get_uid_(self):
+        ret = np.arange(1,(self.value.shape[0]*self.value.shape[1])+1,dtype=constants.np_int)
+        ret = ret.reshape(self.value.shape)
+        return(ret)
 
 
-class VectorDimension(AbstractSourcedVariable,AbstractDimension):
+class VectorDimension(AbstractSourcedVariable,Abstract1d,AbstractDimension):
     
     def __init__(self,*args,**kwds):
         self._src_idx = get_none_or_1d(kwds.pop('src_idx',None))
@@ -144,12 +174,6 @@ class VectorDimension(AbstractSourcedVariable,AbstractDimension):
         ret = self[select]
         
         return(ret)
-    
-    def _format_uid_(self,value):
-        return(np.atleast_1d(value))
-    
-    def _format_value_(self,value):
-        return(get_none_or_1d(value))
     
     def _get_from_source_(self):
         raise(NotImplementedError)

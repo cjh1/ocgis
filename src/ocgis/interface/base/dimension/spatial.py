@@ -7,6 +7,7 @@ from shapely.geometry.point import Point
 from ocgis import constants
 import itertools
 from shapely.geometry.polygon import Polygon
+from ocgis.interface.base.dimension.base import Abstract2d
 
 
 class SpatialDimension(AbstractDimension):
@@ -52,7 +53,7 @@ class SpatialDimension(AbstractDimension):
         return(ret)
 
     
-class SpatialGridDimension(AbstractDimension):
+class SpatialGridDimension(Abstract2d,AbstractDimension):
     
     def __init__(self,*args,**kwds):
         for key in ['value','bounds']:
@@ -122,16 +123,13 @@ class SpatialGridDimension(AbstractDimension):
     def value(self,value):
         self._value = value
         
-    def _format_uid_(self,value):
-        return(np.atleast_2d(value))
-        
     def _get_uid_(self):
         ret = np.arange(1,(self.value.shape[1]*self.value.shape[2])+1,dtype=constants.np_int)
-        ret = ret.reshape(self.value.shape[1],self.value.shape[2])
+        ret = ret.reshape((self.value.shape[1],self.value.shape[2]))
         return(ret)
     
     
-class SpatialGeometryDimension(AbstractDimension):
+class SpatialGeometryDimension(Abstract2d,AbstractDimension):
     
     def __init__(self,*args,**kwds):
         self.grid = kwds.pop('grid',None)
@@ -165,12 +163,9 @@ class SpatialGeometryDimension(AbstractDimension):
     def value(self,value):
         self._value = value
         
-    def _format_uid_(self,value):
-        return(np.atleast_2d(value))
-        
     def _get_uid_(self):
         if self.grid is not None:
-            ret = self.grid
+            ret = self.grid.uid
         elif self._point is not None:
             ret = self._point.uid
         else:
@@ -178,7 +173,7 @@ class SpatialGeometryDimension(AbstractDimension):
         return(ret)
 
 
-class SpatialGeometryPointDimension(AbstractDimension):
+class SpatialGeometryPointDimension(Abstract2d,AbstractDimension):
     
     def __init__(self,*args,**kwds):
         self.grid = kwds.pop('grid',None)
@@ -202,18 +197,11 @@ class SpatialGeometryPointDimension(AbstractDimension):
     @value.setter
     def value(self,value):
         self._value = value
-        
-    def _format_uid_(self,value):
-        return(np.atleast_2d(value))
     
     def _get_geometry_fill_(self):
         fill = np.ma.array(np.zeros((self.grid.shape[1],self.grid.shape[2])),
                            mask=self.grid.value[0].mask,dtype=object)
         return(fill)
-    
-    def _get_uid_(self):
-        ret = np.arange(1,len(self.value.flatten())+1,dtype=constants.np_int)
-        return(ret)
     
     
 class SpatialGeometryPolygonDimension(SpatialGeometryPointDimension):
