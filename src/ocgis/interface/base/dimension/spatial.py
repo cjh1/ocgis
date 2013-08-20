@@ -278,7 +278,7 @@ class SpatialGeometryPolygonDimension(SpatialGeometryPointDimension):
         ref_col_bounds = self.grid.col.bounds
         fill = self._get_geometry_fill_()
         for idx_row,idx_col in itertools.product(range(ref_row_bounds.shape[0]),range(ref_col_bounds.shape[0])):
-            row_min,row_max = ref_row_bounds[idx_row,:]
-            col_min,col_max = ref_col_bounds[idx_col,:]
+            row_min,row_max = ref_row_bounds[idx_row,:].min(),ref_row_bounds[idx_row,:].max()
+            col_min,col_max = ref_col_bounds[idx_col,:].min(),ref_col_bounds[idx_col,:].max()
             fill[idx_row,idx_col] = Polygon([(col_min,row_min),(col_min,row_max),(col_max,row_max),(col_max,row_min)])
         return(fill)
