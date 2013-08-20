@@ -196,7 +196,6 @@ class SpatialGeometryPointDimension(Abstract2d,AbstractDimension):
         super(SpatialGeometryPointDimension,self).__init__(*args,**kwds)
         
     def get_mask_by_point_or_polygon(self,point_or_polygon):
-        ret = copy(self)
         
         if type(point_or_polygon) in (Point,MultiPoint):
             keep_touches = True
@@ -205,12 +204,13 @@ class SpatialGeometryPointDimension(Abstract2d,AbstractDimension):
         else:
             raise(NotImplementedError)
         
-        ref_value = self.value
-        fill = np.ma.array(ref_value,mask=True)
+        ret = copy(self)
+        fill = np.ma.array(ret.value,mask=True)
         ref_fill_mask = fill.mask
-        prepared = prep(point_or_polygon)
         ref_touches = point_or_polygon.touches
-        for (ii,jj),geom in iter_array(ref_value,return_value=True):
+        prepared = prep(point_or_polygon)
+
+        for (ii,jj),geom in iter_array(self.value,return_value=True):
             if prepared.intersects(geom):
                 only_touches = ref_touches(geom)
                 fill_mask = False
