@@ -55,7 +55,7 @@ class SpatialDimension(AbstractDimension):
     @property
     def weights(self):
         if self.geom is None:
-            raise(NotImplementedError)
+            ret = self.grid.weights
         else:
             try:
                 ret = self.geom.polygon.weights
@@ -99,6 +99,10 @@ class SpatialGridDimension(Abstract2d,AbstractDimension):
     @property
     def shape(self):
         return(self.uid.shape)
+    
+    @property
+    def weights(self):
+        raise(NotImplementedError)
         
     def get_subset_bbox(self,min_row,min_col,max_row,max_col):
         if self.row is None:
