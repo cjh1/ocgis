@@ -9,6 +9,10 @@ from shapely.geometry.polygon import Polygon
 from ocgis.interface.base.dimension.base import Abstract2d
 from copy import copy
 from shapely.geometry.base import BaseGeometry
+from shapely.prepared import prep
+from shapely.geometry.multipoint import MultiPoint
+from shapely.geometry.multipolygon import MultiPolygon
+from ocgis.exc import EmptySubsetError
 
 
 class SpatialDimension(AbstractDimension):
@@ -191,6 +195,37 @@ class SpatialGeometryPointDimension(Abstract2d,AbstractDimension):
         
         super(SpatialGeometryPointDimension,self).__init__(*args,**kwds)
         
+    def get_mask_by_point_or_polygon(self,point_or_polygon):
+        ret = copy(self)
+        
+        if type(point_or_polygon) in (Point,MultiPoint):
+            keep_touches = True
+        elif type(point_or_polygon) in (Polygon,MultiPolygon):
+            keep_touches = False
+        else:
+            raise(NotImplementedError)
+        
+        ref_value = self.value
+        fill = np.ma.array(ref_value,mask=True)
+        ref_fill_mask = fill.mask
+        prepared = prep(point_or_polygon)
+        ref_touches = point_or_polygon.touches
+        for (ii,jj),geom in iter_array(ref_value,return_value=True):
+            if prepared.intersects(geom):
+                only_touches = ref_touches(geom)
+                fill_mask = False
+                if only_touches:
+                    if keep_touches == False:
+                        fill_mask = True
+                ref_fill_mask[ii,jj] = fill_mask
+        
+        if ref_fill_mask.all():
+            ocgis_lh(exc=EmptySubsetError(self.name))
+            
+        ret.value = fill
+        
+        return(ret)
+        
     def _format_value_(self,value):
         if value is not None:
             try:
@@ -203,9 +238,14 @@ class SpatialGeometryPointDimension(Abstract2d,AbstractDimension):
         ret = Abstract2d._format_value_(self,value)
         return(ret)
     
-    def _get_geometry_fill_(self):
-        fill = np.ma.array(np.zeros((self.grid.shape[0],self.grid.shape[1])),
-                           mask=self.grid.value[0].mask,dtype=object)
+    def _get_geometry_fill_(self,shape=None):
+        if shape is None:
+            shape = (self.grid.shape[0],self.grid.shape[1])
+            mask = self.grid.value[0].mask
+        else:
+            mask = False
+        fill = np.ma.array(np.zeros(shape),mask=mask,dtype=object)
+
         return(fill)
     
     def _get_slice_(self,state,slc):
@@ -233,7 +273,7 @@ class SpatialGeometryPolygonDimension(SpatialGeometryPointDimension):
             else:
                 if self.grid.row.bounds[0,0] == self.grid.row.bounds[0,1]:
                     ocgis_lh(exc=ValueError('Polygon dimensions require row and column dimension bounds to have delta > 0.'))
-        
+    
     def _get_value_(self):
         ref_row_bounds = self.grid.row.bounds
         ref_col_bounds = self.grid.col.bounds

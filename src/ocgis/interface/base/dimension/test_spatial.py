@@ -21,11 +21,28 @@ class TestSpatialDimension(unittest.TestCase):
     
     def get_2d_state_boundaries(self):
         geoms = []
+        build = True
+        ret = {}
         with fiona.open('/home/local/WX/ben.koziol/Dropbox/nesii/project/ocg/bin/shp/state_boundaries/state_boundaries.shp','r') as source:
-            for row in source:
+            for ii,row in enumerate(source):
+                if build:
+                    nrows = len(source)
+                    dtype = []
+                    for k,v in source.schema['properties'].iteritems():
+                        if v.startswith('str'):
+                            v = str('|S{0}'.format(v.split(':')[1]))
+                        else:
+                            v = getattr(np,v.split(':')[0])
+                        dtype.append((str(k),v))
+                    fill = np.empty(nrows,dtype=dtype)
+                    ref_names = fill.dtype.names
+                    ret['source.meta'] = source.meta.copy()
+                    build = False
+                fill[ii] = tuple([row['properties'][n] for n in ref_names])
                 geoms.append(shape(row['geometry']))
+        ret['properties'] = fill
         geoms = np.atleast_2d(geoms)
-        return(geoms)
+        return(geoms,ret)
     
     def get_col(self,bounds=True):
         value = [-100,-99,-98,-97]
@@ -51,13 +68,23 @@ class TestSpatialDimension(unittest.TestCase):
         sdim = SpatialDimension(row=row,col=col)
         return(sdim)
     
-    def test_geom_subset_polygon(self):
-        geoms = self.get_2d_state_boundaries()
-        spdim = SpatialGeometryPolygonDimension(value=geoms)
+    def test_geom_mask_by_polygon(self):
+        geoms,attrs = self.get_2d_state_boundaries()
+        spdim = SpatialGeometryPolygonDimension(value=geoms,attrs=attrs)
         ref = spdim.value.mask
         self.assertEqual(ref.shape,(1,51))
         self.assertFalse(ref.any())
-        import ipdb;ipdb.set_trace()
+        select = attrs['properties']['STATE_ABBR'] == 'NE'
+        subset_polygon = geoms[:,select][0,0]
+        msked = spdim.get_mask_by_point_or_polygon(subset_polygon)
+        self.assertEqual(msked.value.mask.sum(),50)
+        self.assertTrue(msked.value.compressed()[0].almost_equals(subset_polygon))
+        
+        msked = spdim.get_mask_by_point_or_polygon(subset_polygon.centroid)
+        self.assertTrue(msked.value.compressed()[0].almost_equals(subset_polygon))
+        
+        with self.assertRaises(EmptySubsetError):
+            spdim.get_mask_by_point_or_polygon(Point(1000,1000))
 
     def test_grid_value(self):
         for b in [True,False]:

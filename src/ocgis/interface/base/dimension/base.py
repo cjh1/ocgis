@@ -76,8 +76,8 @@ class AbstractDimension(object):
     @abc.abstractmethod
     def _get_uid_(self): pass
     
-    @abc.abstractmethod
-    def _get_value_(self): pass
+    def _get_value_(self):
+        return(self._value)
     
     
 class Abstract1d(object):
