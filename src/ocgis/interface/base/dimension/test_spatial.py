@@ -8,7 +8,7 @@ from ocgis.util.helpers import iter_array
 import fiona
 from shapely.geometry import shape
 from shapely.geometry.point import Point
-from ocgis.exc import EmptySubsetError
+from ocgis.exc import EmptySubsetError, ImproperPolygonBoundsError
 
 
 class TestSpatialDimension(unittest.TestCase):
@@ -67,6 +67,15 @@ class TestSpatialDimension(unittest.TestCase):
         col = self.get_col(bounds=bounds)
         sdim = SpatialDimension(row=row,col=col)
         return(sdim)
+    
+    def test_state_boundaries_weights(self):
+        geoms,attrs = self.get_2d_state_boundaries()
+        poly = SpatialGeometryPolygonDimension(value=geoms)
+        geom = SpatialGeometryDimension(polygon=poly)
+        sdim = SpatialDimension(geom=geom,attrs=attrs)
+        ref = sdim.weights
+        self.assertEqual(ref[0,50],1.0)
+        self.assertAlmostEqual(sdim.weights.mean(),0.07744121084026262)
     
     def test_geom_mask_by_polygon(self):
         geoms,attrs = self.get_2d_state_boundaries()
@@ -135,7 +144,7 @@ class TestSpatialDimension(unittest.TestCase):
         
     def test_geom_polygon_no_bounds(self):
         sdim = self.get_sdim(bounds=False)
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ImproperPolygonBoundsError):
             sdim.geom.polygon.value
             
     def test_geom_polygon_bounds(self):
@@ -263,7 +272,8 @@ class TestSpatialDimension(unittest.TestCase):
         for b in [True,False]:
             sdim = self.get_sdim(bounds=b)
             ref = sdim.weights
-        import ipdb;ipdb.set_trace()
+            self.assertEqual(ref.mean(),1.0)
+            self.assertFalse(ref.mask.any())
         
 
 if __name__ == "__main__":

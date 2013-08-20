@@ -81,6 +81,10 @@ class OcgisEnvironmentError(OcgException):
     def __str__(self):
         new_msg = 'Error when setting the ocgis.env variable {0}. The message is: {1}'.format(self.env_parm.name,self.msg)
         return(new_msg)
+    
+    
+class ImproperPolygonBoundsError(OcgException):
+    pass
 
 
 class MaskedDataError(SubsetException):

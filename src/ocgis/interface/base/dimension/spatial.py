@@ -11,7 +11,7 @@ from copy import copy
 from shapely.prepared import prep
 from shapely.geometry.multipoint import MultiPoint
 from shapely.geometry.multipolygon import MultiPolygon
-from ocgis.exc import EmptySubsetError
+from ocgis.exc import EmptySubsetError, ImproperPolygonBoundsError
 
 
 class SpatialDimension(AbstractDimension):
@@ -57,10 +57,10 @@ class SpatialDimension(AbstractDimension):
         if self.geom is None:
             raise(NotImplementedError)
         else:
-            if self.geom.polygon is None:
-                raise(NotImplementedError)
-            else:
+            try:
                 ret = self.geom.polygon.weights
+            except ImproperPolygonBoundsError:
+                ret = self.geom.point.weights
         return(ret)
         
     def _format_uid_(self,value):
@@ -199,7 +199,9 @@ class SpatialGeometryPointDimension(Abstract2d,AbstractDimension):
         
     @property
     def weights(self):
-        import ipdb;ipdb.set_trace()
+        ret = np.ones(self.value.shape,dtype=constants.np_float)
+        ret = np.ma.array(ret,mask=self.value.mask)
+        return(ret)
         
     def get_mask_by_point_or_polygon(self,point_or_polygon):
         
@@ -275,10 +277,10 @@ class SpatialGeometryPolygonDimension(SpatialGeometryPointDimension):
         
         if self._value is None:
             if self.grid.row is None:
-                ocgis_lh(exc=ValueError('Polygon dimensions require a row and column dimension with bounds.'))
+                ocgis_lh(exc=ImproperPolygonBoundsError('Polygon dimensions require a row and column dimension with bounds.'))
             else:
                 if self.grid.row.bounds[0,0] == self.grid.row.bounds[0,1]:
-                    ocgis_lh(exc=ValueError('Polygon dimensions require row and column dimension bounds to have delta > 0.'))
+                    ocgis_lh(exc=ImproperPolygonBoundsError('Polygon dimensions require row and column dimension bounds to have delta > 0.'))
     
     @property
     def area(self):
