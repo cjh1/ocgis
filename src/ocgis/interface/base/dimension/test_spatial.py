@@ -6,7 +6,7 @@ from ocgis.interface.base.dimension.spatial import SpatialDimension,\
     SpatialGridDimension, SpatialGeometryPointDimension
 from ocgis.util.helpers import iter_array
 import fiona
-from shapely.geometry import mapping, shape
+from shapely.geometry import shape
 from shapely.geometry.point import Point
 from ocgis.exc import EmptySubsetError
 
@@ -258,6 +258,12 @@ class TestSpatialDimension(unittest.TestCase):
                 
             bg2 = sdim.grid.get_subset_bbox(1,-99999,1000,1)
             self.assertNumpyAll(bg2.value,sdim.grid.value)
+            
+    def test_weights(self):
+        for b in [True,False]:
+            sdim = self.get_sdim(bounds=b)
+            ref = sdim.weights
+        import ipdb;ipdb.set_trace()
         
 
 if __name__ == "__main__":

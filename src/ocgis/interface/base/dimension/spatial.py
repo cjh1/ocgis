@@ -51,13 +51,17 @@ class SpatialDimension(AbstractDimension):
         if self._geom is None:
             self._geom = SpatialGeometryDimension(grid=self.grid,uid=self.grid.uid)
         return(self._geom)
-    
+        
     @property
-    def value(self):
-        ocgis_lh(exc=NotImplementedError('Spatial dimension values should be accessed through "grid" and/or "geom".'))
-    @value.setter
-    def value(self,value):
-        self._value = value
+    def weights(self):
+        if self.geom is None:
+            raise(NotImplementedError)
+        else:
+            if self.geom.polygon is None:
+                raise(NotImplementedError)
+            else:
+                ret = self.geom.polygon.weights
+        return(ret)
         
     def _format_uid_(self,value):
         return(np.atleast_2d(value))
@@ -68,6 +72,9 @@ class SpatialDimension(AbstractDimension):
         else:
             ret = self.grid.uid
         return(ret)
+    
+    def _get_value_(self):
+        ocgis_lh(exc=NotImplementedError('Spatial dimension values should be accessed through "grid" and/or "geom".'))
 
     
 class SpatialGridDimension(Abstract2d,AbstractDimension):
@@ -164,13 +171,6 @@ class SpatialGeometryDimension(Abstract2d,AbstractDimension):
         if self._polygon == None and self.grid is not None:
             self._polygon = SpatialGeometryPolygonDimension(grid=self.grid,uid=self.grid.uid)
         return(self._polygon)
-    
-    @property
-    def value(self):
-        ocgis_lh(exc=NotImplementedError('Geometry dimensions do not have a direct value. Chose "...geom.point.value" or "...geom.polygon.value" instead.'))
-    @value.setter
-    def value(self,value):
-        self._value = value
         
     def _get_slice_(self,state,slc):
         state._point = get_none_or_slice(state._point,slc)
@@ -185,6 +185,9 @@ class SpatialGeometryDimension(Abstract2d,AbstractDimension):
         else:
             ret = self._polygon.uid
         return(ret)
+    
+    def _get_value_(self):
+        ocgis_lh(exc=NotImplementedError('Geometry dimensions do not have a direct value. Chose "...geom.point.value" or "...geom.polygon.value" instead.'))
 
 
 class SpatialGeometryPointDimension(Abstract2d,AbstractDimension):
@@ -193,6 +196,10 @@ class SpatialGeometryPointDimension(Abstract2d,AbstractDimension):
         self.grid = kwds.pop('grid',None)
         
         super(SpatialGeometryPointDimension,self).__init__(*args,**kwds)
+        
+    @property
+    def weights(self):
+        import ipdb;ipdb.set_trace()
         
     def get_mask_by_point_or_polygon(self,point_or_polygon):
         
@@ -272,6 +279,19 @@ class SpatialGeometryPolygonDimension(SpatialGeometryPointDimension):
             else:
                 if self.grid.row.bounds[0,0] == self.grid.row.bounds[0,1]:
                     ocgis_lh(exc=ValueError('Polygon dimensions require row and column dimension bounds to have delta > 0.'))
+    
+    @property
+    def area(self):
+        r_value = self.value
+        fill = np.ones(r_value.shape,dtype=constants.np_float)
+        fill = np.ma.array(fill,mask=r_value.mask)
+        for (ii,jj),geom in iter_array(r_value,return_value=True):
+            fill[ii,jj] = geom.area
+        return(fill)
+    
+    @property
+    def weights(self):
+        return(self.area/self.area.max())
     
     def _get_value_(self):
         ref_row_bounds = self.grid.row.bounds
