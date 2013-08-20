@@ -191,16 +191,12 @@ class VectorDimension(AbstractSourcedVariable,Abstract1d,AbstractDimension):
     
     def get_between(self,lower,upper,return_indices=False):
         assert(lower <= upper)
-        ref_bounds = self.bounds
-        ref_logical_or = np.logical_or
-        ref_logical_and = np.logical_and
         
-        select = np.zeros(ref_bounds.shape[0],dtype=bool)
-        indices = np.arange(0,select.shape[0])
-        for idx in range(ref_bounds.shape[0]):
-            select_lower = ref_logical_and(lower >= ref_bounds[idx,0],lower <= ref_bounds[idx,1])
-            select_upper = ref_logical_and(upper >= ref_bounds[idx,0],upper <= ref_bounds[idx,1])
-            select[idx] = ref_logical_or(select_lower,select_upper)
+        bounds_min = np.min(self.bounds,axis=1)
+        bounds_max = np.max(self.bounds,axis=1)
+        select_lower = np.logical_or(bounds_min >= lower,bounds_max >= lower)
+        select_upper = np.logical_or(bounds_min <= upper,bounds_max <= upper)
+        select = np.logical_and(select_lower,select_upper)
         
         if select.any() == False:
             ocgis_lh(exc=EmptySubsetError(origin=self.name))
@@ -208,6 +204,7 @@ class VectorDimension(AbstractSourcedVariable,Abstract1d,AbstractDimension):
         ret = self[select]
         
         if return_indices:
+            indices = np.arange(self.bounds.shape[0])
             ret = (ret,indices[select])
         
         return(ret)

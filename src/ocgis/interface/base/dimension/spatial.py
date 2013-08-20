@@ -8,7 +8,6 @@ import itertools
 from shapely.geometry.polygon import Polygon
 from ocgis.interface.base.dimension.base import Abstract2d
 from copy import copy
-from shapely.geometry.base import BaseGeometry
 from shapely.prepared import prep
 from shapely.geometry.multipoint import MultiPoint
 from shapely.geometry.multipolygon import MultiPolygon

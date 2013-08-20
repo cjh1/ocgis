@@ -246,17 +246,18 @@ class TestSpatialDimension(unittest.TestCase):
         self.assertEqual(grid_slc.row.name,'row')
         self.assertEqual(grid_slc.uid,np.array([[6]],dtype=np.int32))
         
-    def test_grid_between(self):
-        sdim = self.get_sdim(bounds=False)
-        bg = sdim.grid.get_subset_bbox(39,-99,39,-98)
-        self.assertEqual(bg._value,None)
-        self.assertEqual(bg.uid.shape,(1,2))
-        self.assertNumpyAll(bg.uid,np.array([[6,7]]))
-        with self.assertRaises(EmptySubsetError):
-            sdim.grid.get_subset_bbox(1000,1000,1001,10001)
-        
-#        import ipdb;ipdb.set_trace()
-    
+    def test_grid_get_subset_bbox(self):
+        for b in [True,False]:
+            sdim = self.get_sdim(bounds=b)
+            bg = sdim.grid.get_subset_bbox(39,-99,39,-98)
+            self.assertEqual(bg._value,None)
+            self.assertEqual(bg.uid.shape,(1,2))
+            self.assertNumpyAll(bg.uid,np.array([[6,7]]))
+            with self.assertRaises(EmptySubsetError):
+                sdim.grid.get_subset_bbox(1000,1000,1001,10001)
+                
+            bg2 = sdim.grid.get_subset_bbox(1,-99999,1000,1)
+            self.assertNumpyAll(bg2.value,sdim.grid.value)
         
 
 if __name__ == "__main__":
