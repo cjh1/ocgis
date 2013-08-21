@@ -12,12 +12,6 @@ from ocgis.exc import EmptySubsetError, ImproperPolygonBoundsError
 
 
 class TestSpatialDimension(unittest.TestCase):
-
-    def assertNumpyAll(self,arr1,arr2):
-        return(self.assertTrue(np.all(arr1 == arr2)))
-    
-    def assertNumpyNotAll(self,arr1,arr2):
-        return(self.assertFalse(np.all(arr1 == arr2)))
     
     def get_2d_state_boundaries(self):
         geoms = []

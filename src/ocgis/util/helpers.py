@@ -16,6 +16,13 @@ import sys
 import datetime
 
 
+def get_default_or_apply(target,f,default=None):
+    if target is None:
+        ret = default
+    else:
+        ret = f(target)
+    return(ret)
+
 def get_none_or_1d(target):
     if target is None:
         ret = None
@@ -52,6 +59,15 @@ def iter_arg(arg):
             itr = iter([arg])
     for element in itr:
         yield(element)
+
+def get_date_list(start,stop,days):
+    ret = []
+    delta = datetime.timedelta(days=days)
+    check = start
+    while check <= stop:
+        ret.append(check)
+        check += delta
+    return(ret)
 
 
 def validate_time_subset(time_range,time_region):

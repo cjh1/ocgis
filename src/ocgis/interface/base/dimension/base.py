@@ -224,4 +224,3 @@ class VectorDimension(AbstractSourcedVariable,Abstract1d,AbstractDimension):
         else:
             ret = self._value
         return(ret)
-    
