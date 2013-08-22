@@ -4,7 +4,7 @@ from base import VectorDimension
 from ocgis.interface.base.dimension.spatial import SpatialDimension,\
     SpatialGeometryDimension, SpatialGeometryPolygonDimension,\
     SpatialGridDimension, SpatialGeometryPointDimension
-from ocgis.util.helpers import iter_array
+from ocgis.util.helpers import iter_array, make_poly
 import fiona
 from shapely.geometry import shape
 from shapely.geometry.point import Point
@@ -44,6 +44,13 @@ class TestSpatialDimension(unittest.TestCase):
         geoms = np.atleast_2d(geoms)
         return(geoms,ret)
     
+    def get_2d_state_boundaries_sdim(self):
+        geoms,attrs = self.get_2d_state_boundaries()
+        poly = SpatialGeometryPolygonDimension(value=geoms)
+        geom = SpatialGeometryDimension(polygon=poly)
+        sdim = SpatialDimension(geom=geom,attrs=attrs)
+        return(sdim)
+    
     def get_col(self,bounds=True):
         value = [-100,-99,-98,-97]
         if bounds:
@@ -68,6 +75,45 @@ class TestSpatialDimension(unittest.TestCase):
         sdim = SpatialDimension(row=row,col=col)
         return(sdim)
     
+#    def test_get_intersects(self):
+#        sdim = self.get_2d_state_boundaries_sdim()
+#        select = sdim.attrs['properties']['STATE_ABBR'] == 'NE'
+#        subset_polygon = sdim.geom.polygon.value[:,select][0,0]
+#        import ipdb;ipdb.set_trace()
+
+    def test_get_intersects_polygon_small(self):
+        for b in [True,False]:
+            sdim = self.get_sdim(bounds=b)
+            poly = make_poly((37.75,38.25),(-100.25,-99.75))
+            ret = sdim.get_intersects(poly)
+            to_test = np.ma.array([[[0,0],[38,0]],[[0,0],[-100,0]]],mask=[[[True,True],[False,True]],[[True,True],[False,True]]])
+            self.assertNumpyAll(ret.grid.value,to_test)
+            self.assertEqual(ret.shape,(3,4))
+            to_test = ret.geom.point.value.compressed()[0]
+            self.assertTrue(to_test.almost_equals(Point(-100,38)))
+            if b is False:
+                with self.assertRaises(ImproperPolygonBoundsError):
+                    ret.geom.polygon
+            else:
+                to_test = ret.geom.polygon.value.compressed()[0].bounds
+                self.assertEqual((-100.5,37.5,-99.5,38.5),to_test)
+
+    def test_get_intersects_polygon_all(self):
+        for b in [True,False]:
+            sdim = self.get_sdim(bounds=b)
+            poly = make_poly((37,41),(-101,-96))
+            ret = sdim.get_intersects(poly)
+            self.assertNumpyAll(sdim.grid.value,ret.grid.value)
+            self.assertNumpyAll(sdim.grid.value.mask[0,:,:],sdim.geom.point.value.mask)
+            self.assertEqual(ret.shape,(3,4))
+            
+    def test_get_intersects_polygon_empty(self):
+        for b in [True,False]:
+            sdim = self.get_sdim(bounds=b)
+            poly = make_poly((1000,1001),(-1000,-1001))
+            with self.assertRaises(EmptySubsetError):
+                sdim.get_intersects(poly)
+    
     def test_state_boundaries_weights(self):
         geoms,attrs = self.get_2d_state_boundaries()
         poly = SpatialGeometryPolygonDimension(value=geoms)
@@ -85,15 +131,15 @@ class TestSpatialDimension(unittest.TestCase):
         self.assertFalse(ref.any())
         select = attrs['properties']['STATE_ABBR'] == 'NE'
         subset_polygon = geoms[:,select][0,0]
-        msked = spdim.get_mask_by_point_or_polygon(subset_polygon)
+        msked = spdim.get_intersects_masked(subset_polygon)
         self.assertEqual(msked.value.mask.sum(),50)
         self.assertTrue(msked.value.compressed()[0].almost_equals(subset_polygon))
         
-        msked = spdim.get_mask_by_point_or_polygon(subset_polygon.centroid)
+        msked = spdim.get_intersects_masked(subset_polygon.centroid)
         self.assertTrue(msked.value.compressed()[0].almost_equals(subset_polygon))
         
         with self.assertRaises(EmptySubsetError):
-            spdim.get_mask_by_point_or_polygon(Point(1000,1000))
+            spdim.get_intersects_masked(Point(1000,1000))
 
     def test_grid_value(self):
         for b in [True,False]:

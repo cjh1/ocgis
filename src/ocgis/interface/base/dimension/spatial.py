@@ -62,6 +62,42 @@ class SpatialDimension(AbstractDimension):
             except ImproperPolygonBoundsError:
                 ret = self.geom.point.weights
         return(ret)
+    
+    def get_clip(self,polygon):
+        raise(NotImplementedError)
+    
+    def get_intersects(self,point_or_polygon):
+        ret = copy(self)
+        if type(point_or_polygon) in (Point,MultiPoint):
+            raise(NotImplementedError)
+        elif type(point_or_polygon) in (Polygon,MultiPolygon):
+            ## for a polygon subset, first the grid is subsetted by the bounds
+            ## of the polygon object. the intersects operations is then performed
+            ## on the polygon/point representation as appropriate.
+            minx,miny,maxx,maxy = point_or_polygon.bounds
+            if self.grid is None:
+                raise(NotImplementedError)
+            else:
+                ## reset any geometries
+                ret._geom = None
+                ## subset the grid by its bounding box
+                ret.grid = ret.grid.get_subset_bbox(miny,minx,maxy,maxx)
+                ## attempt to mask the polygons
+                try:
+                    ret.geom._polygon = ret.geom.polygon.get_intersects_masked(point_or_polygon)
+                    grid_mask = ret.geom._polygon.value.mask
+                except ImproperPolygonBoundsError:
+                    ret.geom._point = ret.geom.point.get_intersects_masked(point_or_polygon)
+                    grid_mask = ret.geom._point.value.mask
+                ## transfer the geometry mask to the grid mask
+                ret.grid.value.mask[:,:,:] = grid_mask.copy()
+        else:
+            raise(NotImplementedError)
+        
+        return(ret)
+    
+    def get_nearest(self,point_or_polygon,search_radius=None):
+        raise(NotImplementedError)
         
     def _format_uid_(self,value):
         return(np.atleast_2d(value))
@@ -207,7 +243,7 @@ class SpatialGeometryPointDimension(Abstract2d,AbstractDimension):
         ret = np.ma.array(ret,mask=self.value.mask)
         return(ret)
         
-    def get_mask_by_point_or_polygon(self,point_or_polygon):
+    def get_intersects_masked(self,point_or_polygon):
         
         if type(point_or_polygon) in (Point,MultiPoint):
             keep_touches = True
