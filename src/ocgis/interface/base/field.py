@@ -23,7 +23,7 @@ class AbstractSourcedVariable(object):
     def _get_value_from_source_(self): pass
 
 
-class Variable(AbstractSourcedVariable):
+class Field(AbstractSourcedVariable):
     
     def __init__(self,name=None,value=None,alias=None,realization=None,temporal=None,
                  level=None,spatial=None,units=None,attrs=None,data=None):
@@ -41,7 +41,7 @@ class Variable(AbstractSourcedVariable):
         self.value_dimension_names = ('realization','temporal','level','row','column')
         self.value = value
         
-        super(Variable,self).__init__(data)
+        super(Field,self).__init__(data)
         
     def __getitem__(self,slc):
         try:
