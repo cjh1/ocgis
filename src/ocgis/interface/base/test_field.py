@@ -143,13 +143,12 @@ class TestField(unittest.TestCase):
                 self.assertEqual(var_slc._value,var._value)
     
     def test_slicing_specific(self):
-        
+        var = self.get_field(with_value=True)
         var_slc = var[:,0:2,0,:,:]
-        self.assertEqual(var_slc.shape,(2,31,1,3,4))
-        if iv:
-            self.assertEqual(var_slc.value.shape,(shp_r,shp_t,1,3,4))
-            ref_var_real_slc = var.value[:,0:2,0,:,:]
-            self.assertNumpyAll(ref_var_real_slc.flatten(),var_slc.value.flatten())
+        self.assertEqual(var_slc.shape,(2,2,1,3,4))
+        self.assertEqual(var_slc.value.shape,(2,2,1,3,4))
+        ref_var_real_slc = var.value[:,0:2,0,:,:]
+        self.assertNumpyAll(ref_var_real_slc.flatten(),var_slc.value.flatten())
 
 
 if __name__ == "__main__":
