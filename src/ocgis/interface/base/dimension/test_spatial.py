@@ -6,9 +6,11 @@ from ocgis.interface.base.dimension.spatial import SpatialDimension,\
     SpatialGridDimension, SpatialGeometryPointDimension
 from ocgis.util.helpers import iter_array, make_poly
 import fiona
-from shapely.geometry import shape
+from fiona.crs import from_epsg
+from shapely.geometry import shape, mapping
 from shapely.geometry.point import Point
 from ocgis.exc import EmptySubsetError, ImproperPolygonBoundsError
+from tempfile import mkdtemp, mkstemp
 
 
 class TestSpatialDimension(unittest.TestCase):
@@ -74,16 +76,26 @@ class TestSpatialDimension(unittest.TestCase):
         col = self.get_col(bounds=bounds)
         sdim = SpatialDimension(row=row,col=col)
         return(sdim)
+    
+    def write_sdim(self):
+        sdim = self.get_sdim(bounds=True)
+        crs = from_epsg(4326)
+        schema = {'geometry':'Polygon','properties':{'UID':'int:8'}}
+        with fiona.open('/tmp/test.shp','w',driver='ESRI Shapefile',crs=crs,schema=schema) as sink:
+            for ii,poly in enumerate(sdim.geom.polygon.value.flat):
+                row = {'geometry':mapping(poly),
+                       'properties':{'UID':int(sdim.geom.uid.flatten()[ii])}}
+                sink.write(row)
 
     def test_get_intersects_polygon_small(self):
         for b in [True,False]:
             sdim = self.get_sdim(bounds=b)
             poly = make_poly((37.75,38.25),(-100.25,-99.75))
             ret = sdim.get_intersects(poly)
-            to_test = np.ma.array([[[0,0],[38,0]],[[0,0],[-100,0]]],
-             mask=[[[True,True],[False,True]],[[True,True],[False,True]]])
+            to_test = np.ma.array([[[38]],[[-100]]],mask=False)
             self.assertNumpyAll(ret.grid.value,to_test)
-            self.assertEqual(ret.shape,(3,4))
+            self.assertNumpyAll(ret.uid,np.array([[9]]))
+            self.assertEqual(ret.shape,(1,1))
             to_test = ret.geom.point.value.compressed()[0]
             self.assertTrue(to_test.almost_equals(Point(-100,38)))
             if b is False:
@@ -97,14 +109,12 @@ class TestSpatialDimension(unittest.TestCase):
         for b in [True,False]:
             sdim = self.get_sdim(bounds=b)
             poly = make_poly((39.25,39.75),(-97.75,-97.25))
-            ret = sdim.get_intersects(poly)
-            
-    def test_get_nearest(self):
-        for b in [True,False]:
-            sdim = self.get_sdim(bounds=b)
-            point = Point(-98.5,39.5)
-            ret = sdim.get_nearest(point)
-            import ipdb;ipdb.set_trace()
+            if b is False:
+                with self.assertRaises(EmptySubsetError):
+                    sdim.get_intersects(poly)
+            else:
+                ret = sdim.get_intersects(poly)
+                self.assertEqual(ret.shape,(2,2))
 
     def test_get_intersects_polygon_all(self):
         for b in [True,False]:

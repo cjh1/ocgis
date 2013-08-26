@@ -1,7 +1,7 @@
 import unittest
 from base import VectorDimension
 import numpy as np
-from ocgis.exc import EmptyIterationError, EmptySubsetError
+from ocgis.exc import EmptySubsetError
 
 
 class TestVectorDimension(unittest.TestCase):
@@ -32,7 +32,7 @@ class TestVectorDimension(unittest.TestCase):
         self.assertNumpyAll(vdim.bounds,np.array([[3,5],[4,6],[5,7]]))
         self.assertNumpyAll(vdim.uid,np.array([1,2,3]))
         self.assertTrue(len(list(vdim)),3)
-        self.assertEqual(vdim.resolution,(2.0,None))
+        self.assertEqual(vdim.resolution,2.0)
     
     def test_boolean_slice(self):
         vdim = VectorDimension(value=[4,5,6],bounds=[[3,5],[4,6],[5,7]])
@@ -61,7 +61,7 @@ class TestVectorDimension(unittest.TestCase):
     
     def test_resolution_with_units(self):
         vdim = VectorDimension(value=[5,10,15],units='large')
-        self.assertEqual(vdim.resolution,(5.0,'large'))
+        self.assertEqual(vdim.resolution,5.0)
     
     def test_load_from_source(self):
         vdim = VectorDimension(src_idx=[0,1,2,3],data='foo')
@@ -88,7 +88,7 @@ class TestVectorDimension(unittest.TestCase):
         vdim = VectorDimension(value=[0,5,10],bounds=[[-2.5,2.5],[2.5,7.5],[7.5,12.5]])
         vdim_between = vdim.get_between(1,3)
         self.assertEqual(len(vdim_between),2)
-        self.assertEqual(vdim.resolution,(5.0,None))
+        self.assertEqual(vdim.resolution,5.0)
         
         vdim_between = vdim.get_between(2.5,2.5)
         self.assertEqual(len(vdim_between),2)

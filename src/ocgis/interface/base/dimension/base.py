@@ -50,6 +50,8 @@ class AbstractDimension(object):
     
     @property
     def uid(self):
+        if self._uid is None:
+            self._uid = self._format_uid_(self._get_uid_())
         return(self._uid)
     @uid.setter
     def uid(self,value):

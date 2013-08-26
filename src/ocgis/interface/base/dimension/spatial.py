@@ -78,8 +78,9 @@ class SpatialDimension(AbstractDimension):
             if self.grid is None:
                 raise(NotImplementedError)
             else:
-                ## reset any geometries
+                ## reset any geometries and uids
                 ret._geom = None
+                ret._uid = None
                 ## subset the grid by its bounding box
                 ret.grid = ret.grid.get_subset_bbox(miny,minx,maxy,maxx)
                 ## attempt to mask the polygons
@@ -93,38 +94,7 @@ class SpatialDimension(AbstractDimension):
                 ret.grid.value.mask[:,:,:] = grid_mask.copy()
         else:
             raise(NotImplementedError)
-        
-        return(ret)
-    
-    def get_nearest(self,point,search_radius=None):
-        if type(point) not in (Point,MultiPoint):
-            ocgis_lh(exc=NotImplementedError("Finding the nearest feature(s) is only implemented for a point search into a gridded spatial dimension."))
-        
-        ## defines how far to look from the target point for closest features.
-        ## it units are defined by the target's spatial reference
-        if search_radius is None:
-            search_radius = 1.25*self.grid.resolution
-        
-        subset_polygon = point.buffer(search_radius)
-        search_dim = self.get_intersects(subset_polygon)
-        
-        shp = search_dim.shape
-        real_row = np.repeat(np.arange(shp[0]).reshape(-1,1),shp[1],axis=1).reshape(shp)
-        real_col = np.repeat(np.arange(shp[1]).reshape(1,-1),shp[0],axis=0).reshape(shp)
-        
-        diffs = np.zeros(search_dim.shape)
-        search = np.array([point.y,point.x])
-        ref_gv = search_dim.grid.value
-        for idx_row,idx_col in itertools.product(*[range(s) for s in search_dim.shape]):
-            diff = np.linalg.norm(np.array([ref_gv[0,idx_row,idx_col],ref_gv[1,idx_row,idx_col]])-search)
-            diffs[idx_row,idx_col] = diff
-        mins = diffs == diffs.min()
-        import ipdb;ipdb.set_trace()
-        slc_row = get_slice(real_row[mins])
-        slc_col = get_slice(real_col[mins])
-        
-        ret = search_dim[slc_row,slc_col]
-        import ipdb;ipdb.set_trace()
+
         return(ret)
         
     def _format_uid_(self,value):

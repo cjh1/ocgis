@@ -69,28 +69,6 @@ def get_date_list(start,stop,days):
         check += delta
     return(ret)
 
-def get_interpolated_bounds(arr):
-    arr = np.atleast_1d(arr).astype(float)
-    ## edge effects will need to be estimated from the data resolution
-    fill = np.empty((arr.shape[0],2),dtype=arr.dtype)
-    for idx in range(arr.shape[0]):
-        if idx == 0:
-            pass
-        else:
-            try:
-                lower = np.mean([arr[idx-1],arr[idx]])
-                upper = np.mean([arr[idx],arr[idx+1]])
-                fill[idx,:] = [lower,upper]
-            except IndexError:
-                ## fill in edges
-                fill[0,1] = fill[1,0]
-                fill[0,0] = arr[0] - np.abs(arr[0] - fill[0,1])
-                
-                fill[-1,0] = fill[-2,1]
-                fill[-1,1] = arr[-1] + np.abs(arr[-1] - fill[-1,0])
-                break
-    return(fill)
-
 
 def validate_time_subset(time_range,time_region):
     '''
