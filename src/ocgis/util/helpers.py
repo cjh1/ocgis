@@ -49,6 +49,21 @@ def get_slice(arr):
     stop = arr.max() + 1
     return(slice(start,stop))
 
+def get_formatted_slice(slc,n_dims):
+    if isinstance(slc,slice) and slc == slice(None):
+        ret = slc
+    elif n_dims == 1:
+        ret = slc
+    elif n_dims > 1:
+        try:
+            assert(len(slc) == n_dims)
+        except (TypeError,AssertionError):
+            raise(ValueError("Only {0}-d slicing allowed.".format(n_dims)))
+        ret = slc
+    else:
+        raise(NotImplementedError((slc,n_dims)))
+    return(ret)
+
 def iter_arg(arg):
     if isinstance(arg,basestring):
         itr = [arg]

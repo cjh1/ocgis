@@ -1,7 +1,7 @@
 #from ocgis.interface.shp import ShpDataset
 import numpy as np
 from ocgis.util.helpers import format_bool, iter_array, validate_time_subset,\
-    get_interpolated_bounds
+    get_formatted_slice
 import itertools
 from ocgis.test.base import TestBase
 from ocgis.util.spatial.wrap import Wrapper
@@ -9,6 +9,15 @@ from datetime import datetime as dt
 
 
 class TestHelpers(TestBase):
+    
+    def test_get_formatted_slc(self):
+        ret = get_formatted_slice(slice(None,None,None),10)
+        self.assertEqual(ret,slice(None,None,None))
+        ret = get_formatted_slice(0,1)
+        self.assertEqual(ret,0)
+        with self.assertRaises(ValueError):
+            get_formatted_slice(slice(0,1),2)
+        ret = get_formatted_slice((slice(0,1),0),2)
     
     def test_validate_time_subset(self):
         time_range = [dt(2000,1,1),dt(2001,1,1)]

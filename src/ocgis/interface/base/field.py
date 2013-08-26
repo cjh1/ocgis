@@ -9,15 +9,42 @@ from copy import copy
 class AbstractSourcedVariable(object):
     __metaclass__ = abc.ABCMeta
     
-    def __init__(self,data):
+    def __init__(self,data,src_idx,value):
+        if value is None and src_idx is None:
+            ocgis_lh(exc=ValueError('Either values or a source index are required for sourced variables.'))
+        
+        self._value = value
         self._data = data
+        self._src_idx = src_idx
+        
+    @property
+    def _src_idx(self):
+        return(self.__src_idx)
+    @_src_idx.setter
+    def _src_idx(self,value):
+        self.__src_idx = self._format_src_idx_(value)
+        
+    @property
+    def _value(self):
+        return(self.__value)
+    @_value.setter
+    def _value(self,value):
+        self.__value = self._format_private_value_(value)
     
     def _get_value_(self):
         if self._data is None and self._value is None:
             ocgis_lh(exc=ValueError('Values were requested from data source, but no data source is available.'))
+        elif self._src_idx is None and self._value is None:
+            ocgis_lh(exc=ValueError('Values were requested from data source, but no source index source is available.'))
         else:
             ret = self._get_value_from_source_()
         return(ret)
+    
+    @abc.abstractmethod
+    def _format_private_value_(self,value): pass
+    
+    @abc.abstractmethod
+    def _format_src_idx_(self,value): pass
             
     @abc.abstractmethod
     def _get_value_from_source_(self): pass
@@ -33,9 +60,9 @@ class Field(AbstractSourcedVariable):
         self.name = name
         self.alias = alias or name
         self.realization = get_none_or_1d(realization)
-        self.temporal = temporal
-        self.level = level
-        self.spatial = spatial
+        self.temporal = self._format_dimension_(temporal)
+        self.level = self._format_dimension_(level)
+        self.spatial = self._format_dimension_(spatial)
         self.units = units
         self.attrs = attrs or {}
         self.value_dimension_names = ('realization','temporal','level','row','column')
@@ -80,6 +107,11 @@ class Field(AbstractSourcedVariable):
             self._value = None
         else:
             self._value = self._format_value_(value)
+            
+    def _format_dimension_(self,dim):
+        if dim is not None:
+            dim._field = self
+        return(dim)
         
     def _format_value_(self,value):
         assert(value.shape == self.shape)

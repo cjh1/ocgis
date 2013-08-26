@@ -72,7 +72,7 @@ class TestVectorDimension(unittest.TestCase):
             vdim.resolution
 
     def test_empty(self):
-        with self.assertRaises(AttributeError):
+        with self.assertRaises(ValueError):
             VectorDimension()
         
     def test_get_between(self):
