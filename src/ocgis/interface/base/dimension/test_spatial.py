@@ -74,19 +74,14 @@ class TestSpatialDimension(unittest.TestCase):
         col = self.get_col(bounds=bounds)
         sdim = SpatialDimension(row=row,col=col)
         return(sdim)
-    
-#    def test_get_intersects(self):
-#        sdim = self.get_2d_state_boundaries_sdim()
-#        select = sdim.attrs['properties']['STATE_ABBR'] == 'NE'
-#        subset_polygon = sdim.geom.polygon.value[:,select][0,0]
-#        import ipdb;ipdb.set_trace()
 
     def test_get_intersects_polygon_small(self):
         for b in [True,False]:
             sdim = self.get_sdim(bounds=b)
             poly = make_poly((37.75,38.25),(-100.25,-99.75))
             ret = sdim.get_intersects(poly)
-            to_test = np.ma.array([[[0,0],[38,0]],[[0,0],[-100,0]]],mask=[[[True,True],[False,True]],[[True,True],[False,True]]])
+            to_test = np.ma.array([[[0,0],[38,0]],[[0,0],[-100,0]]],
+             mask=[[[True,True],[False,True]],[[True,True],[False,True]]])
             self.assertNumpyAll(ret.grid.value,to_test)
             self.assertEqual(ret.shape,(3,4))
             to_test = ret.geom.point.value.compressed()[0]
@@ -97,6 +92,19 @@ class TestSpatialDimension(unittest.TestCase):
             else:
                 to_test = ret.geom.polygon.value.compressed()[0].bounds
                 self.assertEqual((-100.5,37.5,-99.5,38.5),to_test)
+                
+    def test_get_intersects_polygon_no_point_overlap(self):
+        for b in [True,False]:
+            sdim = self.get_sdim(bounds=b)
+            poly = make_poly((39.25,39.75),(-97.75,-97.25))
+            ret = sdim.get_intersects(poly)
+            
+    def test_get_nearest(self):
+        for b in [True,False]:
+            sdim = self.get_sdim(bounds=b)
+            point = Point(-98.5,39.5)
+            ret = sdim.get_nearest(point)
+            import ipdb;ipdb.set_trace()
 
     def test_get_intersects_polygon_all(self):
         for b in [True,False]:

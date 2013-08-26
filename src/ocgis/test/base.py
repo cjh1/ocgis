@@ -1,7 +1,7 @@
 import unittest
 import abc
 import tempfile
-from ocgis import env, RequestDataset
+from ocgis import env
 import shutil
 from copy import deepcopy, copy
 import os
@@ -23,6 +23,12 @@ class TestBase(unittest.TestCase):
     def __init__(self,*args,**kwds):
         self.test_data = self.get_tdata()
         super(TestBase,self).__init__(*args,**kwds)
+        
+    def assertNumpyAll(self,arr1,arr2):
+        return(self.assertTrue(np.all(arr1 == arr2)))
+    
+    def assertNumpyNotAll(self,arr1,arr2):
+        return(self.assertFalse(np.all(arr1 == arr2)))
     
     @staticmethod
     def get_tdata():

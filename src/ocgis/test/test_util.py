@@ -1,6 +1,7 @@
-from ocgis.interface.shp import ShpDataset
+#from ocgis.interface.shp import ShpDataset
 import numpy as np
-from ocgis.util.helpers import format_bool, iter_array, validate_time_subset
+from ocgis.util.helpers import format_bool, iter_array, validate_time_subset,\
+    get_interpolated_bounds
 import itertools
 from ocgis.test.base import TestBase
 from ocgis.util.spatial.wrap import Wrapper
@@ -8,6 +9,15 @@ from datetime import datetime as dt
 
 
 class TestHelpers(TestBase):
+    
+    def test_interpolated_bounds(self):
+        arr = [0,5,10,15]
+        ret = get_interpolated_bounds(arr)
+        self.assertNumpyAll(ret,np.array([[ -2.5,   2.5],[  2.5,   7.5],[  7.5,  12.5],[ 12.5,  17.5]]))
+        
+        arr = [15,10,5,0]
+        ret = get_interpolated_bounds(arr)
+        import ipdb;ipdb.set_trace()
     
     def test_validate_time_subset(self):
         time_range = [dt(2000,1,1),dt(2001,1,1)]

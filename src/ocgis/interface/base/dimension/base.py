@@ -179,7 +179,7 @@ class VectorDimension(AbstractSourcedVariable,Abstract1d,AbstractDimension):
             else:
                 res_bounds = self.bounds[0:constants.resolution_limit]
                 res_array = res_bounds[:,1] - res_bounds[:,0]
-            ret = (res_array.mean(),self.units)
+            ret = np.abs(res_array).mean()
         return(ret)
     
     @property
