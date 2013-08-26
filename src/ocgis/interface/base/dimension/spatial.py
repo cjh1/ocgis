@@ -64,7 +64,18 @@ class SpatialDimension(AbstractDimension):
         return(ret)
     
     def get_clip(self,polygon):
-        raise(NotImplementedError)
+        assert(type(polygon) in (Polygon,MultiPolygon))
+        
+        to_clip = self.get_intersects(polygon)
+        ## clipped geometries have no grid or point representations
+        to_clip.grid = None
+        to_clip.geom.grid = None
+        to_clip.geom._point = None
+        ref_value = to_clip.geom.polygon.value
+        for (row_idx,col_idx),geom in iter_array(ref_value,return_value=True):
+            ref_value[row_idx,col_idx] = geom.intersection(polygon)
+
+        return(to_clip)
     
     def get_intersects(self,point_or_polygon):
         ret = copy(self)

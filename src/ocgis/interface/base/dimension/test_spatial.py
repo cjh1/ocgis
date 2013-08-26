@@ -10,7 +10,6 @@ from fiona.crs import from_epsg
 from shapely.geometry import shape, mapping
 from shapely.geometry.point import Point
 from ocgis.exc import EmptySubsetError, ImproperPolygonBoundsError
-from tempfile import mkdtemp, mkstemp
 
 
 class TestSpatialDimension(unittest.TestCase):
@@ -86,7 +85,16 @@ class TestSpatialDimension(unittest.TestCase):
                 row = {'geometry':mapping(poly),
                        'properties':{'UID':int(sdim.geom.uid.flatten()[ii])}}
                 sink.write(row)
-
+                
+    def test_get_clip(self):
+        sdim = self.get_sdim(bounds=True)
+        poly = make_poly((37.75,38.25),(-100.25,-99.75))
+        ret = sdim.get_clip(poly)
+        
+        self.assertEqual(ret.uid,np.array([[9]]))
+        self.assertTrue(poly.almost_equals(ret.geom.polygon.value[0,0]))
+        self.assertEqual(ret.geom.point,None)
+        
     def test_get_intersects_polygon_small(self):
         for b in [True,False]:
             sdim = self.get_sdim(bounds=b)
