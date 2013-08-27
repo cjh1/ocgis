@@ -160,23 +160,22 @@ class Field(AbstractSourcedVariable):
         ret._value = self._get_value_slice_or_none_(ret._value,slc_field)
         return(ret)
     
+    def get_clip(self,polygon):
+        return(self._get_spatial_operation_('get_clip',polygon))
+    
     def get_intersects(self,point_or_polygon):
+        return(self._get_spatial_operation_('get_intersects',point_or_polygon))
+    
+    def _get_spatial_operation_(self,attr,point_or_polygon):
+        ref = getattr(self.spatial,attr)
         ret = copy(self)
-        ret.spatial,slc = self.spatial.get_intersects(point_or_polygon,return_indices=True)
+        ret.spatial,slc = ref(point_or_polygon,return_indices=True)
         slc = [slice(None),slice(None),slice(None)] + list(slc)
         ret._value = self._get_value_slice_or_none_(ret._value,slc)
 
         ## we need to update the value mask with the geometry mask
         if ret._value is not None:
-            ret_shp = ret.shape
-            rng_realization = range(ret_shp[0])
-            rng_temporal = range(ret_shp[1])
-            rng_level = range(ret_shp[2])
-            new_mask = ret.spatial.get_mask()
-            for v in ret._value.itervalues():
-                for idx_r,idx_t,idx_l in itertools.product(rng_realization,rng_temporal,rng_level):
-                    ref = v[idx_r,idx_t,idx_l]
-                    ref.mask = np.logical_or(ref.mask,new_mask)
+            self._set_new_value_mask_(ret,ret.spatial.get_mask())
         
         return(ret)
             
@@ -208,3 +207,14 @@ class Field(AbstractSourcedVariable):
         else:
             ret = {k:v[slc] for k,v in value.iteritems()}
         return(ret)
+    
+    def _set_new_value_mask_(self,field,mask):
+        ret_shp = field.shape
+        rng_realization = range(ret_shp[0])
+        rng_temporal = range(ret_shp[1])
+        rng_level = range(ret_shp[2])
+        ref_logical_or = np.logical_or
+        for v in field._value.itervalues():
+            for idx_r,idx_t,idx_l in itertools.product(rng_realization,rng_temporal,rng_level):
+                ref = v[idx_r,idx_t,idx_l]
+                ref.mask = ref_logical_or(ref.mask,mask)

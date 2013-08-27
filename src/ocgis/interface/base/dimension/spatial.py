@@ -58,19 +58,24 @@ class SpatialDimension(base.AbstractUidDimension):
                 ret = self.geom.point.weights
         return(ret)
     
-    def get_clip(self,polygon):
+    def get_clip(self,polygon,return_indices=False):
         assert(type(polygon) in (Polygon,MultiPolygon))
         
-        to_clip = self.get_intersects(polygon)
+        ret,slc = self.get_intersects(polygon,return_indices=True)
+        
         ## clipped geometries have no grid or point representations
-        to_clip.grid = None
-        to_clip.geom.grid = None
-        to_clip.geom._point = None
-        ref_value = to_clip.geom.polygon.value
+        ret.grid = None
+        ret.geom.grid = None
+        ret.geom._point = None
+        
+        ref_value = ret.geom.polygon.value
         for (row_idx,col_idx),geom in iter_array(ref_value,return_value=True):
             ref_value[row_idx,col_idx] = geom.intersection(polygon)
-
-        return(to_clip)
+        
+        if return_indices:
+            ret = (ret,slc)
+        
+        return(ret)
     
     def get_intersects(self,point_or_polygon,return_indices=False):
         ret = copy(self)
@@ -110,10 +115,10 @@ class SpatialDimension(base.AbstractUidDimension):
     
     def get_mask(self):
         if self.grid is None:
-            if self.point is None:
-                ret = self.polygon.value.mask
+            if self.geom.point is None:
+                ret = self.geom.polygon.value.mask
             else:
-                ret = self.point.value.mask
+                ret = self.geom.point.value.mask
         else:
             ret = self.grid.value.mask[0,:,:]
         return(ret.copy())
