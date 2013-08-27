@@ -86,6 +86,15 @@ class TestField(TestBase):
         
         return(var)
     
+    def test_subsetting(self):
+        field = self.get_field()
+        self.assertNotIsInstance(field.temporal.value,np.ma.MaskedArray)
+        temporal_start = dt(2000,1,1,12)
+        temporal_stop = dt(2000,1,31,12)
+        ret = field.temporal.get_between(temporal_start,temporal_stop)
+        self.assertIsInstance(ret,Field)
+        import ipdb;ipdb.set_trace()
+    
     def test_empty(self):
         with self.assertRaises(ValueError):
             Field()

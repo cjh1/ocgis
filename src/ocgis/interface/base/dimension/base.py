@@ -212,7 +212,7 @@ class VectorDimension(AbstractSourcedVariable,AbstractUidValueDimension):
         return(ret)
     
     def _format_private_value_(self,value):
-        return(self._get_none_or_array_(value,masked=True))
+        return(self._get_none_or_array_(value,masked=False))
     
     def _format_slice_state_(self,state,slc):
         state.bounds = get_none_or_slice(state._bounds,(slc,slice(None)))
