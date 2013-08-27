@@ -5,6 +5,7 @@ from ocgis.util.helpers import get_default_or_apply, get_none_or_slice,\
 import numpy as np
 from copy import copy
 from collections import OrderedDict
+import itertools
 
 
 class AbstractValueVariable(object):
@@ -158,6 +159,26 @@ class Field(AbstractSourcedVariable):
         slc_field[pos] = slc
         ret._value = self._get_value_slice_or_none_(ret._value,slc_field)
         return(ret)
+    
+    def get_intersects(self,point_or_polygon):
+        ret = copy(self)
+        ret.spatial,slc = self.spatial.get_intersects(point_or_polygon,return_indices=True)
+        slc = [slice(None),slice(None),slice(None)] + list(slc)
+        ret._value = self._get_value_slice_or_none_(ret._value,slc)
+
+        ## we need to update the value mask with the geometry mask
+        if ret._value is not None:
+            ret_shp = ret.shape
+            rng_realization = range(ret_shp[0])
+            rng_temporal = range(ret_shp[1])
+            rng_level = range(ret_shp[2])
+            new_mask = ret.spatial.get_mask()
+            for v in ret._value.itervalues():
+                for idx_r,idx_t,idx_l in itertools.product(rng_realization,rng_temporal,rng_level):
+                    ref = v[idx_r,idx_t,idx_l]
+                    ref.mask = np.logical_or(ref.mask,new_mask)
+        
+        return(ret)
             
     def _format_dimension_(self,dim):
         if dim is not None:
@@ -179,6 +200,7 @@ class Field(AbstractSourcedVariable):
     
     def _get_value_from_source_(self):
         raise(NotImplementedError)
+        ## TODO: remember to apply the geometry mask to fresh values!!
     
     def _get_value_slice_or_none_(self,value,slc):
         if value is None:

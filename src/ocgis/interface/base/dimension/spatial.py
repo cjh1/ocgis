@@ -72,7 +72,7 @@ class SpatialDimension(base.AbstractUidDimension):
 
         return(to_clip)
     
-    def get_intersects(self,point_or_polygon):
+    def get_intersects(self,point_or_polygon,return_indices=False):
         ret = copy(self)
         if type(point_or_polygon) in (Point,MultiPoint):
             raise(NotImplementedError)
@@ -84,10 +84,10 @@ class SpatialDimension(base.AbstractUidDimension):
             if self.grid is None:
                 raise(NotImplementedError)
             else:
-                ## reset any geometries and uids
+                ## reset any geometries
                 ret._geom = None
                 ## subset the grid by its bounding box
-                ret.grid = ret.grid.get_subset_bbox(miny,minx,maxy,maxx)
+                ret.grid,slc = ret.grid.get_subset_bbox(miny,minx,maxy,maxx,return_indices=True)
                 ## attempt to mask the polygons
                 try:
                     ret.geom._polygon = ret.geom.polygon.get_intersects_masked(point_or_polygon)
@@ -99,12 +99,25 @@ class SpatialDimension(base.AbstractUidDimension):
                 ret.grid.value.mask[:,:,:] = grid_mask.copy()
         else:
             raise(NotImplementedError)
-
+        
+        if return_indices:
+            ret = (ret,slc)
+        
         return(ret)
     
     def get_iter(self):
         ocgis_lh(exc=NotImplementedError('Spatial dimensions do not have a direct iterator.'))
-        
+    
+    def get_mask(self):
+        if self.grid is None:
+            if self.point is None:
+                ret = self.polygon.value.mask
+            else:
+                ret = self.point.value.mask
+        else:
+            ret = self.grid.value.mask[0,:,:]
+        return(ret.copy())
+    
     def _format_uid_(self,value):
         return(np.atleast_2d(value))
         
@@ -153,7 +166,7 @@ class SpatialGridDimension(base.AbstractUidValueDimension):
             ret = len(self.row),len(self.col)
         return(ret)
         
-    def get_subset_bbox(self,min_row,min_col,max_row,max_col):
+    def get_subset_bbox(self,min_row,min_col,max_row,max_col,return_indices=False):
         if self.row is None:
             raise(NotImplementedError('no slicing w/out rows and columns'))
         else:
@@ -164,6 +177,8 @@ class SpatialGridDimension(base.AbstractUidValueDimension):
             row_slc = get_slice(row_indices)
             col_slc = get_slice(col_indices)
             ret.uid = self.uid[row_slc,col_slc]
+        if return_indices:
+            ret = (ret,(row_slc,col_slc))
         return(ret)
     
     def _format_private_value_(self,value):

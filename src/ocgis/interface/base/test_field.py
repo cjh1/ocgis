@@ -1,6 +1,6 @@
 import unittest
 from datetime import datetime as dt
-from ocgis.util.helpers import get_date_list
+from ocgis.util.helpers import get_date_list, make_poly
 from ocgis.interface.base.dimension.base import VectorDimension
 import datetime
 from ocgis.interface.base.dimension.spatial import SpatialGridDimension,\
@@ -10,6 +10,7 @@ import numpy as np
 import itertools
 from ocgis.test.base import TestBase
 from ocgis.exc import EmptySubsetError
+from shapely import wkt
 
 
 class TestField(TestBase):
@@ -89,6 +90,21 @@ class TestField(TestBase):
             var._value = {'tmax':np.random.rand(*var.shape)}
         
         return(var)
+        
+    def test_get_intersects_domain_polygon(self):
+        regular = make_poly((36.61,41.39),(-101.41,-95.47))
+        field = self.get_field(with_value=True)
+        ret = field.get_intersects(regular)
+        self.assertNumpyAll(ret.value['tmax'],field.value['tmax'])
+        self.assertNumpyAll(field.spatial.grid.value,ret.spatial.grid.value)
+    
+    def test_get_intersects_irregular_polygon(self):
+        irregular = wkt.loads('POLYGON((-100.106049 38.211305,-99.286894 38.251591,-99.286894 38.258306,-99.286894 38.258306,-99.260036 39.252035,-98.769886 39.252035,-98.722885 37.734583,-100.092620 37.714440,-100.106049 38.211305))')
+        field = self.get_field(with_value=True)
+        ret = field.get_intersects(irregular)
+        self.assertEqual(ret.shape,(2,31,2,2,2))
+        self.assertNumpyAll(ret.value['tmax'].mask[0,2,1,:,:],np.array([[True,False],[False,False]]))
+        self.assertEqual(ret.spatial.uid[ret.spatial.get_mask()][0],5)
     
     def test_subsetting(self):
         for wv in [True,False]:
