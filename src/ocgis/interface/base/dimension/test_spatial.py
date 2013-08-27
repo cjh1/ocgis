@@ -328,16 +328,16 @@ class TestSpatialDimension(TestSpatialBase):
 class TestSpatialGridDimension(TestSpatialBase):
     
     def test_load_from_source_grid_slicing(self):
-        row = VectorDimension(src_idx=[10,20,30,40],name='row')
+        row = VectorDimension(src_idx=[10,20,30,40],name='row',data='foo')
         self.assertEqual(row.name,'row')
-        col = VectorDimension(src_idx=[100,200,300],name='col')
+        col = VectorDimension(src_idx=[100,200,300],name='col',data='foo')
         grid = SpatialGridDimension(row=row,col=col,name='grid')
         self.assertEqual(grid.shape,(4,3))
         grid_slc = grid[1,2]
         self.assertEqual(grid_slc.shape,(1,1))
-        with self.assertRaises(ValueError):
+        with self.assertRaises(NotImplementedError):
             grid_slc.value
-        with self.assertRaises(ValueError):
+        with self.assertRaises(NotImplementedError):
             grid_slc.row.bounds
         self.assertNumpyAll(grid_slc.row._src_idx,np.array([20]))
         self.assertNumpyAll(grid_slc.col._src_idx,np.array([300]))

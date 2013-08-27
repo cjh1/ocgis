@@ -115,9 +115,6 @@ class SpatialDimension(base.AbstractUidDimension):
         else:
             ret = self.grid.uid
         return(ret)
-    
-    def _get_value_(self):
-        ocgis_lh(exc=NotImplementedError('Spatial dimension values should be accessed through "grid" and/or "geom".'))
 
     
 class SpatialGridDimension(base.AbstractUidValueDimension):
@@ -170,7 +167,7 @@ class SpatialGridDimension(base.AbstractUidValueDimension):
             ret.uid = self.uid[row_slc,col_slc]
         return(ret)
     
-    def _format_value_(self,value):
+    def _format_private_value_(self,value):
         if value is None:
             ret = None
         else:
@@ -257,9 +254,6 @@ class SpatialGeometryDimension(base.AbstractUidDimension):
         else:
             ret = self._polygon.uid
         return(ret)
-    
-    def _get_value_(self):
-        ocgis_lh(exc=NotImplementedError('Geometry dimensions do not have a direct value. Chose "...geom.point.value" or "...geom.polygon.value" instead.'))
 
 
 class SpatialGeometryPointDimension(base.AbstractUidValueDimension):
@@ -309,7 +303,7 @@ class SpatialGeometryPointDimension(base.AbstractUidValueDimension):
         
         return(ret)
         
-    def _format_value_(self,value):
+    def _format_private_value_(self,value):
         if value is not None:
             try:
                 assert(len(value.shape) == 2)

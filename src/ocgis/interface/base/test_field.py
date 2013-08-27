@@ -72,12 +72,17 @@ class TestField(TestBase):
             realization = ['r1','r2']
         else:
             realization = None
+            
+        if with_value:
+            data = None
+        else:
+            data = 'foo'
         
         var = Field(name='tmax',units='C',temporal=temporal,level=level,realization=realization,
-                       spatial=spatial)
+                       spatial=spatial,data=data,debug=True)
         
         if with_value:
-            var.value = np.random.rand(*var.shape)
+            var._value = np.random.rand(*var.shape)
         
         return(var)
     
@@ -91,11 +96,11 @@ class TestField(TestBase):
             ref = var.shape
             self.assertEqual(ref,(2,31,2,3,4))
             value = np.random.rand(*var.shape)
-            var.value = value
+            var._value = value
             self.assertIsInstance(var.value,np.ma.MaskedArray)
             value = np.random.rand(3)
             with self.assertRaises(AssertionError):
-                var.value = value
+                var._value = value
                 
     def test_slicing_general(self):
         ibounds = [True,False]

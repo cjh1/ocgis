@@ -1,6 +1,7 @@
 import abc
 import numpy as np
-from ocgis.interface.base.field import AbstractSourcedVariable
+from ocgis.interface.base.field import AbstractSourcedVariable,\
+    AbstractValueVariable
 from ocgis import constants
 from ocgis.util.logging_ocgis import ocgis_lh
 from ocgis.util.helpers import get_none_or_1d, get_none_or_2d, get_none_or_slice,\
@@ -52,15 +53,15 @@ class AbstractDimension(object):
         return(ret)
     
     
-class AbstractValueDimension(AbstractDimension):
+class AbstractValueDimension(AbstractValueVariable,AbstractDimension):
     __metaclass__ = abc.ABCMeta
     
     def __init__(self,*args,**kwds):
-        self._value = self._format_value_(kwds.pop('value',None))
         self.name_value = kwds.pop('name_value',None)
         self.units = kwds.pop('units',None)
         
-        super(AbstractValueDimension,self).__init__(*args,**kwds)
+        AbstractValueVariable.__init__(self,value=kwds.pop('value',None))
+        AbstractDimension.__init__(self,*args,**kwds)
         
         if self.name_value is None:
             self.name_value = self.name
@@ -69,13 +70,13 @@ class AbstractValueDimension(AbstractDimension):
     def shape(self):
         return(self.value.shape)
     
-    @property
-    def value(self):
-        if self._value is None:
-            self._value = self._get_value_()
-        return(self._value)
-    @abc.abstractmethod
-    def _get_value_(self): pass
+#    @property
+#    def value(self):
+#        if self._value is None:
+#            self._value = self._get_value_()
+#        return(self._value)
+#    @abc.abstractmethod
+#    def _get_value_(self): pass
     
     def get_iter(self):
         raise(NotImplementedError)
@@ -93,8 +94,8 @@ class AbstractValueDimension(AbstractDimension):
                    ref_name_bounds_upper:ref_bounds[ii,1]}
             yield(ii,yld)
             
-    @abc.abstractmethod
-    def _format_value_(self,value): pass
+#    @abc.abstractmethod
+#    def _format_value_(self,value): pass
     
     
 class AbstractUidDimension(AbstractDimension):
@@ -149,7 +150,7 @@ class VectorDimension(AbstractSourcedVariable,AbstractUidValueDimension):
         self.name_bounds = kwds.pop('name_bounds',None)
         self._axis = kwds.pop('axis',None)
         
-        AbstractSourcedVariable.__init__(self,kwds.pop('data',None),kwds.pop('src_idx',None),kwds.get('value'))
+        AbstractSourcedVariable.__init__(self,kwds.pop('data',None),src_idx=kwds.pop('src_idx',None),value=kwds.get('value'))
         AbstractUidValueDimension.__init__(self,*args,**kwds)
         
         if self.name_bounds is None:
@@ -210,15 +211,15 @@ class VectorDimension(AbstractSourcedVariable,AbstractUidValueDimension):
         
         return(ret)
     
+    def _format_private_value_(self,value):
+        return(self._get_none_or_array_(value,masked=True))
+    
     def _format_slice_state_(self,state,slc):
         state.bounds = get_none_or_slice(state._bounds,(slc,slice(None)))
         return(state)
     
     def _format_src_idx_(self,value):
         return(self._get_none_or_array_(value))
-        
-    def _format_value_(self,value):
-        return(self._get_none_or_array_(value,masked=True))
     
     def _get_uid_(self):
         if self._value is not None:

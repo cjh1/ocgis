@@ -54,7 +54,7 @@ class TestVectorDimension(unittest.TestCase):
         self.assertNumpyAll(vdim.value,vdim_slc2.value)
     
     def test_slice_source_idx_only(self):
-        vdim = VectorDimension(src_idx=[4,5,6])
+        vdim = VectorDimension(src_idx=[4,5,6],data='foo')
         vdim_slice = vdim[0]
         self.assertEqual(vdim_slice._src_idx[0],4)
     
