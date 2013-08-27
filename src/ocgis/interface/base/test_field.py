@@ -5,7 +5,7 @@ from ocgis.interface.base.dimension.base import VectorDimension
 import datetime
 from ocgis.interface.base.dimension.spatial import SpatialGridDimension,\
     SpatialDimension
-from ocgis.interface.base.field import Field
+from ocgis.interface.base.field import Field, Variable, VariableCollection
 import numpy as np
 import itertools
 from ocgis.test.base import TestBase
@@ -79,11 +79,14 @@ class TestField(TestBase):
         else:
             data = 'foo'
         
-        var = Field(name='tmax',units='C',temporal=temporal,level=level,realization=realization,
-                       spatial=spatial,data=data,debug=True)
+        var = Variable('tmax',units='C')
+        vcoll = VariableCollection([var])
+        
+        var = Field(variables=vcoll,temporal=temporal,level=level,realization=realization,
+                    spatial=spatial,data=data,debug=True)
         
         if with_value:
-            var._value = np.random.rand(*var.shape)
+            var._value = {'tmax':np.random.rand(*var.shape)}
         
         return(var)
     
@@ -104,7 +107,7 @@ class TestField(TestBase):
             self.assertIsInstance(ret,Field)
             self.assertEqual(ret.shape,field.shape)
             if wv:
-                self.assertNumpyAll(field.value,ret.value)
+                self.assertNumpyAll(field.value['tmax'],ret.value['tmax'])
             else:
                 with self.assertRaises(ValueError):
                     ret.value
@@ -116,7 +119,7 @@ class TestField(TestBase):
             ret = field.get_between('realization',1,1)
             self.assertEqual(ret.shape,(1, 31, 2, 3, 4))
             if wv:
-                self.assertNumpyAll(ret.value,field.value[0:1,:,:,:,:])
+                self.assertNumpyAll(ret.value['tmax'],field.value['tmax'][0:1,:,:,:,:])
                 
             ret = field.get_between('temporal',dt(2000,1,15),dt(2000,1,30))
             self.assertEqual(ret.temporal.value[0],dt(2000,1,14,12))
@@ -132,8 +135,9 @@ class TestField(TestBase):
             ref = var.shape
             self.assertEqual(ref,(2,31,2,3,4))
             value = np.random.rand(*var.shape)
-            var._value = value
-            self.assertIsInstance(var.value,np.ma.MaskedArray)
+            var._value = {'tmax':value}
+            self.assertIsInstance(var.value,dict)
+            self.assertIsInstance(var.variables['tmax'].value,np.ma.MaskedArray)
             value = np.random.rand(3)
             with self.assertRaises(AssertionError):
                 var._value = value
@@ -164,17 +168,22 @@ class TestField(TestBase):
             var_slc = var[:,:,:,:,:]
             self.assertTrue(np.may_share_memory(var.spatial.grid.value,var_slc.spatial.grid.value))
             self.assertTrue(np.may_share_memory(var.spatial.geom.point.value,var_slc.spatial.geom.point.value))
-            self.assertNumpyAll(var._value,var_slc._value)
+            
+            if iv:
+                self.assertNumpyAll(var._value['tmax'],var_slc._value['tmax'])
+            else:
+                self.assertNumpyAll(var._value,var_slc._value)
+                
             if iv == True:
-                self.assertTrue(np.may_share_memory(var._value,var_slc._value))
+                self.assertTrue(np.may_share_memory(var._value['tmax'],var_slc._value['tmax']))
             else:
                 self.assertEqual(var_slc._value,None)
             
             var_slc = var[0,0,0,0,0]
             self.assertEqual(var_slc.shape,(1,1,1,1,1))
             if iv:
-                self.assertEqual(var_slc.value.shape,(1,1,1,1,1))
-                self.assertNumpyAll(var_slc.value,var.value[0,0,0,0,0])
+                self.assertEqual(var_slc.value['tmax'].shape,(1,1,1,1,1))
+                self.assertNumpyAll(var_slc.value['tmax'],var.value['tmax'][0,0,0,0,0])
             else:
                 self.assertEqual(var_slc._value,None)
                 self.assertEqual(var_slc._value,var._value)
@@ -183,9 +192,9 @@ class TestField(TestBase):
         var = self.get_field(with_value=True)
         var_slc = var[:,0:2,0,:,:]
         self.assertEqual(var_slc.shape,(2,2,1,3,4))
-        self.assertEqual(var_slc.value.shape,(2,2,1,3,4))
-        ref_var_real_slc = var.value[:,0:2,0,:,:]
-        self.assertNumpyAll(ref_var_real_slc.flatten(),var_slc.value.flatten())
+        self.assertEqual(var_slc.value['tmax'].shape,(2,2,1,3,4))
+        ref_var_real_slc = var.value['tmax'][:,0:2,0,:,:]
+        self.assertNumpyAll(ref_var_real_slc.flatten(),var_slc.value['tmax'].flatten())
 
 
 if __name__ == "__main__":

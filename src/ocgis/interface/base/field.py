@@ -77,27 +77,42 @@ class Variable(object):
         self.alias = alias or name
         self.units = units
         self.meta = meta or {}
+        self._field = None
+    
+    @property
+    def field(self):
+        return(self._field)
+    
+    @property
+    def value(self):
+        return(self.field.value[self.alias])
         
         
 class VariableCollection(OrderedDict):
     
     def __init__(self,variables=None):
+        super(VariableCollection,self).__init__()
+        
         if variables is not None:
             for variable in variables:
                 assert(variable.alias not in self)
-                self.update({variable.alias:variable})
+                self.update(variable.alias,variable)
                 
-    def update(self,variable):
-        assert(variable.alis not in self)
-        super(VariableCollection,self).update(variable)
+    def update(self,alias,variable):
+        assert(alias not in self)
+        super(VariableCollection,self).update({alias:variable})
 
 
 class Field(AbstractSourcedVariable):
     _axis_map = {'realization':0,'temporal':1,'level':2}
     
-    def __init__(self,variables=None,value=None,alias=None,realization=None,temporal=None,
+    def __init__(self,variables=None,value=None,realization=None,temporal=None,
                  level=None,spatial=None,units=None,data=None,debug=False,meta=None):
-        assert(isinstance(variables,VariableCollection))
+        try:
+            assert(isinstance(variables,VariableCollection))
+        except AssertionError:
+            ocgis_lh(exc=ValueError('The "variables" keyword must be a VariableCollection.'))
+        
         self.variables = variables
         self.realization = self._format_dimension_(realization)
         self.temporal = self._format_dimension_(temporal)
@@ -109,6 +124,8 @@ class Field(AbstractSourcedVariable):
         
         super(Field,self).__init__(data,src_idx=None,value=value,debug=debug)
         
+        for v in self.variables.itervalues(): v._field = self
+        
     def __getitem__(self,slc):
         slc = get_formatted_slice(slc,5)        
         ret = copy(self)
@@ -117,8 +134,7 @@ class Field(AbstractSourcedVariable):
         ret.level = get_none_or_slice(ret.level,slc[2])
         ret.spatial = get_none_or_slice(ret.spatial,(slc[3],slc[4]))
         
-        if self._value is not None:
-            ret._value = ret._value[slc]
+        ret._value = self._get_value_slice_or_none_(self._value,slc)
 
         return(ret)
     
@@ -140,7 +156,7 @@ class Field(AbstractSourcedVariable):
         slc = get_slice(indices)
         slc_field = [slice(None)]*5
         slc_field[pos] = slc
-        ret._value = get_none_or_slice(ret._value,slc_field)
+        ret._value = self._get_value_slice_or_none_(ret._value,slc_field)
         return(ret)
             
     def _format_dimension_(self,dim):
@@ -149,16 +165,24 @@ class Field(AbstractSourcedVariable):
         return(dim)
         
     def _format_private_value_(self,value):
-        import ipdb;ipdb.set_trace()
         if value is None:
             ret = value
         else:
-            assert(value.shape == self.shape)
-            if not isinstance(value,np.ma.MaskedArray):
-                ret = np.ma.array(value,mask=False)
-            else:
-                ret = value
+            assert(isinstance(value,dict))
+            ret = value
+            for k,v in ret.iteritems():
+                assert(k in self.variables)
+                assert(v.shape == self.shape)
+                if not isinstance(v,np.ma.MaskedArray):
+                    ret[k] = np.ma.array(v,mask=False)
         return(ret)
     
     def _get_value_from_source_(self):
         raise(NotImplementedError)
+    
+    def _get_value_slice_or_none_(self,value,slc):
+        if value is None:
+            ret = value
+        else:
+            ret = {k:v[slc] for k,v in value.iteritems()}
+        return(ret)
