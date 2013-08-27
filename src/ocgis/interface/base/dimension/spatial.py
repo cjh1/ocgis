@@ -33,9 +33,6 @@ class SpatialDimension(base.AbstractUidDimension):
         
         super(SpatialDimension,self).__init__(*args,**kwds)
     
-    def get_iter(self):
-        ocgis_lh(exc=NotImplementedError('Spatial dimensions do not have a direct iterator.'))
-    
     @property
     def geom(self):
         if self._geom is None:
@@ -105,6 +102,9 @@ class SpatialDimension(base.AbstractUidDimension):
             raise(NotImplementedError)
 
         return(ret)
+    
+    def get_iter(self):
+        ocgis_lh(exc=NotImplementedError('Spatial dimensions do not have a direct iterator.'))
         
     def _format_uid_(self,value):
         return(np.atleast_2d(value))

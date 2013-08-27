@@ -109,18 +109,6 @@ class Field(AbstractSourcedVariable):
         shape_spatial = get_default_or_apply(self.spatial,lambda x: x.shape,(1,1))
         ret = (shape_realization,shape_temporal,shape_level,shape_spatial[0],shape_spatial[1])
         return(ret)
-        
-#    @property
-#    def value(self):
-#        if self._value is None:
-#            self._value = self._get_value_()
-#        return(self._value)
-#    @value.setter
-#    def value(self,value):
-#        if value is None:
-#            self._value = None
-#        else:
-#            self._value = self._format_value_(value)
             
     def _format_dimension_(self,dim):
         if dim is not None:
