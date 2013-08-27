@@ -98,18 +98,18 @@ class AbstractValueDimension(AbstractDimension):
         return(ret)
     
     
-class AbstractUidValueDimension(AbstractValueDimension):
-    _attrs_slice = ('uid','value')
+class AbstractUidDimension(AbstractDimension):
+    _attrs_slice = ('uid',)
     
     def __init__(self,*args,**kwds):
         self.uid = kwds.pop('uid',None)
         self.name_uid = kwds.pop('name_uid',None)
         
-        super(AbstractUidValueDimension,self).__init__(*args,**kwds)
+        super(AbstractUidDimension,self).__init__(*args,**kwds)
         
         if self.name_uid is None:
             self.name_uid = '{0}_uid'.format(self.name_value)
-    
+            
     @property
     def uid(self):
         if self._uid is None:
@@ -125,6 +125,16 @@ class AbstractUidValueDimension(AbstractValueDimension):
             n = reduce(mul,self.value.shape)
             ret = np.arange(1,n+1).reshape(self.value.shape)
         return(ret)
+
+
+class AbstractUidValueDimension(AbstractValueDimension,AbstractUidDimension):
+    _attrs_slice = ('uid','value')
+    
+    def __init__(self,*args,**kwds):
+        uid = kwds.pop('uid',None)
+        name_uid = kwds.pop('name_uid',None)
+        AbstractValueDimension.__init__(self,*args,**kwds)
+        AbstractUidDimension.__init__(self,uid=uid,name_uid=name_uid)
 
 
 class VectorDimension(AbstractSourcedVariable,AbstractUidValueDimension):

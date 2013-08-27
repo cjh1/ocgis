@@ -1,4 +1,4 @@
-from base import AbstractDimension
+import base
 import numpy as np
 from ocgis.util.logging_ocgis import ocgis_lh
 from ocgis.util.helpers import iter_array, get_none_or_slice, get_slice
@@ -6,7 +6,6 @@ from shapely.geometry.point import Point
 from ocgis import constants
 import itertools
 from shapely.geometry.polygon import Polygon
-from ocgis.interface.base.dimension.base import Abstract2d
 from copy import copy
 from shapely.prepared import prep
 from shapely.geometry.multipoint import MultiPoint
@@ -14,7 +13,7 @@ from shapely.geometry.multipolygon import MultiPolygon
 from ocgis.exc import EmptySubsetError, ImproperPolygonBoundsError
 
 
-class SpatialDimension(AbstractDimension):
+class SpatialDimension(base.AbstractDimension):
     
     def __init__(self,*args,**kwds):
         self.grid = kwds.pop('grid',None)
@@ -122,7 +121,7 @@ class SpatialDimension(AbstractDimension):
         ocgis_lh(exc=NotImplementedError('Spatial dimension values should be accessed through "grid" and/or "geom".'))
 
     
-class SpatialGridDimension(Abstract2d,AbstractDimension):
+class SpatialGridDimension(base.AbstractValueDimension):
     
     def __init__(self,*args,**kwds):
         for key in ['value','bounds']:
@@ -197,7 +196,7 @@ class SpatialGridDimension(Abstract2d,AbstractDimension):
         return(fill)
     
     
-class SpatialGeometryDimension(Abstract2d,AbstractDimension):
+class SpatialGeometryDimension(base.AbstractDimension):
     
     def __init__(self,*args,**kwds):
         self.grid = kwds.pop('grid',None)
