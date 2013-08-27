@@ -4,6 +4,7 @@ from ocgis.util.helpers import get_default_or_apply, get_none_or_slice,\
     get_none_or_1d, get_formatted_slice, get_slice
 import numpy as np
 from copy import copy
+from collections import OrderedDict
 
 
 class AbstractValueVariable(object):
@@ -69,23 +70,42 @@ class AbstractSourcedVariable(AbstractValueVariable):
     def _get_value_from_source_(self): pass
 
 
+class Variable(object):
+    
+    def __init__(self,name,alias=None,units=None,meta=None):
+        self.name = name
+        self.alias = alias or name
+        self.units = units
+        self.meta = meta or {}
+        
+        
+class VariableCollection(OrderedDict):
+    
+    def __init__(self,variables=None):
+        if variables is not None:
+            for variable in variables:
+                assert(variable.alias not in self)
+                self.update({variable.alias:variable})
+                
+    def update(self,variable):
+        assert(variable.alis not in self)
+        super(VariableCollection,self).update(variable)
+
+
 class Field(AbstractSourcedVariable):
     _axis_map = {'realization':0,'temporal':1,'level':2}
     
-    def __init__(self,name=None,value=None,alias=None,realization=None,temporal=None,
-                 level=None,spatial=None,units=None,attrs=None,data=None,debug=False):
-        if spatial is None or name is None:
-            ocgis_lh(exc=ValueError('Variables require a name and spatial dimension.'))
-        
-        self.name = name
-        self.alias = alias or name
+    def __init__(self,variables=None,value=None,alias=None,realization=None,temporal=None,
+                 level=None,spatial=None,units=None,data=None,debug=False,meta=None):
+        assert(isinstance(variables,VariableCollection))
+        self.variables = variables
         self.realization = self._format_dimension_(realization)
         self.temporal = self._format_dimension_(temporal)
         self.level = self._format_dimension_(level)
         self.spatial = self._format_dimension_(spatial)
         self.units = units
-        self.attrs = attrs or {}
         self.value_dimension_names = ('realization','temporal','level','row','column')
+        self.meta = meta or {}
         
         super(Field,self).__init__(data,src_idx=None,value=value,debug=debug)
         
@@ -129,6 +149,7 @@ class Field(AbstractSourcedVariable):
         return(dim)
         
     def _format_private_value_(self,value):
+        import ipdb;ipdb.set_trace()
         if value is None:
             ret = value
         else:
