@@ -11,9 +11,12 @@ from shapely.prepared import prep
 from shapely.geometry.multipoint import MultiPoint
 from shapely.geometry.multipolygon import MultiPolygon
 from ocgis.exc import EmptySubsetError, ImproperPolygonBoundsError
+from ocgis.interface.base.field import AbstractSourcedVariable
 
 
-class SpatialDimension(base.AbstractDimension):
+class SpatialDimension(base.AbstractUidDimension):
+    _ndims = 2
+    _axis = 'SPATIAL'
     
     def __init__(self,*args,**kwds):
         self.grid = kwds.pop('grid',None)
@@ -42,7 +45,7 @@ class SpatialDimension(base.AbstractDimension):
         
         return(ret)
     
-    def __iter__(self):
+    def get_iter(self):
         ocgis_lh(exc=NotImplementedError('Spatial dimensions do not have a direct iterator.'))
     
     @property
@@ -122,19 +125,14 @@ class SpatialDimension(base.AbstractDimension):
 
     
 class SpatialGridDimension(base.AbstractValueDimension):
+    _axis = 'GRID'
+    _ndims = 2
     
     def __init__(self,*args,**kwds):
-        for key in ['value','bounds']:
-            if kwds.get(key) is not None:
-                assert(all([isinstance(v,np.ma.MaskedArray) for v in kwds[key]]))
-        
         self.row = kwds.pop('row',None)
         self.col = kwds.pop('col',None)
         
         super(SpatialGridDimension,self).__init__(*args,**kwds)
-        
-    def __iter__(self):
-        raise(NotImplementedError)
         
     @property
     def resolution(self):
@@ -142,11 +140,11 @@ class SpatialGridDimension(base.AbstractValueDimension):
     
     @property
     def shape(self):
-        return(self.uid.shape)
-    
-    @property
-    def weights(self):
-        raise(NotImplementedError)
+        if self.row is None:
+            ret = self.value.shape[1],self.value.shape[2]
+        else:
+            ret = len(self.row),len(self.col)
+        return(ret)
         
     def get_subset_bbox(self,min_row,min_col,max_row,max_col):
         if self.row is None:
@@ -238,7 +236,7 @@ class SpatialGeometryDimension(base.AbstractDimension):
         ocgis_lh(exc=NotImplementedError('Geometry dimensions do not have a direct value. Chose "...geom.point.value" or "...geom.polygon.value" instead.'))
 
 
-class SpatialGeometryPointDimension(Abstract2d,AbstractDimension):
+class SpatialGeometryPointDimension(base.AbstractUidValueDimension):
     
     def __init__(self,*args,**kwds):
         self.grid = kwds.pop('grid',None)

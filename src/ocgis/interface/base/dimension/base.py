@@ -14,7 +14,7 @@ class AbstractDimension(object):
     __metaclass__ = abc.ABCMeta
     
     @abc.abstractproperty
-    def _axis(self): ['R','T','Z','X','Y','GEOM','GRID','POINT','POLYGON']
+    def _axis(self): ['R','T','Z','X','Y','GEOM','GRID','POINT','POLYGON',None]
     @abc.abstractproperty
     def _ndims(self): int
     @abc.abstractproperty
@@ -39,6 +39,17 @@ class AbstractDimension(object):
         
     def _format_slice_state_(self,state,slc):
         return(state)
+    
+    def _get_none_or_array_(self,arr,masked=False):
+        if self._ndims == 1:
+            ret = get_none_or_1d(arr)
+        elif self._ndims == 2:
+            ret = get_none_or_2d(arr)
+        else:
+            raise(NotImplementedError)
+        if ret is not None and masked and not isinstance(ret,np.ma.MaskedArray):
+            ret = np.ma.array(ret,mask=False)
+        return(ret)
     
     
 class AbstractValueDimension(AbstractDimension):
@@ -86,17 +97,6 @@ class AbstractValueDimension(AbstractDimension):
                    ref_name_bounds_upper:ref_bounds[ii,1]}
             yield(ii,yld)
     
-    def _get_none_or_array_(self,arr,masked=False):
-        if self._ndims == 1:
-            ret = get_none_or_1d(arr)
-        elif self._ndims == 2:
-            ret = get_none_or_2d(arr)
-        else:
-            raise(NotImplementedError)
-        if ret is not None and masked and not isinstance(ret,np.ma.MaskedArray):
-            ret = np.ma.array(ret,mask=False)
-        return(ret)
-    
     
 class AbstractUidDimension(AbstractDimension):
     _attrs_slice = ('uid',)
@@ -108,7 +108,7 @@ class AbstractUidDimension(AbstractDimension):
         super(AbstractUidDimension,self).__init__(*args,**kwds)
         
         if self.name_uid is None:
-            self.name_uid = '{0}_uid'.format(self.name_value)
+            self.name_uid = '{0}_uid'.format(self.name)
             
     @property
     def uid(self):

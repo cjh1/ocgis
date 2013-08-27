@@ -10,15 +10,10 @@ from fiona.crs import from_epsg
 from shapely.geometry import shape, mapping
 from shapely.geometry.point import Point
 from ocgis.exc import EmptySubsetError, ImproperPolygonBoundsError
+from ocgis.test.base import TestBase
 
 
-class TestSpatialDimension(unittest.TestCase):
-    
-    def assertNumpyAll(self,arr1,arr2):
-        return(self.assertTrue(np.all(arr1 == arr2)))
-    
-    def assertNumpyNotAll(self,arr1,arr2):
-        return(self.assertFalse(np.all(arr1 == arr2)))
+class TestSpatialBase(TestBase):
     
     def get_2d_state_boundaries(self):
         geoms = []
@@ -85,6 +80,9 @@ class TestSpatialDimension(unittest.TestCase):
                 row = {'geometry':mapping(poly),
                        'properties':{'UID':int(sdim.geom.uid.flatten()[ii])}}
                 sink.write(row)
+
+
+class TestSpatialDimension(TestSpatialBase):
                 
     def test_get_clip(self):
         sdim = self.get_sdim(bounds=True)
@@ -278,15 +276,6 @@ class TestSpatialDimension(unittest.TestCase):
         sdim = self.get_sdim(bounds=True)
         sdim_slc = sdim[1,:]
         self.assertEqual(sdim_slc.shape,(1,4))
-    
-    def test_singletons(self):
-        row = VectorDimension(value=10,name='row')
-        col = VectorDimension(value=100,name='col')
-        grid = SpatialGridDimension(row=row,col=col,name='grid')
-        self.assertNumpyAll(grid.value,np.ma.array([[[10]],[[100]]],mask=False))
-        sdim = SpatialDimension(grid=grid)
-        to_test = sdim.geom.point.value[0,0].y,sdim.geom.point.value[0,0].x
-        self.assertEqual((10.0,100.0),(to_test))
         
     def test_point_as_value(self):
         pt = Point(100.0,10.0)
@@ -308,24 +297,6 @@ class TestSpatialDimension(unittest.TestCase):
         sdim_slc = sdim[:,1]
         self.assertEqual(sdim_slc.shape,(1,1))
         self.assertTrue(sdim_slc.geom.point.value[0,0].almost_equals(pt2))
-      
-    def test_load_from_source_grid_slicing(self):
-        row = VectorDimension(src_idx=[10,20,30,40],name='row')
-        col = VectorDimension(src_idx=[100,200,300],name='col')
-        grid = SpatialGridDimension(row=row,col=col,name='grid')
-        self.assertEqual(grid.shape,(4,3))
-        self.assertEqual(grid.uid.mean(),6.5)
-        self.assertEqual(grid.uid.shape,(4,3))
-        grid_slc = grid[1,2]
-        self.assertEqual(grid_slc.shape,(1,1))
-        with self.assertRaises(ValueError):
-            grid_slc.value
-        with self.assertRaises(ValueError):
-            grid_slc.row.bounds
-        self.assertNumpyAll(grid_slc.row._src_idx,np.array([20]))
-        self.assertNumpyAll(grid_slc.col._src_idx,np.array([300]))
-        self.assertEqual(grid_slc.row.name,'row')
-        self.assertEqual(grid_slc.uid,np.array([[6]],dtype=np.int32))
         
     def test_grid_get_subset_bbox(self):
         for b in [True,False]:
@@ -346,7 +317,41 @@ class TestSpatialDimension(unittest.TestCase):
             ref = sdim.weights
             self.assertEqual(ref.mean(),1.0)
             self.assertFalse(ref.mask.any())
+            
+    def test_singletons(self):
+        row = VectorDimension(value=10,name='row')
+        col = VectorDimension(value=100,name='col')
+        grid = SpatialGridDimension(row=row,col=col,name='grid')
+        self.assertNumpyAll(grid.value,np.ma.array([[[10]],[[100]]],mask=False))
+        sdim = SpatialDimension(grid=grid)
+        to_test = sdim.geom.point.value[0,0].y,sdim.geom.point.value[0,0].x
+        self.assertEqual((10.0,100.0),(to_test))
+
+
+class TestSpatialGridDimension(TestSpatialBase):
+    
+    def test_load_from_source_grid_slicing(self):
+        row = VectorDimension(src_idx=[10,20,30,40],name='row')
+        col = VectorDimension(src_idx=[100,200,300],name='col')
+        grid = SpatialGridDimension(row=row,col=col,name='grid')
+        self.assertEqual(grid.shape,(4,3))
+        grid_slc = grid[1,2]
+        self.assertEqual(grid_slc.shape,(1,1))
+        with self.assertRaises(ValueError):
+            grid_slc.value
+        with self.assertRaises(ValueError):
+            grid_slc.row.bounds
+        self.assertNumpyAll(grid_slc.row._src_idx,np.array([20]))
+        self.assertNumpyAll(grid_slc.col._src_idx,np.array([300]))
+        self.assertEqual(grid_slc.row.name,'row')
+        self.assertEqual(grid_slc.uid,np.array([[6]],dtype=np.int32))
         
+    def test_singletons(self):
+        row = VectorDimension(value=10,name='row')
+        col = VectorDimension(value=100,name='col')
+        grid = SpatialGridDimension(row=row,col=col,name='grid')
+        self.assertNumpyAll(grid.value,np.ma.array([[[10]],[[100]]],mask=False))
+
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']
