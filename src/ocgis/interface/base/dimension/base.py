@@ -130,15 +130,10 @@ class AbstractUidValueDimension(AbstractValueDimension,AbstractUidDimension):
     def __init__(self,*args,**kwds):
         self.properties = kwds.pop('properties',None)
         
-        uid = kwds.pop('uid',None)
-        name_uid = kwds.pop('name_uid',None)
-        value = kwds.pop('value',None)
-        name_value = kwds.pop('name_value',None)
-        units = kwds.pop('units',None)
-        meta = kwds.pop('meta',None)
-        name = kwds.pop('name',None)
-        AbstractValueDimension.__init__(self,meta=meta,name=name,value=value,name_value=name_value,units=units)
-        AbstractUidDimension.__init__(self,meta=meta,name=name,uid=uid,name_uid=name_uid)
+        kwds_value = {key:kwds.get(key,None) for key in ('value','name_value','units','meta','name')}
+        kwds_uid = {key:kwds.get(key,None) for key in ('uid','name_uid','meta','name')}
+        AbstractValueDimension.__init__(self,*args,**kwds_value)
+        AbstractUidDimension.__init__(self,*args,**kwds_uid)
         
         if self.properties is not None:
             assert(isinstance(self.properties,np.ndarray))
