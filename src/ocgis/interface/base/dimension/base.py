@@ -54,10 +54,10 @@ class AbstractDimension(object):
     
 class AbstractValueDimension(AbstractDimension):
     __metaclass__ = abc.ABCMeta
-    _attrs_slice = ('value',)
+    _attrs_slice = ('_value',)
     
     def __init__(self,*args,**kwds):
-        self.value = kwds.pop('value',None)
+        self._value = self._format_value_(kwds.pop('value',None))
         self.name_value = kwds.pop('name_value',None)
         self.units = kwds.pop('units',None)
         
@@ -72,17 +72,12 @@ class AbstractValueDimension(AbstractDimension):
     
     @property
     def value(self):
-        if self._value is None:
-            self._value = self._get_value_()
         return(self._value)
-    @value.setter
-    def value(self,value):
-        self._value = self._get_none_or_array_(value,masked=True)
-    def _get_value_(self):
-        return(self._value)
+    @abc.abstractmethod
+    def _format_value_(self,value): pass
     
     def get_iter(self):
-            
+        raise(NotImplementedError)
         ref_value = self.value
         ref_bounds = self.bounds
         ref_uid = self.uid
@@ -133,8 +128,16 @@ class AbstractUidValueDimension(AbstractValueDimension,AbstractUidDimension):
     def __init__(self,*args,**kwds):
         uid = kwds.pop('uid',None)
         name_uid = kwds.pop('name_uid',None)
-        AbstractValueDimension.__init__(self,*args,**kwds)
-        AbstractUidDimension.__init__(self,uid=uid,name_uid=name_uid)
+        
+        value = kwds.pop('value',None)
+        name_value = kwds.pop('name_value',None)
+        units = kwds.pop('units',None)
+        
+        meta = kwds.pop('meta',None)
+        name = kwds.pop('name',None)
+        
+        AbstractValueDimension.__init__(self,meta=meta,name=name,value=value,name_value=name_value,units=units)
+        AbstractUidDimension.__init__(self,meta=meta,name=name,uid=uid,name_uid=name_uid)
 
 
 class VectorDimension(AbstractSourcedVariable,AbstractUidValueDimension):
@@ -145,13 +148,15 @@ class VectorDimension(AbstractSourcedVariable,AbstractUidValueDimension):
     def __init__(self,*args,**kwds):
         self.bounds = kwds.pop('bounds',None)
         self.name_bounds = kwds.pop('name_bounds',None)
-        self._axis = kwds.get('axis','undefined')
+        self._axis = kwds.pop('axis',None)
         
         AbstractSourcedVariable.__init__(self,kwds.pop('data',None),kwds.pop('src_idx',None),kwds.get('value'))
         AbstractUidValueDimension.__init__(self,*args,**kwds)
         
         if self.name_bounds is None:
             self.name_bounds = '{0}_bnds'.format(self.name)
+        if self._axis is None:
+            self._axis = 'undefined'
             
     def __len__(self):
         return(self.shape[0])
@@ -206,15 +211,15 @@ class VectorDimension(AbstractSourcedVariable,AbstractUidValueDimension):
         
         return(ret)
     
-    def _format_private_value_(self,value):
-        return(self._get_none_or_array_(value,masked=True))
-    
     def _format_slice_state_(self,state,slc):
         state.bounds = get_none_or_slice(state._bounds,(slc,slice(None)))
         return(state)
     
     def _format_src_idx_(self,value):
         return(self._get_none_or_array_(value))
+        
+    def _format_value_(self,value):
+        return(self._get_none_or_array_(value,masked=True))
     
     def _get_uid_(self):
         if self._value is not None:

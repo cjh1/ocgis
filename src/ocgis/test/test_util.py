@@ -14,10 +14,11 @@ class TestHelpers(TestBase):
         ret = get_formatted_slice(slice(None,None,None),10)
         self.assertEqual(ret,slice(None,None,None))
         ret = get_formatted_slice(0,1)
-        self.assertEqual(ret,0)
+        self.assertEqual(slice(0,1),ret)
         with self.assertRaises(ValueError):
             get_formatted_slice(slice(0,1),2)
         ret = get_formatted_slice((slice(0,1),0),2)
+        self.assertEqual(ret,[slice(0,1,None),slice(0,1,None)])
     
     def test_validate_time_subset(self):
         time_range = [dt(2000,1,1),dt(2001,1,1)]

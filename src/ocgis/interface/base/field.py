@@ -13,7 +13,6 @@ class AbstractSourcedVariable(object):
         if value is None and src_idx is None:
             ocgis_lh(exc=ValueError('Either values or a source index are required for sourced variables.'))
         
-        self._value = value
         self._data = data
         self._src_idx = src_idx
         
@@ -25,11 +24,10 @@ class AbstractSourcedVariable(object):
         self.__src_idx = self._format_src_idx_(value)
         
     @property
-    def _value(self):
-        return(self.__value)
-    @_value.setter
-    def _value(self,value):
-        self.__value = self._format_private_value_(value)
+    def value(self):
+        if self._value is None:
+            self._value = self._get_value_()
+        return(self._value)
     
     def _get_value_(self):
         if self._data is None and self._value is None:
@@ -39,9 +37,6 @@ class AbstractSourcedVariable(object):
         else:
             ret = self._get_value_from_source_()
         return(ret)
-    
-    @abc.abstractmethod
-    def _format_private_value_(self,value): pass
     
     @abc.abstractmethod
     def _format_src_idx_(self,value): pass

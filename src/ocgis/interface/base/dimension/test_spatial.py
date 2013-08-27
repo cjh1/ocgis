@@ -332,6 +332,7 @@ class TestSpatialGridDimension(TestSpatialBase):
     
     def test_load_from_source_grid_slicing(self):
         row = VectorDimension(src_idx=[10,20,30,40],name='row')
+        self.assertEqual(row.name,'row')
         col = VectorDimension(src_idx=[100,200,300],name='col')
         grid = SpatialGridDimension(row=row,col=col,name='grid')
         self.assertEqual(grid.shape,(4,3))

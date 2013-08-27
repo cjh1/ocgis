@@ -50,16 +50,31 @@ def get_slice(arr):
     return(slice(start,stop))
 
 def get_formatted_slice(slc,n_dims):
+    
+    def _format_(slc):
+        if isinstance(slc,int):
+            ret = slice(slc,slc+1)
+        elif isinstance(slc,slice):
+            ret = slc
+        elif isinstance(slc,np.ndarray):
+            if slc.dtype == bool:
+                ret = slc
+            else:
+                raise(NotImplementedError(slc))
+        else:
+            ret = slice(slc[0],slc[1])
+        return(ret)
+    
     if isinstance(slc,slice) and slc == slice(None):
         ret = slc
     elif n_dims == 1:
-        ret = slc
+        ret = _format_(slc)
     elif n_dims > 1:
         try:
             assert(len(slc) == n_dims)
         except (TypeError,AssertionError):
             raise(ValueError("Only {0}-d slicing allowed.".format(n_dims)))
-        ret = slc
+        ret = map(_format_,slc)
     else:
         raise(NotImplementedError((slc,n_dims)))
     return(ret)

@@ -31,7 +31,6 @@ class TestVectorDimension(unittest.TestCase):
         vdim = VectorDimension(value=[4,5,6],bounds=[[3,5],[4,6],[5,7]])
         self.assertNumpyAll(vdim.bounds,np.array([[3,5],[4,6],[5,7]]))
         self.assertNumpyAll(vdim.uid,np.array([1,2,3]))
-        self.assertTrue(len(list(vdim)),3)
         self.assertEqual(vdim.resolution,2.0)
     
     def test_boolean_slice(self):
