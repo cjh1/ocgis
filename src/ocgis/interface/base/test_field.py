@@ -9,6 +9,7 @@ from ocgis.interface.base.field import Field
 import numpy as np
 import itertools
 from ocgis.test.base import TestBase
+from ocgis.exc import EmptySubsetError
 
 
 class TestField(TestBase):
@@ -69,7 +70,7 @@ class TestField(TestBase):
         spatial = SpatialDimension(grid=grid)
         
         if with_realization:
-            realization = ['r1','r2']
+            realization = VectorDimension(value=[1,2],name='realization')
         else:
             realization = None
             
@@ -87,13 +88,39 @@ class TestField(TestBase):
         return(var)
     
     def test_subsetting(self):
-        field = self.get_field()
-        self.assertNotIsInstance(field.temporal.value,np.ma.MaskedArray)
-        temporal_start = dt(2000,1,1,12)
-        temporal_stop = dt(2000,1,31,12)
-        ret = field.temporal.get_between(temporal_start,temporal_stop)
-        self.assertIsInstance(ret,Field)
-        import ipdb;ipdb.set_trace()
+        for wv in [True,False]:
+            field = self.get_field(with_value=wv)
+            self.assertNotIsInstance(field.temporal.value,np.ma.MaskedArray)
+            self.assertIsInstance(field.temporal._field,Field)
+            
+            temporal_start = dt(2000,1,1,12)
+            temporal_stop = dt(2000,1,31,12)
+            ret = field.temporal.get_between(temporal_start,temporal_stop)
+            self.assertIsInstance(ret,VectorDimension)
+            self.assertNumpyAll(ret.value,field.temporal.value)
+            self.assertNumpyAll(ret.bounds,field.temporal.bounds)
+            
+            ret = field.get_between('temporal',temporal_start,temporal_stop)
+            self.assertIsInstance(ret,Field)
+            self.assertEqual(ret.shape,field.shape)
+            if wv:
+                self.assertNumpyAll(field.value,ret.value)
+            else:
+                with self.assertRaises(ValueError):
+                    ret.value
+                    
+            ## try empty subset
+            with self.assertRaises(EmptySubsetError):
+                field.get_between('level',100000,2000000000)
+                
+            ret = field.get_between('realization',1,1)
+            self.assertEqual(ret.shape,(1, 31, 2, 3, 4))
+            if wv:
+                self.assertNumpyAll(ret.value,field.value[0:1,:,:,:,:])
+                
+            ret = field.get_between('temporal',dt(2000,1,15),dt(2000,1,30))
+            self.assertEqual(ret.temporal.value[0],dt(2000,1,14,12))
+            self.assertEqual(ret.temporal.value[-1],dt(2000,1,30,12))
     
     def test_empty(self):
         with self.assertRaises(ValueError):

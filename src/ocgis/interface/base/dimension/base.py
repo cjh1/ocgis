@@ -70,14 +70,6 @@ class AbstractValueDimension(AbstractValueVariable,AbstractDimension):
     def shape(self):
         return(self.value.shape)
     
-#    @property
-#    def value(self):
-#        if self._value is None:
-#            self._value = self._get_value_()
-#        return(self._value)
-#    @abc.abstractmethod
-#    def _get_value_(self): pass
-    
     def get_iter(self):
         raise(NotImplementedError)
         ref_value = self.value
@@ -93,9 +85,6 @@ class AbstractValueDimension(AbstractValueVariable,AbstractDimension):
                    ref_name_bounds_lower:ref_bounds[ii,0],
                    ref_name_bounds_upper:ref_bounds[ii,1]}
             yield(ii,yld)
-            
-#    @abc.abstractmethod
-#    def _format_value_(self,value): pass
     
     
 class AbstractUidDimension(AbstractDimension):
@@ -139,6 +128,7 @@ class AbstractUidValueDimension(AbstractValueDimension,AbstractUidDimension):
         if self.properties is not None:
             assert(isinstance(self.properties,np.ndarray))
             assert(self.properties.shape[0] == self.shape[0])
+
 
 class VectorDimension(AbstractSourcedVariable,AbstractUidValueDimension):
     _axis = None

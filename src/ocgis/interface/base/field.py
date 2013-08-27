@@ -1,7 +1,7 @@
 import abc
 from ocgis.util.logging_ocgis import ocgis_lh
 from ocgis.util.helpers import get_default_or_apply, get_none_or_slice,\
-    get_none_or_1d, get_formatted_slice
+    get_none_or_1d, get_formatted_slice, get_slice
 import numpy as np
 from copy import copy
 
@@ -70,6 +70,7 @@ class AbstractSourcedVariable(AbstractValueVariable):
 
 
 class Field(AbstractSourcedVariable):
+    _axis_map = {'realization':0,'temporal':1,'level':2}
     
     def __init__(self,name=None,value=None,alias=None,realization=None,temporal=None,
                  level=None,spatial=None,units=None,attrs=None,data=None,debug=False):
@@ -78,7 +79,7 @@ class Field(AbstractSourcedVariable):
         
         self.name = name
         self.alias = alias or name
-        self.realization = get_none_or_1d(realization)
+        self.realization = self._format_dimension_(realization)
         self.temporal = self._format_dimension_(temporal)
         self.level = self._format_dimension_(level)
         self.spatial = self._format_dimension_(spatial)
@@ -97,7 +98,7 @@ class Field(AbstractSourcedVariable):
         ret.spatial = get_none_or_slice(ret.spatial,(slc[3],slc[4]))
         
         if self._value is not None:
-            ret._value = np.atleast_1d(self._value[slc]).reshape(*ret.shape)
+            ret._value = ret._value[slc]
 
         return(ret)
     
@@ -108,6 +109,18 @@ class Field(AbstractSourcedVariable):
         shape_level = get_default_or_apply(self.level,len,1)
         shape_spatial = get_default_or_apply(self.spatial,lambda x: x.shape,(1,1))
         ret = (shape_realization,shape_temporal,shape_level,shape_spatial[0],shape_spatial[1])
+        return(ret)
+    
+    def get_between(self,dim,lower,upper):
+        pos = self._axis_map[dim]
+        ref = getattr(self,dim)
+        new_dim,indices = ref.get_between(lower,upper,return_indices=True)
+        ret = copy(self)
+        setattr(ret,dim,new_dim)
+        slc = get_slice(indices)
+        slc_field = [slice(None)]*5
+        slc_field[pos] = slc
+        ret._value = get_none_or_slice(ret._value,slc_field)
         return(ret)
             
     def _format_dimension_(self,dim):
