@@ -54,7 +54,6 @@ class AbstractDimension(object):
     
 class AbstractValueDimension(AbstractDimension):
     __metaclass__ = abc.ABCMeta
-    _attrs_slice = ('_value',)
     
     def __init__(self,*args,**kwds):
         self._value = self._format_value_(kwds.pop('value',None))
@@ -72,9 +71,11 @@ class AbstractValueDimension(AbstractDimension):
     
     @property
     def value(self):
+        if self._value is None:
+            self._value = self._get_value_()
         return(self._value)
     @abc.abstractmethod
-    def _format_value_(self,value): pass
+    def _get_value_(self): pass
     
     def get_iter(self):
         raise(NotImplementedError)
@@ -91,10 +92,12 @@ class AbstractValueDimension(AbstractDimension):
                    ref_name_bounds_lower:ref_bounds[ii,0],
                    ref_name_bounds_upper:ref_bounds[ii,1]}
             yield(ii,yld)
+            
+    @abc.abstractmethod
+    def _format_value_(self,value): pass
     
     
 class AbstractUidDimension(AbstractDimension):
-    _attrs_slice = ('uid',)
     
     def __init__(self,*args,**kwds):
         self.uid = kwds.pop('uid',None)
@@ -123,22 +126,21 @@ class AbstractUidDimension(AbstractDimension):
 
 
 class AbstractUidValueDimension(AbstractValueDimension,AbstractUidDimension):
-    _attrs_slice = ('uid','value')
     
     def __init__(self,*args,**kwds):
+        self.properties = kwds.pop('properties',None)
+        if self.properties is not None:
+            assert(isinstance(self.properties,np.ndarray))
+        
         uid = kwds.pop('uid',None)
         name_uid = kwds.pop('name_uid',None)
-        
         value = kwds.pop('value',None)
         name_value = kwds.pop('name_value',None)
         units = kwds.pop('units',None)
-        
         meta = kwds.pop('meta',None)
         name = kwds.pop('name',None)
-        
         AbstractValueDimension.__init__(self,meta=meta,name=name,value=value,name_value=name_value,units=units)
         AbstractUidDimension.__init__(self,meta=meta,name=name,uid=uid,name_uid=name_uid)
-
 
 class VectorDimension(AbstractSourcedVariable,AbstractUidValueDimension):
     _axis = None

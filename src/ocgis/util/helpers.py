@@ -66,14 +66,17 @@ def get_formatted_slice(slc,n_dims):
         return(ret)
     
     if isinstance(slc,slice) and slc == slice(None):
-        ret = slc
+        if n_dims == 1:
+            ret = slc
+        else:
+            ret = [slice(None)]*n_dims
     elif n_dims == 1:
         ret = _format_(slc)
     elif n_dims > 1:
         try:
             assert(len(slc) == n_dims)
         except (TypeError,AssertionError):
-            raise(ValueError("Only {0}-d slicing allowed.".format(n_dims)))
+            raise(IndexError("Only {0}-d slicing allowed.".format(n_dims)))
         ret = map(_format_,slc)
     else:
         raise(NotImplementedError((slc,n_dims)))

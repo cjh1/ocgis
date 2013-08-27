@@ -18,7 +18,6 @@ class TestSpatialBase(TestBase):
     def get_2d_state_boundaries(self):
         geoms = []
         build = True
-        ret = {}
         with fiona.open('/home/local/WX/ben.koziol/Dropbox/nesii/project/ocg/bin/shp/state_boundaries/state_boundaries.shp','r') as source:
             for ii,row in enumerate(source):
                 if build:
@@ -32,13 +31,11 @@ class TestSpatialBase(TestBase):
                         dtype.append((str(k),v))
                     fill = np.empty(nrows,dtype=dtype)
                     ref_names = fill.dtype.names
-                    ret['source.meta'] = source.meta.copy()
                     build = False
                 fill[ii] = tuple([row['properties'][n] for n in ref_names])
                 geoms.append(shape(row['geometry']))
-        ret['properties'] = fill
         geoms = np.atleast_2d(geoms)
-        return(geoms,ret)
+        return(geoms,fill)
     
     def get_2d_state_boundaries_sdim(self):
         geoms,attrs = self.get_2d_state_boundaries()
@@ -142,18 +139,18 @@ class TestSpatialDimension(TestSpatialBase):
         geoms,attrs = self.get_2d_state_boundaries()
         poly = SpatialGeometryPolygonDimension(value=geoms)
         geom = SpatialGeometryDimension(polygon=poly)
-        sdim = SpatialDimension(geom=geom,attrs=attrs)
+        sdim = SpatialDimension(geom=geom)
         ref = sdim.weights
         self.assertEqual(ref[0,50],1.0)
         self.assertAlmostEqual(sdim.weights.mean(),0.07744121084026262)
     
     def test_geom_mask_by_polygon(self):
-        geoms,attrs = self.get_2d_state_boundaries()
-        spdim = SpatialGeometryPolygonDimension(value=geoms,attrs=attrs)
+        geoms,properties = self.get_2d_state_boundaries()
+        spdim = SpatialGeometryPolygonDimension(value=geoms)
         ref = spdim.value.mask
         self.assertEqual(ref.shape,(1,51))
         self.assertFalse(ref.any())
-        select = attrs['properties']['STATE_ABBR'] == 'NE'
+        select = properties['STATE_ABBR'] == 'NE'
         subset_polygon = geoms[:,select][0,0]
         msked = spdim.get_intersects_masked(subset_polygon)
         self.assertEqual(msked.value.mask.sum(),50)
@@ -177,8 +174,8 @@ class TestSpatialDimension(TestSpatialBase):
                 
     def test_grid_slice_all(self):
         sdim = self.get_sdim(bounds=True)
-        with self.assertRaises(IndexError):
-            sdim.grid[:]
+        slc = sdim[:]
+        self.assertNumpyAll(sdim.grid.value,slc.grid.value)
     
     def test_grid_slice_1d(self):
         sdim = self.get_sdim(bounds=True)
@@ -203,7 +200,7 @@ class TestSpatialDimension(TestSpatialBase):
         
     def test_geom_point(self):
         sdim = self.get_sdim(bounds=True)
-        with self.assertRaises(NotImplementedError):
+        with self.assertRaises(AttributeError):
             sdim.geom.value
         pt = sdim.geom.point.value
         fill = np.ma.array(np.zeros((2,3,4)),mask=False)
