@@ -12,7 +12,6 @@ from shapely.prepared import prep
 from shapely.geometry.multipoint import MultiPoint
 from shapely.geometry.multipolygon import MultiPolygon
 from ocgis.exc import EmptySubsetError, ImproperPolygonBoundsError
-from ocgis.interface.base.field import AbstractSourcedVariable
 
 
 class SpatialDimension(base.AbstractUidDimension):

@@ -8,18 +8,14 @@ from ocgis.interface.base.dimension.spatial import SpatialGridDimension,\
 from ocgis.interface.base.field import Field
 import numpy as np
 import itertools
+from ocgis.test.base import TestBase
 
 
-class TestField(unittest.TestCase):
+class TestField(TestBase):
     
     def setUp(self):
         np.random.seed(1)
-        
-    def assertNumpyAll(self,arr1,arr2):
-        return(self.assertTrue(np.all(arr1 == arr2)))
-    
-    def assertNumpyNotAll(self,arr1,arr2):
-        return(self.assertFalse(np.all(arr1 == arr2)))
+        super(TestField,self).setUp()
     
     def get_col(self,bounds=True):
         value = [-100,-99,-98,-97]

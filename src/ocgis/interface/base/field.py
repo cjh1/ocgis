@@ -61,9 +61,9 @@ class Field(AbstractSourcedVariable):
         self.units = units
         self.attrs = attrs or {}
         self.value_dimension_names = ('realization','temporal','level','row','column')
-        self.value = value
+        self._value = self._format_value_(value)
         
-        super(Field,self).__init__(data)
+        super(Field,self).__init__(data,None,value)
         
     def __getitem__(self,slc):
         try:
@@ -91,28 +91,38 @@ class Field(AbstractSourcedVariable):
         ret = (shape_realization,shape_temporal,shape_level,shape_spatial[0],shape_spatial[1])
         return(ret)
         
-    @property
-    def value(self):
-        if self._value is None:
-            self._value = self._get_value_()
-        return(self._value)
-    @value.setter
-    def value(self,value):
-        if value is None:
-            self._value = None
-        else:
-            self._value = self._format_value_(value)
+#    @property
+#    def value(self):
+#        if self._value is None:
+#            self._value = self._get_value_()
+#        return(self._value)
+#    @value.setter
+#    def value(self,value):
+#        if value is None:
+#            self._value = None
+#        else:
+#            self._value = self._format_value_(value)
             
     def _format_dimension_(self,dim):
         if dim is not None:
             dim._field = self
         return(dim)
+    
+    def _format_src_idx_(self,value):
+        if value is None:
+            ret = value
+        else:
+            raise(NotImplementedError)
+        return(ret)
         
     def _format_value_(self,value):
-        assert(value.shape == self.shape)
-        if not isinstance(value,np.ma.MaskedArray):
-            value = np.ma.array(value,mask=False)
-        return(value)
+        if value is None:
+            ret = value
+        else:
+            assert(value.shape == self.shape)
+            if not isinstance(value,np.ma.MaskedArray):
+                ret = np.ma.array(value,mask=False)
+        return(ret)
     
     def _get_value_from_source_(self):
         raise(NotImplementedError)
