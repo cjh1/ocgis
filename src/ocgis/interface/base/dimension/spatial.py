@@ -86,7 +86,6 @@ class SpatialDimension(base.AbstractUidDimension):
             else:
                 ## reset any geometries and uids
                 ret._geom = None
-                ret._uid = None
                 ## subset the grid by its bounding box
                 ret.grid = ret.grid.get_subset_bbox(miny,minx,maxy,maxx)
                 ## attempt to mask the polygons
