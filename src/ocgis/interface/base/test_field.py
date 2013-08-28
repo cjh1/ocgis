@@ -132,6 +132,14 @@ class TestField(TestBase):
             if not wv:
                 with self.assertRaises(ValueError):
                     ret.value
+                    
+    def test_get_aggregated_irregular(self):
+        for wv in [True,False]:
+            single = wkt.loads('POLYGON((-99.894355 40.230645,-98.725806 40.196774,-97.726613 40.027419,-97.032258 39.942742,-97.681452 39.626613,-97.850806 39.299194,-98.178226 39.643548,-98.844355 39.920161,-99.894355 40.230645))')
+            field = self.get_field(with_value=wv)
+            ret = field.get_clip(single)
+            agg = ret.get_spatially_aggregated()
+            import ipdb;ipdb.set_trace()
         
     def test_subsetting(self):
         for wv in [True,False]:

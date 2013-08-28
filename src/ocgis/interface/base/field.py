@@ -3,9 +3,12 @@ from ocgis.util.logging_ocgis import ocgis_lh
 from ocgis.util.helpers import get_default_or_apply, get_none_or_slice,\
     get_none_or_1d, get_formatted_slice, get_slice
 import numpy as np
-from copy import copy
-from collections import OrderedDict
+from copy import copy, deepcopy
+from collections import OrderedDict, deque
 import itertools
+from shapely.ops import cascaded_union
+from shapely.geometry.multipoint import MultiPoint
+from shapely.geometry.multipolygon import MultiPolygon
 
 
 class AbstractValueVariable(object):
@@ -148,6 +151,40 @@ class Field(AbstractSourcedVariable):
         ret = (shape_realization,shape_temporal,shape_level,shape_spatial[0],shape_spatial[1])
         return(ret)
     
+    def get_spatially_aggregated(self,new_spatial_uid=None):
+
+        def _get_geometry_union_(value):
+            to_union = [geom for geom in value.compressed().flat]
+            processed_to_union = deque()
+            for geom in to_union:
+                if isinstance(geom,MultiPolygon) or isinstance(geom,MultiPoint):
+                    for element in geom:
+                        processed_to_union.append(element)
+                else:
+                    processed_to_union.append(geom)
+            unioned = cascaded_union(processed_to_union)
+            ret = np.ma.array([[None]],mask=False,dtype=object)
+            ret[0,0] = unioned
+            return(ret)
+        
+        ret = copy(self)
+        ## this is the new spatial identifier for the spatial dimension.
+        new_spatial_uid = new_spatial_uid or 1
+        ## aggregate the geometry containers if possible.
+        if ret.spatial.geom.point is not None:
+            unioned = _get_geometry_union_(ret.spatial.geom.point.value)
+            new_point = SpatialGeometryPointDimension(value=unioned,uid=new_spatial_uid)
+#            ret.spatial.geom.point._value = _get_geometry_union_(ret.spatial.geom.point.value)
+        if ret.spatial.geom.polygon is not None:
+            unioned = _get_geometry_union_(ret.spatial.geom.polygon.value)
+            new_polygon = SpatialGeometryPolygonDimension(value=unioned,uid=new_spatial_uid)
+#            ret.spatial.geom.polygon._value = _get_geometry_union_(ret.spatial.geom.polygon.value)
+        ## there are no grid objects for aggregated spatial dimensions.
+        ret.spatial.grid = None
+        
+        ## now the values are aggregated.
+        import ipdb;ipdb.set_trace()
+    
     def get_between(self,dim,lower,upper):
         pos = self._axis_map[dim]
         ref = getattr(self,dim)
@@ -218,3 +255,11 @@ class Field(AbstractSourcedVariable):
             for idx_r,idx_t,idx_l in itertools.product(rng_realization,rng_temporal,rng_level):
                 ref = v[idx_r,idx_t,idx_l]
                 ref.mask = ref_logical_or(ref.mask,mask)
+                
+                
+class SpatiallyAggregatedField(Field):
+    
+    def __init__(self,*args,**kwds):
+        self.raw = kwds.pop('raw')
+        
+        super(SpatiallyAggregatedField,self).__init__(*args,**kwds)

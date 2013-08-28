@@ -7,14 +7,21 @@ import tempfile
 import warnings
 from osgeo import ogr, osr
 from shapely import wkt, wkb
-from copy import deepcopy
 from shapely.geometry.multipolygon import MultiPolygon
 from shapely.ops import cascaded_union
 import re
 from ocgis.exc import DefinitionValidationError
 import sys
 import datetime
+from copy import copy, deepcopy
 
+
+def copy_deepcopy(src,attrs_deepcopy=None):
+    ret = copy(src)
+    if attrs_deepcopy is not None:
+        for attr in attrs_deepcopy:
+            setattr(ret,attr,deepcopy(getattr(ret,attr)))
+    return(ret)
 
 def get_default_or_apply(target,f,default=None):
     if target is None:
