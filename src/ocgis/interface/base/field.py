@@ -94,17 +94,19 @@ class Variable(object):
         
 class VariableCollection(OrderedDict):
     
-    def __init__(self,variables=None):
+    def __init__(self,*args,**kwds):
+        variables = kwds.pop('variables',None)
+        
         super(VariableCollection,self).__init__()
         
         if variables is not None:
             for variable in variables:
-                assert(variable.alias not in self)
-                self.update(variable.alias,variable)
+                self.add_variable(variable)
                 
-    def update(self,alias,variable):
-        assert(alias not in self)
-        super(VariableCollection,self).update({alias:variable})
+    def add_variable(self,variable):
+        assert(isinstance(variable,Variable))
+        assert(variable.alias not in self)
+        self.update({variable.alias:variable})
 
 
 class Field(AbstractSourcedVariable):
@@ -125,6 +127,7 @@ class Field(AbstractSourcedVariable):
         self.units = units
         self.value_dimension_names = ('realization','temporal','level','row','column')
         self.meta = meta or {}
+        self._raw = None
         
         super(Field,self).__init__(data,src_idx=None,value=value,debug=debug)
         
@@ -150,40 +153,6 @@ class Field(AbstractSourcedVariable):
         shape_spatial = get_default_or_apply(self.spatial,lambda x: x.shape,(1,1))
         ret = (shape_realization,shape_temporal,shape_level,shape_spatial[0],shape_spatial[1])
         return(ret)
-    
-    def get_spatially_aggregated(self,new_spatial_uid=None):
-
-        def _get_geometry_union_(value):
-            to_union = [geom for geom in value.compressed().flat]
-            processed_to_union = deque()
-            for geom in to_union:
-                if isinstance(geom,MultiPolygon) or isinstance(geom,MultiPoint):
-                    for element in geom:
-                        processed_to_union.append(element)
-                else:
-                    processed_to_union.append(geom)
-            unioned = cascaded_union(processed_to_union)
-            ret = np.ma.array([[None]],mask=False,dtype=object)
-            ret[0,0] = unioned
-            return(ret)
-        
-        ret = copy(self)
-        ## this is the new spatial identifier for the spatial dimension.
-        new_spatial_uid = new_spatial_uid or 1
-        ## aggregate the geometry containers if possible.
-        if ret.spatial.geom.point is not None:
-            unioned = _get_geometry_union_(ret.spatial.geom.point.value)
-            new_point = SpatialGeometryPointDimension(value=unioned,uid=new_spatial_uid)
-#            ret.spatial.geom.point._value = _get_geometry_union_(ret.spatial.geom.point.value)
-        if ret.spatial.geom.polygon is not None:
-            unioned = _get_geometry_union_(ret.spatial.geom.polygon.value)
-            new_polygon = SpatialGeometryPolygonDimension(value=unioned,uid=new_spatial_uid)
-#            ret.spatial.geom.polygon._value = _get_geometry_union_(ret.spatial.geom.polygon.value)
-        ## there are no grid objects for aggregated spatial dimensions.
-        ret.spatial.grid = None
-        
-        ## now the values are aggregated.
-        import ipdb;ipdb.set_trace()
     
     def get_between(self,dim,lower,upper):
         pos = self._axis_map[dim]
@@ -214,6 +183,58 @@ class Field(AbstractSourcedVariable):
         if ret._value is not None:
             self._set_new_value_mask_(ret,ret.spatial.get_mask())
         
+        return(ret)
+    
+    def get_spatially_aggregated(self,new_spatial_uid=None):
+
+        def _get_geometry_union_(value):
+            to_union = [geom for geom in value.compressed().flat]
+            processed_to_union = deque()
+            for geom in to_union:
+                if isinstance(geom,MultiPolygon) or isinstance(geom,MultiPoint):
+                    for element in geom:
+                        processed_to_union.append(element)
+                else:
+                    processed_to_union.append(geom)
+            unioned = cascaded_union(processed_to_union)
+            ret = np.ma.array([[None]],mask=False,dtype=object)
+            ret[0,0] = unioned
+            return(ret)
+        
+        ret = copy(self)
+        ## the spatial dimension needs to be deep copied so the grid may be
+        ## dereferenced.
+        ret.spatial = deepcopy(self.spatial)
+        ## this is the new spatial identifier for the spatial dimension.
+        new_spatial_uid = new_spatial_uid or 1
+        ## aggregate the geometry containers if possible.
+        if ret.spatial.geom.point is not None:
+            unioned = _get_geometry_union_(ret.spatial.geom.point.value)
+            ret.spatial.geom.point._value = unioned
+            ret.spatial.geom.point.uid = new_spatial_uid
+        if ret.spatial.geom.polygon is not None:
+            unioned = _get_geometry_union_(ret.spatial.geom.polygon.value)
+            ret.spatial.geom.polygon._value = _get_geometry_union_(ret.spatial.geom.polygon.value)
+            ret.spatial.geom.polygon.uid = new_spatial_uid
+        ## there are no grid objects for aggregated spatial dimensions.
+        ret.spatial.grid = None
+        
+        ## next the values are aggregated.
+        shp = list(ret.shape)
+        shp[-2] = 1
+        shp[-1] = 1
+        itrs = [range(dim) for dim in shp[0:3]]
+        weights = self.spatial.weights
+        ref_average = np.ma.average
+        for k,v in ret.value.iteritems():
+            fill = np.ma.array(np.zeros(shp),mask=False,dtype=v.dtype)
+            for idx_r,idx_t,idx_l in itertools.product(*itrs):
+                fill[idx_r,idx_t,idx_l] = ref_average(v[idx_r,idx_t,idx_l],weights=weights)
+            ret.value[k] = fill
+            
+        ## we want to keep a copy of the raw data around for later calculations.
+        ret._raw = self
+            
         return(ret)
             
     def _format_dimension_(self,dim):
@@ -255,11 +276,3 @@ class Field(AbstractSourcedVariable):
             for idx_r,idx_t,idx_l in itertools.product(rng_realization,rng_temporal,rng_level):
                 ref = v[idx_r,idx_t,idx_l]
                 ref.mask = ref_logical_or(ref.mask,mask)
-                
-                
-class SpatiallyAggregatedField(Field):
-    
-    def __init__(self,*args,**kwds):
-        self.raw = kwds.pop('raw')
-        
-        super(SpatiallyAggregatedField,self).__init__(*args,**kwds)

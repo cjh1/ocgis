@@ -82,8 +82,7 @@ class TestField(TestBase):
             data = 'foo'
         
         var = Variable('tmax',units='C')
-        vcoll = VariableCollection([var])
-        
+        vcoll = VariableCollection(variables=[var])
         var = Field(variables=vcoll,temporal=temporal,level=level,realization=realization,
                     spatial=spatial,data=data,debug=True)
         
@@ -134,12 +133,33 @@ class TestField(TestBase):
                     ret.value
                     
     def test_get_aggregated_irregular(self):
+        single = wkt.loads('POLYGON((-99.894355 40.230645,-98.725806 40.196774,-97.726613 40.027419,-97.032258 39.942742,-97.681452 39.626613,-97.850806 39.299194,-98.178226 39.643548,-98.844355 39.920161,-99.894355 40.230645))')
+        field = self.get_field(with_value=True)
+        ret = field.get_clip(single)
+        agg = ret.get_spatially_aggregated()
+        to_test = agg.spatial.geom.polygon.value[0,0]
+        self.assertAlmostEqual(to_test.area,single.area)
+        self.assertAlmostEqual(to_test.bounds,single.bounds)
+        self.assertAlmostEqual(to_test.exterior.length,single.exterior.length)
+            
+    def test_get_aggregated_all(self):
         for wv in [True,False]:
-            single = wkt.loads('POLYGON((-99.894355 40.230645,-98.725806 40.196774,-97.726613 40.027419,-97.032258 39.942742,-97.681452 39.626613,-97.850806 39.299194,-98.178226 39.643548,-98.844355 39.920161,-99.894355 40.230645))')
             field = self.get_field(with_value=wv)
-            ret = field.get_clip(single)
-            agg = ret.get_spatially_aggregated()
-            import ipdb;ipdb.set_trace()
+            try:
+                agg = field.get_spatially_aggregated()
+            except ValueError:
+                if not wv:
+                    continue
+                else:
+                    raise
+            self.assertNotEqual(field.spatial.grid,None)
+            self.assertEqual(agg.spatial.grid,None)
+            self.assertEqual(agg.shape,(2,31,2,1,1))
+            self.assertNumpyAll(field.value['tmax'],agg._raw.value['tmax'])
+            self.assertTrue(np.may_share_memory(field.value['tmax'],agg._raw.value['tmax']))
+            
+            to_test = field.value['tmax'][0,0,0,:,:].mean()
+            self.assertNumpyAll(to_test,agg.value['tmax'][0,0,0,0,0])
         
     def test_subsetting(self):
         for wv in [True,False]:

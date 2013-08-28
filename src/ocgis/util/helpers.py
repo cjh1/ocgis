@@ -17,6 +17,17 @@ from copy import copy, deepcopy
 
 
 def copy_deepcopy(src,attrs_deepcopy=None):
+    
+#    def _get_nested_(target,sequence):
+#        build = True
+#        for attr in sequence:
+#            if build:
+#                ref = getattr(target,attr)
+#                build = False
+#            else:
+#                ref = getattr(ref,attr)
+#        return(ref)
+    
     ret = copy(src)
     if attrs_deepcopy is not None:
         for attr in attrs_deepcopy:
