@@ -129,6 +129,9 @@ class TestField(TestBase):
             self.assertAlmostEqual(unioned.exterior.length,single.exterior.length)
             self.assertAlmostEqual(ret.spatial.weights[1,2],0.064016424)
             self.assertAlmostEqual(ret.spatial.weights.sum(),1.776435)
+            if not wv:
+                with self.assertRaises(ValueError):
+                    ret.value
         
     def test_subsetting(self):
         for wv in [True,False]:
