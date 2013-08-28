@@ -173,7 +173,10 @@ class TestSpatialDimension(TestSpatialBase):
         sdim.update_crs(to_crs)
         
     def test_update_crs_with_grid(self):
-        pass
+        sdim = self.get_sdim(bounds=True)
+        sdim.crs = CoordinateReferenceSystem(epsg=4326)
+        to_crs = CoordinateReferenceSystem(epsg=2163)
+        sdim.update_crs(to_crs)
 
     def test_grid_value(self):
         for b in [True,False]:
