@@ -12,6 +12,8 @@ from shapely.prepared import prep
 from shapely.geometry.multipoint import MultiPoint
 from shapely.geometry.multipolygon import MultiPolygon
 from ocgis.exc import EmptySubsetError, ImproperPolygonBoundsError
+from osgeo.ogr import CreateGeometryFromWkb
+from shapely import wkb
 
 
 class SpatialDimension(base.AbstractUidDimension):
@@ -122,6 +124,20 @@ class SpatialDimension(base.AbstractUidDimension):
         else:
             ret = self.grid.value.mask[0,:,:]
         return(ret.copy())
+    
+    def update_crs(self,to_crs):
+        if self.grid is not None:
+            raise(NotImplementedError)
+        
+        to_sr = to_crs.sr
+        from_sr = self.crs.sr
+        
+        if self.geom.point is not None:
+            self.geom.point.update_crs(to_sr,from_sr)
+        if self.geom.polygon is not None:
+            self.geom.polygon.update_crs(to_sr,from_sr)
+            
+        self.crs = to_crs
     
     def _format_uid_(self,value):
         return(np.atleast_2d(value))
@@ -321,6 +337,16 @@ class SpatialGeometryPointDimension(base.AbstractUidValueDimension):
         ret._value = fill
         
         return(ret)
+    
+    def update_crs(self,to_sr,from_sr):
+        ## project masked geometries!!
+        r_value = self.value.data
+        r_loads = wkb.loads
+        for (idx_row,idx_col),geom in iter_array(r_value,return_value=True,use_mask=False):
+            ogr_geom = CreateGeometryFromWkb(geom.wkb)
+            ogr_geom.AssignSpatialReference(from_sr)
+            ogr_geom.TransformTo(to_sr)
+            r_value[idx_row,idx_col] = r_loads(ogr_geom.ExportToWkb())
         
     def _format_private_value_(self,value):
         if value is not None:

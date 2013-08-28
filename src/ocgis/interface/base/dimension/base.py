@@ -21,10 +21,14 @@ class AbstractDimension(object):
     @abc.abstractproperty
     def _attrs_slice(self): 'sequence of strings'
     
-    def __init__(self,meta=None,name=None):
+    def __init__(self,meta=None,name=None,properties=None):
         self.meta = meta or {}
         self.name = name or self._axis
+        self.properties = properties
         self._field = None
+        
+        if self.properties is not None:
+            assert(isinstance(self.properties,np.ndarray))
     
     def __getitem__(self,slc):
         slc = get_formatted_slice(slc,self._ndims)
@@ -117,17 +121,12 @@ class AbstractUidDimension(AbstractDimension):
 
 class AbstractUidValueDimension(AbstractValueDimension,AbstractUidDimension):
     
-    def __init__(self,*args,**kwds):
-        self.properties = kwds.pop('properties',None)
-        
+    def __init__(self,*args,**kwds):        
         kwds_value = {key:kwds.get(key,None) for key in ('value','name_value','units','meta','name')}
         kwds_uid = {key:kwds.get(key,None) for key in ('uid','name_uid','meta','name')}
+
         AbstractValueDimension.__init__(self,*args,**kwds_value)
         AbstractUidDimension.__init__(self,*args,**kwds_uid)
-        
-        if self.properties is not None:
-            assert(isinstance(self.properties,np.ndarray))
-            assert(self.properties.shape[0] == self.shape[0])
 
 
 class VectorDimension(AbstractSourcedVariable,AbstractUidValueDimension):

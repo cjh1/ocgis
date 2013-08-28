@@ -11,6 +11,7 @@ from shapely.geometry import shape, mapping
 from shapely.geometry.point import Point
 from ocgis.exc import EmptySubsetError, ImproperPolygonBoundsError
 from ocgis.test.base import TestBase
+from ocgis.interface.base.crs import CoordinateReferenceSystem
 
 
 class TestSpatialBase(TestBase):
@@ -161,6 +162,18 @@ class TestSpatialDimension(TestSpatialBase):
         
         with self.assertRaises(EmptySubsetError):
             spdim.get_intersects_masked(Point(1000,1000))
+            
+    def test_update_crs(self):
+        geoms,properties = self.get_2d_state_boundaries()
+        crs = CoordinateReferenceSystem(epsg=4326)
+        spdim = SpatialGeometryPolygonDimension(value=geoms)
+        sdim = SpatialDimension(geom=SpatialGeometryDimension(polygon=spdim),properties=properties,
+                                crs=crs)
+        to_crs = CoordinateReferenceSystem(epsg=2163)
+        sdim.update_crs(to_crs)
+        
+    def test_update_crs_with_grid(self):
+        pass
 
     def test_grid_value(self):
         for b in [True,False]:
