@@ -173,10 +173,13 @@ class TestSpatialDimension(TestSpatialBase):
         sdim.update_crs(to_crs)
         
     def test_update_crs_with_grid(self):
-        sdim = self.get_sdim(bounds=True)
-        sdim.crs = CoordinateReferenceSystem(epsg=4326)
-        to_crs = CoordinateReferenceSystem(epsg=2163)
-        sdim.update_crs(to_crs)
+        for b in [True,False]:
+            sdim = self.get_sdim(bounds=b)
+            orig = sdim.grid.value.copy()
+            sdim.crs = CoordinateReferenceSystem(epsg=4326)
+            to_crs = CoordinateReferenceSystem(epsg=2163)
+            sdim.update_crs(to_crs)
+            self.assertNumpyNotAll(sdim.grid.value,orig)
 
     def test_grid_value(self):
         for b in [True,False]:
@@ -187,6 +190,15 @@ class TestSpatialDimension(TestSpatialBase):
             self.assertNumpyAll(sdim.grid.value[0].data,row_test)
             self.assertNumpyAll(sdim.grid.value[1].data,col_test)
             self.assertFalse(sdim.grid.value.mask.any())
+            try:
+                ret = sdim.get_grid_bounds()
+                self.assertEqual(ret.shape,(3,4,4))
+                self.assertFalse(ret.mask.any())
+            except ImproperPolygonBoundsError:
+                if b is False:
+                    pass
+                else:
+                    raise
                 
     def test_grid_slice_all(self):
         sdim = self.get_sdim(bounds=True)

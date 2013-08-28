@@ -78,6 +78,20 @@ class SpatialDimension(base.AbstractUidDimension):
             ret = (ret,slc)
         
         return(ret)
+        
+    def get_grid_bounds(self):
+        if self.geom.polygon is not None:
+            shp = list(self.geom.polygon.shape) + [4]
+            fill = np.empty(shp)
+            fill_mask = np.zeros(fill.shape,dtype=bool)
+            r_mask = self.geom.polygon.value.mask
+            for (idx_row,idx_col),geom in iter_array(self.geom.polygon.value,use_mask=False,return_value=True):
+                fill[idx_row,idx_col,:] = geom.bounds
+                fill_mask[idx_row,idx_col,:] = r_mask[idx_row,idx_col]
+            fill = np.ma.array(fill,mask=fill_mask)
+        else:
+            raise(NotImplementedError)
+        return(fill)
     
     def get_intersects(self,point_or_polygon,return_indices=False):
         ret = copy(self)
@@ -126,17 +140,25 @@ class SpatialDimension(base.AbstractUidDimension):
         return(ret.copy())
     
     def update_crs(self,to_crs):
-        if self.grid is not None:
-            raise(NotImplementedError)
         
         to_sr = to_crs.sr
         from_sr = self.crs.sr
         
         if self.geom.point is not None:
             self.geom.point.update_crs(to_sr,from_sr)
-        if self.geom.polygon is not None:
+        try:
             self.geom.polygon.update_crs(to_sr,from_sr)
-            
+        except ImproperPolygonBoundsError:
+            pass
+        
+        if self.grid is not None:
+            r_grid_value = self.grid.value.data
+            r_point_value = self.geom.point.value.data
+            for (idx_row,idx_col),geom in iter_array(r_point_value,return_value=True):
+                x,y = geom.x,geom.y
+                r_grid_value[0,idx_row,idx_col] = y
+                r_grid_value[1,idx_row,idx_col] = x
+        
         self.crs = to_crs
     
     def _format_uid_(self,value):
@@ -233,6 +255,7 @@ class SpatialGridDimension(base.AbstractUidValueDimension):
         return(ret)
     
     def _get_value_(self):
+        ## fill the centroids
         fill = np.empty((2,self.row.shape[0],self.col.shape[0]),dtype=self.row.value.dtype)
         fill = np.ma.array(fill,mask=False)
         col_coords,row_coords = np.meshgrid(self.col.value,self.row.value)
