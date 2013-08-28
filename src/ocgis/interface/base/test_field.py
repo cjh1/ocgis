@@ -118,16 +118,17 @@ class TestField(TestBase):
         self.assertEqual(ret.spatial.uid,np.array([[7]]))
         
     def test_get_clip_irregular(self):
-        single = wkt.loads('POLYGON((-99.894355 40.230645,-98.725806 40.196774,-97.726613 40.027419,-97.032258 39.942742,-97.681452 39.626613,-97.850806 39.299194,-98.178226 39.643548,-98.844355 39.920161,-99.894355 40.230645))')
-        field = self.get_field(with_value=True)
-        ret = field.get_clip(single)
-        self.assertEqual(ret.shape,(2,31,2,2,4))
-        unioned = cascaded_union([geom for geom in ret.spatial.geom.polygon.value.compressed().flat])
-        self.assertAlmostEqual(unioned.area,single.area)
-        self.assertAlmostEqual(unioned.bounds,single.bounds)
-        self.assertAlmostEqual(unioned.exterior.length,single.exterior.length)
-        self.assertAlmostEqual(ret.spatial.weights[1,2],0.064016424)
-        self.assertAlmostEqual(ret.spatial.weights.sum(),1.776435)
+        for wv in [True,False]:
+            single = wkt.loads('POLYGON((-99.894355 40.230645,-98.725806 40.196774,-97.726613 40.027419,-97.032258 39.942742,-97.681452 39.626613,-97.850806 39.299194,-98.178226 39.643548,-98.844355 39.920161,-99.894355 40.230645))')
+            field = self.get_field(with_value=wv)
+            ret = field.get_clip(single)
+            self.assertEqual(ret.shape,(2,31,2,2,4))
+            unioned = cascaded_union([geom for geom in ret.spatial.geom.polygon.value.compressed().flat])
+            self.assertAlmostEqual(unioned.area,single.area)
+            self.assertAlmostEqual(unioned.bounds,single.bounds)
+            self.assertAlmostEqual(unioned.exterior.length,single.exterior.length)
+            self.assertAlmostEqual(ret.spatial.weights[1,2],0.064016424)
+            self.assertAlmostEqual(ret.spatial.weights.sum(),1.776435)
         
     def test_subsetting(self):
         for wv in [True,False]:
