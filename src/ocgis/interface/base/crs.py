@@ -1,5 +1,10 @@
 from osgeo.osr import SpatialReference
 from fiona.crs import from_string, to_string
+import numpy as np
+from ocgis.util.logging_ocgis import ocgis_lh
+from ocgis.exc import SpatialWrappingError
+from ocgis.util.spatial.wrap import Wrapper
+from ocgis.util.helpers import iter_array
 
 
 class CoordinateReferenceSystem(object):
@@ -30,3 +35,53 @@ class CoordinateReferenceSystem(object):
         sr = SpatialReference()
         sr.ImportFromProj4(to_string(self.value))
         return(sr)
+    
+    
+class WGS84(CoordinateReferenceSystem):
+    
+    def __init__(self):
+        super(WGS84,self).__init__(epsg=4326)
+
+    def get_is_360(self,spatial):
+        if np.any(spatial.grid.col.value > 180.):
+            ret = True
+        else:
+            ret = False
+        return(ret)
+    
+    def get_wrap_axis(self,spatial):
+        pm = 0.0
+        ref = spatial.grid.col.bounds
+        for idx in range(ref.shape[0]):
+            if ref[idx,0] < 0 and ref[idx,1] > 0:
+                pm = ref[idx,0]
+                break
+        return(pm)
+
+    def unwrap(self,spatial):
+        if not self.get_is_360(spatial):
+            ## reset the grid
+            spatial.grid = None
+            unwrap = Wrapper(axis=self.get_wrap_axis(spatial)).unwrap
+            to_wrap = [spatial.geom._point,spatial.geom._polygon]
+            for tw in to_wrap:
+                if tw is not None:
+                    geom = tw.value.data
+                    for (ii,jj),to_wrap in iter_array(geom,return_value=True):
+                        geom[ii,jj] = unwrap(to_wrap)
+        else:
+            ocgis_lh(exc=SpatialWrappingError('Data already has a 0 to 360 coordinate system.'))
+    
+    def wrap(self,spatial):
+        if self.get_is_360(spatial):
+            ## reset the grid
+            spatial.grid = None
+            wrap = Wrapper(axis=self.get_wrap_axis(spatial)).wrap
+            to_wrap = [spatial.geom._point,spatial.geom._polygon]
+            for tw in to_wrap:
+                if tw is not None:
+                    geom = tw.value.data
+                    for (ii,jj),to_wrap in iter_array(geom,return_value=True):
+                        geom[ii,jj] = wrap(to_wrap)
+        else:
+            ocgis_lh(exc=SpatialWrappingError('Data does not have a 0 to 360 coordinate system.'))

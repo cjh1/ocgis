@@ -82,6 +82,10 @@ class OcgisEnvironmentError(OcgException):
         new_msg = 'Error when setting the ocgis.env variable {0}. The message is: {1}'.format(self.env_parm.name,self.msg)
         return(new_msg)
     
+
+class SpatialWrappingError(OcgException):
+    pass
+    
     
 class ImproperPolygonBoundsError(OcgException):
     pass
