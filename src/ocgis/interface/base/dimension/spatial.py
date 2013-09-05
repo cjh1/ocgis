@@ -11,9 +11,12 @@ from copy import copy
 from shapely.prepared import prep
 from shapely.geometry.multipoint import MultiPoint
 from shapely.geometry.multipolygon import MultiPolygon
-from ocgis.exc import EmptySubsetError, ImproperPolygonBoundsError
+from ocgis.exc import ImproperPolygonBoundsError, EmptySubsetError
 from osgeo.ogr import CreateGeometryFromWkb
 from shapely import wkb
+from ocgis.util.spatial import index as si
+from ocgis.util.spatial.index import build_index_grid, build_index,\
+    index_intersects
 
 
 class SpatialDimension(base.AbstractUidDimension):
@@ -333,27 +336,35 @@ class SpatialGeometryPointDimension(base.AbstractUidValueDimension):
         
     def get_intersects_masked(self,point_or_polygon):
         
+        def _intersects_point_(prepared,target):
+            return(prepared.intersects(target))
+        
+        def _intersects_polygon_(index,target):
+            return(index_intersects(target,index))
+        
+        ## when the selection geometry is a point, we want to return touches as
+        ## it may fall on a geometry boundary only.
         if type(point_or_polygon) in (Point,MultiPoint):
-            keep_touches = True
+            ref_intersects = _intersects_point_
+            obj = prep(point_or_polygon)
         elif type(point_or_polygon) in (Polygon,MultiPolygon):
-            keep_touches = False
+            ## construct the spatial index
+            index_grid = build_index_grid(30.0,point_or_polygon)
+            obj = build_index(point_or_polygon,index_grid)
+            ref_intersects = _intersects_polygon_
         else:
             raise(NotImplementedError)
         
         ret = copy(self)
+        
         fill = np.ma.array(ret.value,mask=True)
         ref_fill_mask = fill.mask
-        ref_touches = point_or_polygon.touches
         prepared = prep(point_or_polygon)
 
         for (ii,jj),geom in iter_array(self.value,return_value=True):
             if prepared.intersects(geom):
-                only_touches = ref_touches(geom)
-                fill_mask = False
-                if only_touches:
-                    if keep_touches == False:
-                        fill_mask = True
-                ref_fill_mask[ii,jj] = fill_mask
+                ## the mask value is the inverse of the intersects operation
+                ref_fill_mask[ii,jj] = not ref_intersects(obj,geom)
         
         if ref_fill_mask.all():
             ocgis_lh(exc=EmptySubsetError(self.name))
