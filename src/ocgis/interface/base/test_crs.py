@@ -19,6 +19,7 @@ class TestCoordinateReferenceSystem(unittest.TestCase):
         col = VectorDimension(value=0,bounds=[-1,1])
         grid = SpatialGridDimension(row=row,col=col)
         grid.resolution
+        raise(NotImplementedError)
         import ipdb;ipdb.set_trace()
 
 

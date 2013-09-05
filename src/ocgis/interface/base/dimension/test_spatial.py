@@ -365,8 +365,7 @@ class TestSpatialGridDimension(TestSpatialBase):
         self.assertEqual(grid_slc.shape,(1,1))
         with self.assertRaises(NotImplementedError):
             grid_slc.value
-        with self.assertRaises(NotImplementedError):
-            grid_slc.row.bounds
+        self.assertEqual(grid_slc.row.bounds,None)
         self.assertNumpyAll(grid_slc.row._src_idx,np.array([20]))
         self.assertNumpyAll(grid_slc.col._src_idx,np.array([300]))
         self.assertEqual(grid_slc.row.name,'row')

@@ -20,12 +20,13 @@ class TestVectorDimension(unittest.TestCase):
             self.assertEqual(vdim.uid[0],1)
             self.assertEqual(len(vdim.uid),1)
             self.assertEqual(vdim.shape,(1,))
-            self.assertNumpyAll(vdim.bounds,np.array([[5,5]]))
+            self.assertNumpyAll(vdim.bounds,None)
             self.assertEqual(vdim[0].value[0],5)
             self.assertEqual(vdim[0].uid[0],1)
             self.assertEqual(vdim[0]._src_idx[0],10)
-            self.assertNumpyAll(vdim[0].bounds,np.array([[5,5]]))
-            self.assertEqual(vdim.resolution,None)
+            self.assertNumpyAll(vdim[0].bounds,None)
+            with self.assertRaises(ValueError):
+                vdim.resolution
     
     def test_with_bounds(self):
         vdim = VectorDimension(value=[4,5,6],bounds=[[3,5],[4,6],[5,7]])
@@ -48,7 +49,8 @@ class TestVectorDimension(unittest.TestCase):
         self.assertNumpyAll(vdim_slc2.value,vdim.value)
         vdim._value[1] = 500
         self.assertNumpyAll(vdim.value,[4,500,6])
-        self.assertNumpyAll(vdim.bounds[1,:],[500,500])
+        with self.assertRaises(TypeError):
+            vdim.bounds[1,:]
         self.assertNumpyAll(vdim.value,vdim_slc2.value)
         vdim_slc2._value[2] = 1000
         self.assertNumpyAll(vdim.value,vdim_slc2.value)

@@ -203,7 +203,6 @@ class SpatialGridDimension(base.AbstractUidValueDimension):
         
     @property
     def resolution(self):
-        import ipdb;ipdb.set_trace()
         return(np.mean([self.row.resolution,self.col.resolution]))
     
     @property
@@ -425,7 +424,7 @@ class SpatialGeometryPolygonDimension(SpatialGeometryPointDimension):
             if self.grid.row is None:
                 ocgis_lh(exc=ImproperPolygonBoundsError('Polygon dimensions require a row and column dimension with bounds.'))
             else:
-                if self.grid.row.bounds[0,0] == self.grid.row.bounds[0,1]:
+                if self.grid.row.bounds is None:
                     ocgis_lh(exc=ImproperPolygonBoundsError('Polygon dimensions require row and column dimension bounds to have delta > 0.'))
     
     @property

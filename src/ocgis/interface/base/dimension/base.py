@@ -152,28 +152,21 @@ class VectorDimension(AbstractSourcedVariable,AbstractUidValueDimension):
     
     @property
     def bounds(self):
-        if self._bounds is None:
-            ret = np.zeros((self.value.shape[0],2),dtype=self.value.dtype)
-            ret[:,0] = self.value
-            ret[:,1] = self.value
-        else:
-            ret = self._bounds
-        return(ret)
+        return(self._bounds)
     @bounds.setter
     def bounds(self,value):
         self._bounds = get_none_or_2d(value)
     
     @property
     def resolution(self):
-        if self.value.shape[0] < 2:
-            ret = None
+        if self.bounds is None and self.value.shape[0] < 2:
+            ocgis_lh(exc=ValueError('With no bounds and a single coordinate, approximate resolution may not be determined.'))
+        elif self.bounds is None:
+            res_array = np.diff(self.value[0:constants.resolution_limit])
         else:
-            if self.bounds[0,0] == self.bounds[0,1]:
-                res_array = np.diff(self.value[0:constants.resolution_limit])
-            else:
-                res_bounds = self.bounds[0:constants.resolution_limit]
-                res_array = res_bounds[:,1] - res_bounds[:,0]
-            ret = np.abs(res_array).mean()
+            res_bounds = self.bounds[0:constants.resolution_limit]
+            res_array = res_bounds[:,1] - res_bounds[:,0]
+        ret = np.abs(res_array).mean()
         return(ret)
     
     @property
@@ -183,11 +176,14 @@ class VectorDimension(AbstractSourcedVariable,AbstractUidValueDimension):
     def get_between(self,lower,upper,return_indices=False):
         assert(lower <= upper)
         
-        bounds_min = np.min(self.bounds,axis=1)
-        bounds_max = np.max(self.bounds,axis=1)
-        select_lower = np.logical_or(bounds_min >= lower,bounds_max >= lower)
-        select_upper = np.logical_or(bounds_min <= upper,bounds_max <= upper)
-        select = np.logical_and(select_lower,select_upper)
+        if self.bounds is None:
+            select = np.logical_and(self.value >= lower,self.value <= upper)
+        else:
+            bounds_min = np.min(self.bounds,axis=1)
+            bounds_max = np.max(self.bounds,axis=1)
+            select_lower = np.logical_or(bounds_min >= lower,bounds_max >= lower)
+            select_upper = np.logical_or(bounds_min <= upper,bounds_max <= upper)
+            select = np.logical_and(select_lower,select_upper)
         
         if select.any() == False:
             ocgis_lh(exc=EmptySubsetError(origin=self.name))
@@ -195,7 +191,7 @@ class VectorDimension(AbstractSourcedVariable,AbstractUidValueDimension):
         ret = self[select]
         
         if return_indices:
-            indices = np.arange(self.bounds.shape[0])
+            indices = np.arange(select.shape[0])
             ret = (ret,indices[select])
         
         return(ret)
