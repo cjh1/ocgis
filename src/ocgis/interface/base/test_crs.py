@@ -1,7 +1,9 @@
 import unittest
-from ocgis.interface.base.crs import CoordinateReferenceSystem
+from ocgis.interface.base.crs import CoordinateReferenceSystem, WGS84
 from ocgis.interface.base.dimension.base import VectorDimension
-from ocgis.interface.base.dimension.spatial import SpatialGridDimension
+from ocgis.interface.base.dimension.spatial import SpatialGridDimension,\
+    SpatialDimension
+from ocgis.exc import SpatialWrappingError
 
 
 class TestCoordinateReferenceSystem(unittest.TestCase):
@@ -18,8 +20,11 @@ class TestCoordinateReferenceSystem(unittest.TestCase):
         row = VectorDimension(value=40,bounds=[38,42])
         col = VectorDimension(value=0,bounds=[-1,1])
         grid = SpatialGridDimension(row=row,col=col)
-        grid.resolution
-        raise(NotImplementedError)
+        self.assertEqual(grid.resolution,3.0)
+        sdim = SpatialDimension(grid=grid,crs=WGS84())
+        with self.assertRaises(SpatialWrappingError):
+            sdim.crs.wrap(sdim)
+        sdim.crs.unwrap(sdim)
         import ipdb;ipdb.set_trace()
 
 

@@ -51,17 +51,16 @@ class WGS84(CoordinateReferenceSystem):
     
     def get_wrap_axis(self,spatial):
         pm = 0.0
-        ref = spatial.grid.col.bounds
-        for idx in range(ref.shape[0]):
-            if ref[idx,0] < 0 and ref[idx,1] > 0:
-                pm = ref[idx,0]
-                break
+        if spatial.grid.col.bounds is not None:
+            ref = spatial.grid.col.bounds
+            for idx in range(ref.shape[0]):
+                if ref[idx,0] < 0 and ref[idx,1] > 0:
+                    pm = ref[idx,0]
+                    break
         return(pm)
 
     def unwrap(self,spatial):
         if not self.get_is_360(spatial):
-            ## reset the grid
-            spatial.grid = None
             unwrap = Wrapper(axis=self.get_wrap_axis(spatial)).unwrap
             to_wrap = [spatial.geom._point,spatial.geom._polygon]
             for tw in to_wrap:
@@ -69,6 +68,8 @@ class WGS84(CoordinateReferenceSystem):
                     geom = tw.value.data
                     for (ii,jj),to_wrap in iter_array(geom,return_value=True):
                         geom[ii,jj] = unwrap(to_wrap)
+            ## reset the grid
+            spatial.grid = None
         else:
             ocgis_lh(exc=SpatialWrappingError('Data already has a 0 to 360 coordinate system.'))
     
