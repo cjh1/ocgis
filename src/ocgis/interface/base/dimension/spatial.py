@@ -140,26 +140,27 @@ class SpatialDimension(base.AbstractUidDimension):
         return(ret.copy())
     
     def update_crs(self,to_crs):
-        
-        to_sr = to_crs.sr
-        from_sr = self.crs.sr
-        
-        if self.geom.point is not None:
-            self.geom.point.update_crs(to_sr,from_sr)
-        try:
-            self.geom.polygon.update_crs(to_sr,from_sr)
-        except ImproperPolygonBoundsError:
-            pass
-        
-        if self.grid is not None:
-            r_grid_value = self.grid.value.data
-            r_point_value = self.geom.point.value.data
-            for (idx_row,idx_col),geom in iter_array(r_point_value,return_value=True):
-                x,y = geom.x,geom.y
-                r_grid_value[0,idx_row,idx_col] = y
-                r_grid_value[1,idx_row,idx_col] = x
-        
-        self.crs = to_crs
+        ## if the crs values are the same, pass through
+        if to_crs != self.crs:
+            to_sr = to_crs.sr
+            from_sr = self.crs.sr
+            
+            if self.geom.point is not None:
+                self.geom.point.update_crs(to_sr,from_sr)
+            try:
+                self.geom.polygon.update_crs(to_sr,from_sr)
+            except ImproperPolygonBoundsError:
+                pass
+            
+            if self.grid is not None:
+                r_grid_value = self.grid.value.data
+                r_point_value = self.geom.point.value.data
+                for (idx_row,idx_col),geom in iter_array(r_point_value,return_value=True):
+                    x,y = geom.x,geom.y
+                    r_grid_value[0,idx_row,idx_col] = y
+                    r_grid_value[1,idx_row,idx_col] = x
+            
+            self.crs = to_crs
     
     def _format_uid_(self,value):
         return(np.atleast_2d(value))

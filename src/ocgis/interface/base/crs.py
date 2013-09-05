@@ -17,16 +17,16 @@ class CoordinateReferenceSystem(object):
             
         sr = SpatialReference()
         sr.ImportFromProj4(to_string(crs))
-        self.crs = from_string(sr.ExportToProj4())
+        self.value = from_string(sr.ExportToProj4())
     
     def __eq__(self,other):
-        return(self.crs == other.crs)
+        return(self.value == other.value)
     
     def __ne__(self,other):
-        return(not self.crs == other.crs)
+        return(not self.value == other.value)
     
     @property
     def sr(self):
         sr = SpatialReference()
-        sr.ImportFromProj4(to_string(self.crs))
+        sr.ImportFromProj4(to_string(self.value))
         return(sr)
