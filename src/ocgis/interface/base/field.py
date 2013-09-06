@@ -218,7 +218,7 @@ class Field(AbstractSourcedVariable):
             ret.spatial.geom.polygon.uid = new_spatial_uid
         ## there are no grid objects for aggregated spatial dimensions.
         ret.spatial.grid = None
-        
+        ret.spatial._geom_to_grid = False
         ## next the values are aggregated.
         shp = list(ret.shape)
         shp[-2] = 1

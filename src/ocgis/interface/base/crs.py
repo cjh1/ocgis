@@ -68,15 +68,12 @@ class WGS84(CoordinateReferenceSystem):
                     geom = tw.value.data
                     for (ii,jj),to_wrap in iter_array(geom,return_value=True):
                         geom[ii,jj] = unwrap(to_wrap)
-            ## reset the grid
             spatial.grid = None
         else:
             ocgis_lh(exc=SpatialWrappingError('Data already has a 0 to 360 coordinate system.'))
     
     def wrap(self,spatial):
         if self.get_is_360(spatial):
-            ## reset the grid
-            spatial.grid = None
             wrap = Wrapper(axis=self.get_wrap_axis(spatial)).wrap
             to_wrap = [spatial.geom._point,spatial.geom._polygon]
             for tw in to_wrap:
@@ -84,5 +81,6 @@ class WGS84(CoordinateReferenceSystem):
                     geom = tw.value.data
                     for (ii,jj),to_wrap in iter_array(geom,return_value=True):
                         geom[ii,jj] = wrap(to_wrap)
+            spatial.grid = None
         else:
             ocgis_lh(exc=SpatialWrappingError('Data does not have a 0 to 360 coordinate system.'))

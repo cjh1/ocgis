@@ -7,14 +7,13 @@ from shapely.geometry.point import Point
 from ocgis import constants
 import itertools
 from shapely.geometry.polygon import Polygon
-from copy import copy
+from copy import copy, deepcopy
 from shapely.prepared import prep
 from shapely.geometry.multipoint import MultiPoint
 from shapely.geometry.multipolygon import MultiPolygon
 from ocgis.exc import ImproperPolygonBoundsError, EmptySubsetError
 from osgeo.ogr import CreateGeometryFromWkb
 from shapely import wkb
-from ocgis.util.spatial import index as si
 from ocgis.util.spatial.index import build_index_grid, build_index,\
     index_intersects
 
@@ -28,6 +27,13 @@ class SpatialDimension(base.AbstractUidDimension):
         self.grid = kwds.pop('grid',None)
         self.crs = kwds.pop('crs',None)
         self._geom = kwds.pop('geom',None)
+        
+        ## if the data comes in with a grid, we will want to reconstruct the grid
+        ## from geometries in most cases, unless the geometry data has been altered.
+        if self.grid is not None:
+            self._geom_to_grid = True
+        else:
+            self._geom_to_grid = False
         
         if self.grid is None and self._geom is None:
             try:
@@ -43,6 +49,17 @@ class SpatialDimension(base.AbstractUidDimension):
         if self._geom is None:
             self._geom = SpatialGeometryDimension(grid=self.grid,uid=self.grid.uid)
         return(self._geom)
+    
+    @property
+    def grid(self):
+        if self._grid is None and self._geom_to_grid:
+            import ipdb;ipdb.set_trace()
+        return(self._grid)
+    @grid.setter
+    def grid(self,value):
+        if value is not None:
+            assert(isinstance(value,SpatialGridDimension))
+        self._grid = value
     
     @property
     def shape(self):
@@ -69,13 +86,17 @@ class SpatialDimension(base.AbstractUidDimension):
         ret,slc = self.get_intersects(polygon,return_indices=True)
         
         ## clipped geometries have no grid or point representations
-        ret.grid = None
-        ret.geom.grid = None
-        ret.geom._point = None
+        ret._grid = None
+        ret._geom_to_grid = False
+        ret._geom = deepcopy(ret.geom)
+        ret._geom._grid = None
+        ret._geom._point = None
         
         ref_value = ret.geom.polygon.value
         for (row_idx,col_idx),geom in iter_array(ref_value,return_value=True):
             ref_value[row_idx,col_idx] = geom.intersection(polygon)
+        
+        import ipdb;ipdb.set_trace()
         
         if return_indices:
             ret = (ret,slc)
@@ -282,13 +303,13 @@ class SpatialGeometryDimension(base.AbstractUidDimension):
     
     @property
     def point(self):
-        if self._point == None and self.grid is not None:
+        if self._point is None and self.grid is not None:
             self._point = SpatialGeometryPointDimension(grid=self.grid,uid=self.grid.uid)
         return(self._point)
     
     @property
     def polygon(self):
-        if self._polygon == None and self.grid is not None:
+        if self._polygon is None and self.grid is not None:
             self._polygon = SpatialGeometryPolygonDimension(grid=self.grid,uid=self.grid.uid)
         return(self._polygon)
     

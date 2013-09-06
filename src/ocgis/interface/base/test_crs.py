@@ -25,6 +25,7 @@ class TestCoordinateReferenceSystem(unittest.TestCase):
         with self.assertRaises(SpatialWrappingError):
             sdim.crs.wrap(sdim)
         sdim.crs.unwrap(sdim)
+        raise(NotImplementedError)
         import ipdb;ipdb.set_trace()
 
 
