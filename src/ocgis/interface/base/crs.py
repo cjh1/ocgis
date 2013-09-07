@@ -43,7 +43,18 @@ class WGS84(CoordinateReferenceSystem):
         super(WGS84,self).__init__(epsg=4326)
 
     def get_is_360(self,spatial):
-        if np.any(spatial.grid.col.value > 180.):
+        try:
+            if spatial.grid.col.bounds is None:
+                check = spatial.grid.col.value
+            else:
+                check = spatial.grid.col.bounds
+        except AttributeError as e:
+            ## column dimension is likely missing
+            if spatial.grid.col is None:
+                check = spatial.get_grid_bounds()
+            else:
+                ocgis_lh(exc=e)
+        if np.any(check > 180.):
             ret = True
         else:
             ret = False
@@ -51,12 +62,15 @@ class WGS84(CoordinateReferenceSystem):
     
     def get_wrap_axis(self,spatial):
         pm = 0.0
-        if spatial.grid.col.bounds is not None:
+        try:
             ref = spatial.grid.col.bounds
             for idx in range(ref.shape[0]):
-                if ref[idx,0] < 0 and ref[idx,1] > 0:
-                    pm = ref[idx,0]
+                ref_row = ref[idx,:]
+                if ref_row.min() < 0 and ref_row.max() > 0:
+                    pm = ref_row.min()
                     break
+        except AttributeError:
+            raise
         return(pm)
 
     def unwrap(self,spatial):
@@ -75,7 +89,7 @@ class WGS84(CoordinateReferenceSystem):
     def wrap(self,spatial):
         if self.get_is_360(spatial):
             wrap = Wrapper(axis=self.get_wrap_axis(spatial)).wrap
-            to_wrap = [spatial.geom._point,spatial.geom._polygon]
+            to_wrap = [spatial.geom.point,spatial.geom.polygon]
             for tw in to_wrap:
                 if tw is not None:
                     geom = tw.value.data

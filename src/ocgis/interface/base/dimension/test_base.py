@@ -11,6 +11,14 @@ class TestVectorDimension(unittest.TestCase):
     
     def assertNumpyNotAll(self,arr1,arr2):
         return(self.assertFalse(np.all(arr1 == arr2)))
+    
+    def test_bad_keywords(self):
+        with self.assertRaises(ValueError):
+            VectorDimension(value=40,bounds=[38,42],dtype=float)
+            
+    def test_bad_dtypes(self):
+        with self.assertRaises(ValueError):
+            VectorDimension(value=181.5,bounds=[181,182])
 
     def test_one_value(self):
         values = [5,np.array([5])]

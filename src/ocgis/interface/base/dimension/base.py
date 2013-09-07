@@ -121,7 +121,13 @@ class AbstractUidDimension(AbstractDimension):
 
 class AbstractUidValueDimension(AbstractValueDimension,AbstractUidDimension):
     
-    def __init__(self,*args,**kwds):        
+    def __init__(self,*args,**kwds):
+        for key in kwds.keys():
+            try:
+                assert(key in ('value','name_value','units','meta','name','uid','name_uid'))
+            except AssertionError:
+                ocgis_lh(exc=ValueError('"{0}" is not a valid keyword argument for "{1}".'.format(key,self.__class__.__name__)))
+               
         kwds_value = {key:kwds.get(key,None) for key in ('value','name_value','units','meta','name')}
         kwds_uid = {key:kwds.get(key,None) for key in ('uid','name_uid','meta','name')}
 
@@ -135,12 +141,16 @@ class VectorDimension(AbstractSourcedVariable,AbstractUidValueDimension):
     _ndims = 1
     
     def __init__(self,*args,**kwds):
-        self.bounds = kwds.pop('bounds',None)
+        bounds = kwds.pop('bounds',None)
         self.name_bounds = kwds.pop('name_bounds',None)
         self._axis = kwds.pop('axis',None)
         
         AbstractSourcedVariable.__init__(self,kwds.pop('data',None),src_idx=kwds.pop('src_idx',None),value=kwds.get('value'))
         AbstractUidValueDimension.__init__(self,*args,**kwds)
+        
+        ## setting bounds requires checking the data type of value set in a
+        ## superclass.
+        self.bounds = bounds
         
         if self.name_bounds is None:
             self.name_bounds = '{0}_bnds'.format(self.name)
@@ -156,6 +166,11 @@ class VectorDimension(AbstractSourcedVariable,AbstractUidValueDimension):
     @bounds.setter
     def bounds(self,value):
         self._bounds = get_none_or_2d(value)
+        if value is not None:
+            try:
+                assert(self._bounds.dtype == self._value.dtype)
+            except AssertionError:
+                ocgis_lh(exc=ValueError('Value and bounds data types do not match.'))
     
     @property
     def resolution(self):

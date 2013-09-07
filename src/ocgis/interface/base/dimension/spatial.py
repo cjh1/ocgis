@@ -28,9 +28,8 @@ class SpatialDimension(base.AbstractUidDimension):
         self.crs = kwds.pop('crs',None)
         self._geom = kwds.pop('geom',None)
         
-        ## if the data comes in with a grid, we will want to reconstruct the grid
-        ## from geometries in most cases, unless the geometry data has been altered.
-        if self.grid is not None:
+        ## if a grid value is passed, then when it is reset
+        if self._grid is not None:
             self._geom_to_grid = True
         else:
             self._geom_to_grid = False
@@ -53,7 +52,16 @@ class SpatialDimension(base.AbstractUidDimension):
     @property
     def grid(self):
         if self._grid is None and self._geom_to_grid:
-            import ipdb;ipdb.set_trace()
+            ## populate the grid using the point geometry representation
+            ref_pv = self.geom.point.value
+            shp = (2,ref_pv.shape[0],ref_pv.shape[1])
+            fill = np.empty(shp,dtype=constants.np_float)
+            for (idx_row,idx_col),geom in iter_array(ref_pv.data,return_value=True):
+                fill[:,idx_row,idx_col] = geom.y,geom.x
+            mask = np.empty_like(fill,dtype=bool)
+            mask[:,:,:] = ref_pv.mask
+            self._grid = SpatialGridDimension(value=np.ma.array(fill,mask=mask),
+                                              uid=self.geom.point.uid)
         return(self._grid)
     @grid.setter
     def grid(self,value):
@@ -85,18 +93,16 @@ class SpatialDimension(base.AbstractUidDimension):
         
         ret,slc = self.get_intersects(polygon,return_indices=True)
         
+        ref_value = ret.geom.polygon.value
+        for (row_idx,col_idx),geom in iter_array(ref_value,return_value=True):
+            ref_value[row_idx,col_idx] = geom.intersection(polygon)
+            
         ## clipped geometries have no grid or point representations
         ret._grid = None
         ret._geom_to_grid = False
         ret._geom = deepcopy(ret.geom)
-        ret._geom._grid = None
+        ret._geom.grid = None
         ret._geom._point = None
-        
-        ref_value = ret.geom.polygon.value
-        for (row_idx,col_idx),geom in iter_array(ref_value,return_value=True):
-            ref_value[row_idx,col_idx] = geom.intersection(polygon)
-        
-        import ipdb;ipdb.set_trace()
         
         if return_indices:
             ret = (ret,slc)
@@ -280,6 +286,9 @@ class SpatialGridDimension(base.AbstractUidValueDimension):
         return(ret)
     
     def _get_value_(self):
+        ## assert types of row and column are equivalent
+        if self.row.value.dtype != self.col.value.dtype:
+            ocgis_lh(exc=ValueError('Row and column data types differ! They must be equivalent.'))
         ## fill the centroids
         fill = np.empty((2,self.row.shape[0],self.col.shape[0]),dtype=self.row.value.dtype)
         fill = np.ma.array(fill,mask=False)
