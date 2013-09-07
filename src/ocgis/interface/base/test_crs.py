@@ -45,12 +45,16 @@ class TestWGS84(TestBase):
         grid = SpatialGridDimension(row=row,col=col)
         self.assertEqual(grid.value[1,0,0],181.5)
         sdim = SpatialDimension(grid=grid,crs=WGS84())
+        orig_sdim = deepcopy(sdim)
         orig_grid = deepcopy(sdim.grid)
         sdim.crs.wrap(sdim)
         self.assertNumpyAll(np.array(sdim.geom.point.value[0,0]),np.array([-178.5,40.]))
         self.assertEqual(sdim.geom.polygon.value[0,0].bounds,(-179.0,38.0,-178.0,42.0))
         self.assertNumpyNotAll(orig_grid.value,sdim.grid.value)
         sdim.crs.unwrap(sdim)
+        to_test = ([sdim.grid.value,orig_sdim.grid.value],[sdim.get_grid_bounds(),orig_sdim.get_grid_bounds()])
+        for tt in to_test:
+            self.assertNumpyAll(*tt)
         import ipdb;ipdb.set_trace()
     
     def test_wrap_360_cross_axis(self):
