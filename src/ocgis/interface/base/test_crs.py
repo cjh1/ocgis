@@ -7,6 +7,7 @@ from ocgis.exc import SpatialWrappingError
 from ocgis.test.base import TestBase
 import numpy as np
 from copy import deepcopy
+from shapely.geometry.multipolygon import MultiPolygon
 
 
 class TestCoordinateReferenceSystem(TestBase):
@@ -55,16 +56,16 @@ class TestWGS84(TestBase):
         to_test = ([sdim.grid.value,orig_sdim.grid.value],[sdim.get_grid_bounds(),orig_sdim.get_grid_bounds()])
         for tt in to_test:
             self.assertNumpyAll(*tt)
-        import ipdb;ipdb.set_trace()
     
     def test_wrap_360_cross_axis(self):
         row = VectorDimension(value=40,bounds=[38,42])
-        col = VectorDimension(value=0,bounds=[179,181])
+        col = VectorDimension(value=180,bounds=[179,181])
         grid = SpatialGridDimension(row=row,col=col)
         sdim = SpatialDimension(grid=grid,crs=WGS84())
-#        with self.assertRaises(SpatialWrappingError):
+        orig_sdim = deepcopy(sdim)
         sdim.crs.wrap(sdim)
-#        sdim.crs.unwrap(sdim)
+        self.assertIsInstance(sdim.geom.polygon.value[0,0],MultiPolygon)
+        sdim.crs.unwrap(sdim)
         import ipdb;ipdb.set_trace()
 
 

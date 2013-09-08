@@ -110,6 +110,9 @@ class SpatialDimension(base.AbstractUidDimension):
         return(ret)
         
     def get_grid_bounds(self):
+        if self.grid is None:
+            ocgis_lh(exc=ValueError('Grid bounds may only be computed when a grid is present.'))
+            
         if self.geom.polygon is not None:
             shp = list(self.geom.polygon.shape) + [4]
             fill = np.empty(shp)

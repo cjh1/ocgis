@@ -65,7 +65,7 @@ class WGS84(CoordinateReferenceSystem):
         try:
             ref = spatial.grid.col.bounds
         except AttributeError:
-            ref = spatial.get_grid_bounds()[:,:,(1,3)]
+            ref = spatial.get_grid_bounds()[:,:,(0,2)]
         for idx in range(ref.shape[0]):
             ref_row = ref[idx,:]
             if ref_row.min() < 0 and ref_row.max() > 0:
