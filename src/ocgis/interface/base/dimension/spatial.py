@@ -16,6 +16,8 @@ from osgeo.ogr import CreateGeometryFromWkb
 from shapely import wkb
 from ocgis.util.spatial.index import build_index_grid, build_index,\
     index_intersects
+import fiona
+from shapely.geometry.geo import mapping
 
 
 class SpatialDimension(base.AbstractUidDimension):
@@ -194,6 +196,11 @@ class SpatialDimension(base.AbstractUidDimension):
                     r_grid_value[1,idx_row,idx_col] = x
             
             self.crs = to_crs
+            
+    def write_fiona(self,path,target='polygon',driver='ESRI Shapefile'):
+        attr = getattr(self.geom,target)
+        attr.write_fiona(path,self.crs.value,driver=driver)
+        return(path)
     
     def _format_uid_(self,value):
         return(np.atleast_2d(value))
@@ -355,6 +362,7 @@ class SpatialGeometryPointDimension(base.AbstractUidValueDimension):
     _axis = 'POINT'
     _ndims = 2
     _attrs_slice = ('uid','_value','grid')
+    _geom_type = 'Point'
     
     def __init__(self,*args,**kwds):
         self.grid = kwds.pop('grid',None)
@@ -415,6 +423,24 @@ class SpatialGeometryPointDimension(base.AbstractUidValueDimension):
             ogr_geom.AssignSpatialReference(from_sr)
             ogr_geom.TransformTo(to_sr)
             r_value[idx_row,idx_col] = r_loads(ogr_geom.ExportToWkb())
+            
+    def write_fiona(self,path,crs,driver='ESRI Shapefile'):
+        schema = {'geometry':self._geom_type,
+                  'properties':{'UGID':'int'}}
+        ref_prep = self._write_fiona_prep_geom_
+        ref_uid = self.uid
+        with fiona.open(path,'w',driver=driver,crs=crs,schema=schema) as f:
+            for (ii,jj),geom in iter_array(self.value,return_value=True):
+                geom = ref_prep(geom)
+                uid = ref_uid[ii,jj]
+                feature = {'properties':{'UGID':uid},'geometry':mapping(geom)}
+                f.write(feature)
+                feature = {'UGID'}
+        
+        return(path)
+        
+    def _write_fiona_prep_geom_(self,geom):
+        return(geom)
         
     def _format_private_value_(self,value):
         if value is not None:
@@ -449,6 +475,7 @@ class SpatialGeometryPointDimension(base.AbstractUidValueDimension):
     
     
 class SpatialGeometryPolygonDimension(SpatialGeometryPointDimension):
+    _geom_type = 'MultiPolygon'
     
     def __init__(self,*args,**kwds):
         super(SpatialGeometryPolygonDimension,self).__init__(*args,**kwds)

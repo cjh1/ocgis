@@ -13,26 +13,8 @@ import re
 from ocgis.exc import DefinitionValidationError
 import sys
 import datetime
-from copy import copy, deepcopy
+from copy import deepcopy
 
-
-def copy_deepcopy(src,attrs_deepcopy=None):
-    
-#    def _get_nested_(target,sequence):
-#        build = True
-#        for attr in sequence:
-#            if build:
-#                ref = getattr(target,attr)
-#                build = False
-#            else:
-#                ref = getattr(ref,attr)
-#        return(ref)
-    
-    ret = copy(src)
-    if attrs_deepcopy is not None:
-        for attr in attrs_deepcopy:
-            setattr(ret,attr,deepcopy(getattr(ret,attr)))
-    return(ret)
 
 def get_default_or_apply(target,f,default=None):
     if target is None:

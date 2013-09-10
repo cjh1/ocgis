@@ -21,7 +21,7 @@ class TestField(TestBase):
         super(TestField,self).setUp()
     
     def get_col(self,bounds=True):
-        value = [-100,-99,-98,-97]
+        value = [-100.,-99.,-98.,-97.]
         if bounds:
             bounds = [[v-0.5,v+0.5] for v in value]
         else:
@@ -30,7 +30,7 @@ class TestField(TestBase):
         return(row)
     
     def get_row(self,bounds=True):
-        value = [40,39,38]
+        value = [40.,39.,38.]
         if bounds:
             bounds = [[v+0.5,v-0.5] for v in value]
         else:

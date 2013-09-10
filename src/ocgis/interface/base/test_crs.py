@@ -8,6 +8,8 @@ from ocgis.test.base import TestBase
 import numpy as np
 from copy import deepcopy
 from shapely.geometry.multipolygon import MultiPolygon
+import tempfile
+from ocgis.util.helpers import get_temp_path
 
 
 class TestCoordinateReferenceSystem(TestBase):
@@ -23,10 +25,10 @@ class TestCoordinateReferenceSystem(TestBase):
 class TestWGS84(TestBase):
     
     def test_wrap_normal_differing_data_types(self):
-        row = VectorDimension(value=40,bounds=[38,42])
+        row = VectorDimension(value=40.,bounds=[38.,42.])
         col = VectorDimension(value=0,bounds=[-1,1])
         with self.assertRaises(ValueError):
-            SpatialGridDimension(row=row,col=col)
+            SpatialGridDimension(row=row,col=col).value
             
     def test_wrap_normal(self):
         row = VectorDimension(value=40.,bounds=[38.,42.])
@@ -66,8 +68,10 @@ class TestWGS84(TestBase):
         sdim.crs.wrap(sdim)
         self.assertIsInstance(sdim.geom.polygon.value[0,0],MultiPolygon)
         sdim.crs.unwrap(sdim)
-        import ipdb;ipdb.set_trace()
-
+        self.assertEqual(orig_sdim.geom.polygon.value[0,0].bounds,sdim.geom.polygon.value[0,0].bounds)
+        for target in ['point','polygon']:
+            path = get_temp_path(name=target,suffix='.shp',wd=self._test_dir)
+            sdim.write_fiona(path,target)
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']

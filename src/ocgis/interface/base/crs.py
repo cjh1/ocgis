@@ -59,23 +59,10 @@ class WGS84(CoordinateReferenceSystem):
         else:
             ret = False
         return(ret)
-    
-    def get_wrap_axis(self,spatial):
-        pm = 0.0
-        try:
-            ref = spatial.grid.col.bounds
-        except AttributeError:
-            ref = spatial.get_grid_bounds()[:,:,(0,2)]
-        for idx in range(ref.shape[0]):
-            ref_row = ref[idx,:]
-            if ref_row.min() < 0 and ref_row.max() > 0:
-                pm = ref_row.min()
-                break
-        return(pm)
 
     def unwrap(self,spatial):
         if not self.get_is_360(spatial):
-            unwrap = Wrapper(axis=self.get_wrap_axis(spatial)).unwrap
+            unwrap = Wrapper().unwrap
             to_wrap = [spatial.geom._point,spatial.geom._polygon]
             for tw in to_wrap:
                 if tw is not None:
@@ -88,7 +75,7 @@ class WGS84(CoordinateReferenceSystem):
     
     def wrap(self,spatial):
         if self.get_is_360(spatial):
-            wrap = Wrapper(axis=self.get_wrap_axis(spatial)).wrap
+            wrap = Wrapper().wrap
             to_wrap = [spatial.geom.point,spatial.geom.polygon]
             for tw in to_wrap:
                 if tw is not None:

@@ -94,7 +94,7 @@ class TestVectorDimension(unittest.TestCase):
         self.assertEqual(len(vdim_between),2)
     
     def test_get_between_bounds(self):
-        vdim = VectorDimension(value=[0,5,10],bounds=[[-2.5,2.5],[2.5,7.5],[7.5,12.5]])
+        vdim = VectorDimension(value=[0.,5.,10.],bounds=[[-2.5,2.5],[2.5,7.5],[7.5,12.5]])
         vdim_between = vdim.get_between(1,3)
         self.assertEqual(len(vdim_between),2)
         self.assertEqual(vdim.resolution,5.0)

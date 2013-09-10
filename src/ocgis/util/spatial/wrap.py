@@ -55,8 +55,6 @@ class Wrapper(object):
 
         assert(type(geom) in [Polygon,MultiPolygon])
         
-        return_type = type(geom)
-        
         ## return the geometry iterator
         it = self._get_iter_(geom)
         ## loop through the polygons determining if any coordinates need to be
@@ -96,13 +94,6 @@ class Wrapper(object):
         ## if polygon does not need adjustment, just return it.
         else:
             ret = geom
-        
-        ## ensure the return types did not change
-        if return_type != type(ret):
-            if return_type == Polygon and type(ret) == MultiPolygon:
-                ret = ret[0]
-            else:
-                raise(NotImplementedError)
 
         return(ret)
 
@@ -145,7 +136,7 @@ class Wrapper(object):
             else:
                 new_geom = geom
         else:
-            if geom.x >= 180:
+            if geom.x > 180:
                 new_geom = Point(geom.x-360,geom.y)
             else:
                 new_geom = geom
