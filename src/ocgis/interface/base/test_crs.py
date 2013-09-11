@@ -8,7 +8,6 @@ from ocgis.test.base import TestBase
 import numpy as np
 from copy import deepcopy
 from shapely.geometry.multipolygon import MultiPolygon
-import tempfile
 from ocgis.util.helpers import get_temp_path
 
 
