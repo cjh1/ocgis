@@ -20,7 +20,8 @@ class TestCoordinateReferenceSystem(TestBase):
         crs2 = CoordinateReferenceSystem(prjs='+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs ')
         self.assertTrue(crs == crs2)
         self.assertFalse(crs != crs2)
-        
+
+
 class TestWGS84(TestBase):
     
     def test_wrap_normal_differing_data_types(self):
@@ -71,6 +72,7 @@ class TestWGS84(TestBase):
         for target in ['point','polygon']:
             path = get_temp_path(name=target,suffix='.shp',wd=self._test_dir)
             sdim.write_fiona(path,target)
+
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']

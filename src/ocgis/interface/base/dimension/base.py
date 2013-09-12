@@ -167,10 +167,7 @@ class VectorDimension(AbstractSourcedVariable,AbstractUidValueDimension):
     def bounds(self,value):
         self._bounds = get_none_or_2d(value)
         if value is not None:
-            try:
-                assert(self._bounds.dtype == self._value.dtype)
-            except AssertionError:
-                ocgis_lh(exc=ValueError('Value and bounds data types do not match.'))
+            self._validate_bounds_(value)
     
     @property
     def resolution(self):
@@ -236,3 +233,9 @@ class VectorDimension(AbstractSourcedVariable,AbstractUidValueDimension):
         else:
             ret = self._value
         return(ret)
+    
+    def _validate_bounds_(self,value):
+        try:
+            assert(self._bounds.dtype == self._value.dtype)
+        except AssertionError:
+            ocgis_lh(exc=ValueError('Value and bounds data types do not match.'))
