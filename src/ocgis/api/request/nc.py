@@ -124,7 +124,7 @@ class NcRequestDataset(object):
                 length = self._source_metadata['dimensions'][ref_axis['dimension']]['len']
                 src_idx = np.arange(0,length)
                 kwds = dict(name_uid=v['name_uid'],name_value=v['name_value'],src_idx=src_idx,
-                            data=self,meta=ref_variable)
+                            data=self,meta=ref_variable,axis=axis_value)
                 if v['adds'] is not None:
                     kwds.update(v['adds'](ref_attrs))
                 fill = v['cls'](**kwds)

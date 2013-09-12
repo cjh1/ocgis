@@ -16,7 +16,6 @@ class TestNcRequestDataset(TestBase):
         tv = field.temporal.value
         test_tv = ds.variables['time'][:]
         self.assertNumpyAll(tv,test_tv)
-        import ipdb;ipdb.set_trace()
         self.assertNotEqual(field.temporal.bounds,None)
         import ipdb;ipdb.set_trace()
 
