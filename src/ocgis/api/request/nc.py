@@ -104,8 +104,8 @@ class NcRequestDataset(object):
     def get(self):
         
         def _get_temporal_adds_(ref_attrs):
-            return({'t_units':self.t_units or ref_attrs['units'],
-                    't_calendar':self.t_calendar or ref_attrs['calendar']})
+            return({'units':self.t_units or ref_attrs['units'],
+                    'calendar':self.t_calendar or ref_attrs['calendar']})
         
         to_load = {'temporal':{'cls':NcTemporalDimension,'adds':_get_temporal_adds_,'axis':None,'name_uid':'tid','name_value':'time'},
                    'level':{'cls':NcVectorDimension,'adds':None,'axis':'Z','name_uid':'lid','name_value':'level'},
