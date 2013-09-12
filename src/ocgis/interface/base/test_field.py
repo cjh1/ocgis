@@ -129,7 +129,7 @@ class TestField(TestBase):
             self.assertAlmostEqual(ret.spatial.weights[1,2],0.064016424)
             self.assertAlmostEqual(ret.spatial.weights.sum(),1.776435)
             if not wv:
-                with self.assertRaises(ValueError):
+                with self.assertRaises(NotImplementedError):
                     ret.value
                     
     def test_get_aggregated_irregular(self):
@@ -147,7 +147,7 @@ class TestField(TestBase):
             field = self.get_field(with_value=wv)
             try:
                 agg = field.get_spatially_aggregated()
-            except ValueError:
+            except NotImplementedError:
                 if not wv:
                     continue
                 else:
@@ -180,7 +180,7 @@ class TestField(TestBase):
             if wv:
                 self.assertNumpyAll(field.value['tmax'],ret.value['tmax'])
             else:
-                with self.assertRaises(ValueError):
+                with self.assertRaises(NotImplementedError):
                     ret.value
                     
             ## try empty subset

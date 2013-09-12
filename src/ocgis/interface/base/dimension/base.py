@@ -227,12 +227,11 @@ class VectorDimension(AbstractSourcedVariable,AbstractUidValueDimension):
         ret = np.atleast_1d(ret)
         return(ret)
     
-    def _get_value_from_source_(self):
+    def _set_value_from_source_(self):
         if self._value is None:
             raise(NotImplementedError)
         else:
-            ret = self._value
-        return(ret)
+            self._value = self._value
     
     def _validate_bounds_(self,value):
         try:

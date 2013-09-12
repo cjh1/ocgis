@@ -15,8 +15,9 @@ import numpy as np
 from ocgis.interface.base.dimension.spatial import SpatialGridDimension,\
     SpatialDimension
 from ocgis.interface.base.crs import WGS84
-from ocgis.interface.base.field import Field, Variable, VariableCollection
+from ocgis.interface.base.field import Variable, VariableCollection
 from ocgis.interface.nc.dimension import NcVectorDimension
+from ocgis.interface.nc.field import NcField
 
 
 class NcRequestDataset(object):
@@ -147,7 +148,7 @@ class NcRequestDataset(object):
         variable_units = variable_meta['attrs'].get('units')
         variable = Variable(self.variable,self.alias,variable_units,meta=variable_meta)
         variable_collection = VariableCollection(variables=[variable])
-        ret = Field(variables=variable_collection,spatial=spatial,temporal=loaded['temporal'],level=loaded['level'],
+        ret = NcField(variables=variable_collection,spatial=spatial,temporal=loaded['temporal'],level=loaded['level'],
                     data=self)
         
         return(ret)
@@ -370,7 +371,7 @@ def get_dimension_map(ds,var,metadata):
                     dimvar = ds.variables[key]
                     break
         axis = get_axis(dimvar,dims,dim)
-        mp[axis] = {'variable':dimvar._name,'dimension':dim}
+        mp[axis] = {'variable':dimvar._name,'dimension':dim,'pos':var.dimensions.index(dimvar._name)}
         
     ## look for bounds variables
     bounds_names = set(constants.name_bounds)

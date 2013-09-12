@@ -67,11 +67,11 @@ class AbstractSourcedVariable(AbstractValueVariable):
         elif self._src_idx is None and self._value is None:
             ocgis_lh(exc=ValueError('Values were requested from data source, but no source index source is available.'))
         else:
-            ret = self._get_value_from_source_()
-        return(ret)
+            self._set_value_from_source_()
+        return(self._value)
             
     @abc.abstractmethod
-    def _get_value_from_source_(self): pass
+    def _set_value_from_source_(self): pass
 
 
 class Variable(object):
@@ -143,7 +143,10 @@ class Field(AbstractSourcedVariable):
         ret.spatial = get_none_or_slice(ret.spatial,(slc[3],slc[4]))
         
         ret._value = self._get_value_slice_or_none_(self._value,slc)
-
+        
+        ## update the field backref for the variables
+        for v in ret.variables.itervalues(): v._field = ret
+        
         return(ret)
     
     @property
@@ -256,9 +259,12 @@ class Field(AbstractSourcedVariable):
                     ret[k] = np.ma.array(v,mask=False)
         return(ret)
     
-    def _get_value_from_source_(self):
-        raise(NotImplementedError)
-        ## TODO: remember to apply the geometry mask to fresh values!!
+    def _get_value_(self):
+        if self._data is None and self._value is None:
+            ocgis_lh(exc=ValueError('Values were requested from data source, but no data source is available.'))
+        else:
+            self._set_value_from_source_()
+        return(self._value)
     
     def _get_value_slice_or_none_(self,value,slc):
         if value is None:
@@ -277,3 +283,7 @@ class Field(AbstractSourcedVariable):
             for idx_r,idx_t,idx_l in itertools.product(rng_realization,rng_temporal,rng_level):
                 ref = v[idx_r,idx_t,idx_l]
                 ref.mask = ref_logical_or(ref.mask,mask)
+                
+    def _set_value_from_source_(self):
+        raise(NotImplementedError)
+        ## TODO: remember to apply the geometry mask to fresh values!!
