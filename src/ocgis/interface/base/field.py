@@ -76,11 +76,12 @@ class AbstractSourcedVariable(AbstractValueVariable):
 
 class Variable(object):
     
-    def __init__(self,name,alias=None,units=None,meta=None):
+    def __init__(self,name,alias=None,units=None,meta=None,uid=None):
         self.name = name
         self.alias = alias or name
         self.units = units
         self.meta = meta or {}
+        self.uid = uid
         self._field = None
     
     @property
