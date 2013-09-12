@@ -12,11 +12,11 @@ from ocgis.util.logging_ocgis import ocgis_lh
 import logging
 from ocgis.interface.nc.temporal import NcTemporalDimension
 import numpy as np
-from ocgis.interface.base.dimension.base import VectorDimension
 from ocgis.interface.base.dimension.spatial import SpatialGridDimension,\
     SpatialDimension
 from ocgis.interface.base.crs import WGS84
 from ocgis.interface.base.field import Field, Variable, VariableCollection
+from ocgis.interface.nc.dimension import NcVectorDimension
 
 
 class NcRequestDataset(object):
@@ -107,9 +107,9 @@ class NcRequestDataset(object):
                     't_calendar':self.t_calendar or ref_attrs['calendar']})
         
         to_load = {'temporal':{'cls':NcTemporalDimension,'adds':_get_temporal_adds_,'axis':None,'name_uid':'tid','name_value':'time'},
-                   'level':{'cls':VectorDimension,'adds':None,'axis':'Z','name_uid':'lid','name_value':'level'},
-                   'row':{'cls':VectorDimension,'adds':None,'axis':'Y','name_uid':'row_id','name_value':'row'},
-                   'col':{'cls':VectorDimension,'adds':None,'axis':'X','name_uid':'col_id','name_value':'col'}}
+                   'level':{'cls':NcVectorDimension,'adds':None,'axis':'Z','name_uid':'lid','name_value':'level'},
+                   'row':{'cls':NcVectorDimension,'adds':None,'axis':'Y','name_uid':'row_id','name_value':'row'},
+                   'col':{'cls':NcVectorDimension,'adds':None,'axis':'X','name_uid':'col_id','name_value':'col'}}
         loaded = {}
         
         for k,v in to_load.iteritems():
@@ -120,10 +120,11 @@ class NcRequestDataset(object):
                 fill = None
             else:
                 ref_attrs = self._source_metadata['variables'][ref_axis['variable']]['attrs']
+                ref_variable = self._source_metadata['variables'][ref_axis['variable']]
                 length = self._source_metadata['dimensions'][ref_axis['dimension']]['len']
                 src_idx = np.arange(0,length)
                 kwds = dict(name_uid=v['name_uid'],name_value=v['name_value'],src_idx=src_idx,
-                            data=self,meta=ref_attrs)
+                            data=self,meta=ref_variable)
                 if v['adds'] is not None:
                     kwds.update(v['adds'](ref_attrs))
                 fill = v['cls'](**kwds)

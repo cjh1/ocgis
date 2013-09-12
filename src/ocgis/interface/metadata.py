@@ -41,7 +41,8 @@ class NcMetadata(AbstractMetadata):
                 subvar.update({attr:getattr(value,attr)})
             variables.update({key:{'dimensions':value.dimensions,
                                    'attrs':subvar,
-                                   'dtype':str(value.dtype)}})
+                                   'dtype':str(value.dtype),
+                                   'name':value._name}})
         self.update({'variables':variables})
         
         ## get dimensions
