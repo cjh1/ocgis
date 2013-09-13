@@ -20,9 +20,7 @@ class NcTemporalDimension(NcVectorDimension,TemporalDimension):
         
     @property
     def bounds_datetime(self):
-        if self.bounds is None:
-            pass
-        else:
+        if self.bounds is not None:
             if self._bounds_datetime is None:
                 self._bounds_datetime = np.atleast_2d(self.get_datetime(self.bounds))
         return(self._bounds_datetime)

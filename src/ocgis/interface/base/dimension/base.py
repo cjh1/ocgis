@@ -162,6 +162,12 @@ class VectorDimension(AbstractSourcedVariable,AbstractUidValueDimension):
     
     @property
     def bounds(self):
+        ## always load the value first. any bounds read from source are set during
+        ## this process. bounds without values are meaningless!
+        self.value
+        ## if no error is encountered, then the bounds should have been set during
+        ## loading from source. simply return the value. it will be none, if no
+        ## bounds were present in the source data.
         return(self._bounds)
     @bounds.setter
     def bounds(self,value):
