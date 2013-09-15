@@ -37,6 +37,10 @@ class NcTemporalDimension(NcVectorDimension,TemporalDimension):
         if self._value_datetime is None:
             self._value_datetime = np.atleast_1d(self.get_datetime(self.value))
         return(self._value_datetime)
+    
+    def get_between(self,lower,upper,return_indices=False):
+        lower,upper = tuple(self.get_nc_time([lower,upper]))
+        return(NcVectorDimension.get_between(self,lower,upper,return_indices=return_indices))
         
     def get_datetime(self,arr):
         arr = np.atleast_1d(nc.num2date(arr,self.units,calendar=self.calendar))

@@ -28,6 +28,7 @@ class SpatialDimension(base.AbstractUidDimension):
     def __init__(self,*args,**kwds):
         self.grid = kwds.pop('grid',None)
         self.crs = kwds.pop('crs',None)
+        self.abstraction = kwds.pop('abstraction','polygon')
         self._geom = kwds.pop('geom',None)
         
         ## if a grid value is passed, then when it is reset
@@ -44,6 +45,13 @@ class SpatialDimension(base.AbstractUidDimension):
                 ocgis_lh(exc=ValueError('A SpatialDimension without "grid" or "geom" arguments requires a "row" and "column".'))
         
         super(SpatialDimension,self).__init__(*args,**kwds)
+        
+    @property
+    def abstraction_geometry(self):
+        if self.abstraction is None:
+            ocgis_lh(exc=ValueError('The abstraction attribute value is None.'))
+        else:
+            return(getattr(self.geom,self.abstraction))
     
     @property
     def geom(self):

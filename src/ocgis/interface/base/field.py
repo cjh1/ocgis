@@ -176,6 +176,9 @@ class Field(AbstractSourcedVariable):
     def get_intersects(self,point_or_polygon):
         return(self._get_spatial_operation_('get_intersects',point_or_polygon))
     
+    def get_time_region(self,time_region):
+        import ipdb;ipdb.set_trace()
+    
     def _get_spatial_operation_(self,attr,point_or_polygon):
         ref = getattr(self.spatial,attr)
         ret = copy(self)

@@ -64,7 +64,6 @@ class NcRequestDataset(object):
     def __init__(self,uri=None,variable=None,alias=None,time_range=None,
                  time_region=None,level_range=None,s_crs=None,t_units=None,
                  t_calendar=None,did=None,meta=None,s_abstraction=None):
-        self.__ds = None
         
         self._uri = self._get_uri_(uri)
         self.variable = variable
@@ -142,7 +141,7 @@ class NcRequestDataset(object):
                 crs = WGS84()
             else:
                 raise(NotImplementedError)
-        spatial = SpatialDimension(name_uid='gid',grid=grid,crs=crs)
+        spatial = SpatialDimension(name_uid='gid',grid=grid,crs=crs,abstraction=self.s_abstraction)
         
         variable_meta = self._source_metadata['variables'][self.variable]
         variable_units = variable_meta['attrs'].get('units')
@@ -150,6 +149,12 @@ class NcRequestDataset(object):
         variable_collection = VariableCollection(variables=[variable])
         ret = NcField(variables=variable_collection,spatial=spatial,temporal=loaded['temporal'],level=loaded['level'],
                     data=self)
+        
+        ## apply any subset parameters after the field is loaded
+        if self.time_range is not None:
+            ret = ret.get_between('temporal',self.time_range[0],self.time_range[1])
+        if self.time_region is not None:
+            ret = ret.get_time_region(self.time_region)
         
         return(ret)
     
@@ -416,7 +421,6 @@ def get_dimension_map(ds,var,metadata):
                         bounds_var = ds.variables[key2]._name
         value.update({'bounds':bounds_var})
     return(mp)
-
 
 def guess_by_location(dims,target):
     mp = {3:{0:'T',1:'Y',2:'X'},
