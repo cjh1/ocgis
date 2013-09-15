@@ -44,10 +44,18 @@ def get_none_or_slice(target,slc):
         ret = target[slc]
     return(ret)
 
-def get_slice(arr):
-    start = arr.min()
-    stop = arr.max() + 1
-    return(slice(start,stop))
+def get_slice(arr,check_sequential=True):
+    import ipdb;ipdb.set_trace()
+    if check_sequential:
+        ## check for index differences greater than one. 
+        diff = np.diff(arr)
+        if np.any(diff > 1):
+            import ipdb;ipdb.set_trace()
+    else:
+        start = arr.min()
+        stop = arr.max() + 1
+        ret = slice(start,stop)
+    return(ret)
 
 def get_formatted_slice(slc,n_dims):
     

@@ -58,3 +58,9 @@ class NcTemporalDimension(NcVectorDimension,TemporalDimension):
         state = NcVectorDimension._format_slice_state_(self,state,slc)
         state.bounds_datetime = get_none_or_slice(state._bounds_datetime,(slc,slice(None)))
         return(state)
+    
+    def _get_datetime_bounds_(self):
+        return(self.bounds_datetime)
+    
+    def _get_datetime_value_(self):
+        return(self.value_datetime)
