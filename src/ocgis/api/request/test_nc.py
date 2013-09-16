@@ -99,12 +99,14 @@ class TestNcRequestDataset(TestBase):
         ref_test = self.test_data['cancm4_tas']
         uri = self.test_data.get_uri('cancm4_tas')
         ds = nc.Dataset(uri,'r')
-        import ipdb;ipdb.set_trace()
         rd = NcRequestDataset(variable=ref_test['variable'],uri=uri,time_region={'month':[8]})
         field = rd.get()
+        
         self.assertEqual(field.shape,(1,320,1,64,128))
         field.value
         import ipdb;ipdb.set_trace()
+        
+        ds.close()
 
 
 if __name__ == "__main__":
