@@ -186,7 +186,17 @@ class TestNcRequestDataset(TestBase):
         ca = ca.geom.polygon.value[0,0]
         ca_sub = field.get_intersects(ca)
         self.assertEqual(ca_sub.shape,(1, 3650, 1, 5, 4))
+        self.assertTrue(ca_sub.value['foo'].mask.any())
+        
+        ca_sub = field.get_intersects(ca.envelope)
+        self.assertEqual(ca_sub.shape,(1, 3650, 1, 5, 4))
         self.assertFalse(ca_sub.value['foo'].mask.all())
+        
+        rd = NcRequestDataset(variable=ref_test['variable'],uri=uri,alias='foo',time_region={'year':[2007]})
+        field = rd.get()
+        ca_sub = field.get_intersects(ca)
+        self.assertEqual(ca_sub.shape,(1, 365, 1, 5, 4))
+        self.assertEqual(set([2007]),set([d.year for d in ca_sub.temporal.value_datetime]))
 
 
 if __name__ == "__main__":
