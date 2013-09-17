@@ -82,7 +82,6 @@ class TemporalDimension(base.VectorDimension):
         
         ## return the values to use for the temporal region subsetting.
         value = self._get_datetime_value_()
-        bounds = self._get_datetime_bounds_()
         
         ## remove any none values in the time_region dictionary. this will save
         ## time in iteration.
@@ -98,25 +97,14 @@ class TemporalDimension(base.VectorDimension):
         row_check = np.zeros(len(time_region),dtype=bool)
         
         for idx_row in range(select.shape[0]):
-            if bounds is None:
-                ## do the comparison for each time_region element.
-                row = value[idx_row]
-                for ii,(k,v) in enumerate(time_region.iteritems()):
-                    part = getattr(row,k)
-                    if part in v:
-                        row_check[ii] = True
-                    else:
-                        row_check[ii] = False
-            else:
-                row = bounds[idx_row,:]
-                ## loop for each element of the time region subset
-                ## TODO: how to deal with edge effects?
-                for ii,(k,v) in enumerate(time_region.iteritems()):
-                    part_check = [e in [getattr(e,k) for e in row.flat] for e in v]
-                    if any(part_check):
-                        row_check[ii] = True
-                    else:
-                        row_check[ii] = False
+            ## do the comparison for each time_region element.
+            row = value[idx_row]
+            for ii,(k,v) in enumerate(time_region.iteritems()):
+                part = getattr(row,k)
+                if part in v:
+                    row_check[ii] = True
+                else:
+                    row_check[ii] = False
             if row_check.all():
                 select[idx_row] = True
         

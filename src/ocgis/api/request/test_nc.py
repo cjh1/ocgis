@@ -102,9 +102,15 @@ class TestNcRequestDataset(TestBase):
         rd = NcRequestDataset(variable=ref_test['variable'],uri=uri,time_region={'month':[8]})
         field = rd.get()
         
-        self.assertEqual(field.shape,(1,320,1,64,128))
-        field.value
-        import ipdb;ipdb.set_trace()
+        self.assertEqual(field.shape,(1,310,1,64,128))
+        
+        var = ds.variables['time']
+        real_temporal = nc.num2date(var[:],var.units,var.calendar)
+        select = [True if x.month == 8 else False for x in real_temporal]
+        indices = np.arange(0,var.shape[0])[np.array(select)]
+        self.assertNumpyAll(indices,field.temporal._src_idx)
+        self.assertNumpyAll(field.temporal.value_datetime,real_temporal[indices])
+        self.assertNumpyAll(field.value['tas'].data.squeeze(),ds.variables['tas'][indices,:,:])
         
         ds.close()
 

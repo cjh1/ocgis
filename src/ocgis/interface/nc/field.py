@@ -10,8 +10,11 @@ class NcField(Field):
         if self.realization is not None:
             raise(NotImplementedError)
         
-        axis_slc = {} 
-        axis_slc['T'] = get_slice(self.temporal._src_idx)
+        axis_slc = {}
+        if self._has_fancy_temporal_indexing:
+            axis_slc['T'] = self.temporal._src_idx
+        else:
+            axis_slc['T'] = get_slice(self.temporal._src_idx)
         axis_slc['Y'] = get_slice(self.spatial.grid.row._src_idx)
         axis_slc['X'] = get_slice(self.spatial.grid.col._src_idx)
 
@@ -47,7 +50,7 @@ class NcField(Field):
                 self._value[var_name] = raw
                 ## apply any spatial mask if the geometries have been loaded
                 if self.spatial._geom is not None:
-                    raise(NotImplementedError)
+                    raise(NotImplementedError('needs testing'))
         finally:
             ds.close()
         ## TODO: remember to apply the geometry mask to fresh values!!

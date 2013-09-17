@@ -24,17 +24,6 @@ class TestTemporalDimension(TestBase):
         ret,indices = td.get_time_region({'day':[20,31],'month':[9,10],'year':[2003]},return_indices=True)
         self.assertNumpyAll(ret.value,[dt(2003,9,20),dt(2003,10,20),dt(2003,10,31,)])
         self.assertEqual(ret.shape,indices.shape)
-        
-    def test_get_time_region_with_bounds(self):
-        dates = get_date_list(dt(2002,1,31,12),dt(2009,12,31,12),1)
-        delta = datetime.timedelta(days=0.5)
-        bounds = [[d-delta,d+delta] for d in dates]
-        td = TemporalDimension(value=dates,bounds=bounds)
-        
-        ret,indices = td.get_time_region({'month':[8]},return_indices=True)
-        self.assertNumpyAll(ret.bounds[0,:],np.array([dt(2002,7,31),dt(2002,8,1)],dtype=object))
-        self.assertNumpyAll(ret.bounds[-1,:],np.array([dt(2009,8,31),dt(2009,9,1)],dtype=object))
-#        self.assertEqual(set([8]),set([d.month for d in ret[1:-1].value.flat]))
 
 class TestTemporalGroupDimension(TestBase):
     

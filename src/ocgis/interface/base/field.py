@@ -128,7 +128,11 @@ class Field(AbstractSourcedVariable):
         self.units = units
         self.value_dimension_names = ('realization','temporal','level','row','column')
         self.meta = meta or {}
+        ## holds raw values for aggregated datasets.
         self._raw = None
+        ## determines if fancy indexing is used for the temporal dimension. this
+        ## will occur with temporal region subsetting.
+        self._has_fancy_temporal_indexing = False
         
         super(Field,self).__init__(data,src_idx=None,value=value,debug=debug)
         
@@ -181,6 +185,9 @@ class Field(AbstractSourcedVariable):
         ret.temporal,indices = self.temporal.get_time_region(time_region,return_indices=True)
         slc = [slice(None),indices,slice(None),slice(None),slice(None)]
         ret._value = self._get_value_slice_or_none_(ret._value,slc)
+        ## indicate the indices are not sequential. this flag may be used by
+        ## subclasses for loading fancy indexed arrays. from source.
+        ret._has_fancy_temporal_indexing = True
         return(ret)
     
     def _get_spatial_operation_(self,attr,point_or_polygon):
