@@ -111,6 +111,9 @@ class TestNcRequestDataset(TestBase):
         self.assertNumpyAll(indices,field.temporal._src_idx)
         self.assertNumpyAll(field.temporal.value_datetime,real_temporal[indices])
         self.assertNumpyAll(field.value['tas'].data.squeeze(),ds.variables['tas'][indices,:,:])
+
+        bounds_temporal = nc.num2date(ds.variables['time_bnds'][indices,:],var.units,var.calendar)
+        self.assertNumpyAll(bounds_temporal,field.temporal.bounds_datetime)
         
         ds.close()
 
