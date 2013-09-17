@@ -208,7 +208,7 @@ class TestField(TestBase):
             value = np.random.rand(*var.shape)
             var._value = {'tmax':value}
             self.assertIsInstance(var.value,dict)
-            self.assertIsInstance(var.variables['tmax'].value,np.ma.MaskedArray)
+            self.assertIsInstance(var.value['tmax'],np.ma.MaskedArray)
             value = np.random.rand(3)
             with self.assertRaises(AssertionError):
                 var._value = value

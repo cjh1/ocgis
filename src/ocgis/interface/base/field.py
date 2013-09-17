@@ -82,15 +82,15 @@ class Variable(object):
         self.units = units
         self.meta = meta or {}
         self.uid = uid
-        self._field = None
-    
-    @property
-    def field(self):
-        return(self._field)
-    
-    @property
-    def value(self):
-        return(self.field.value[self.alias])
+#        self._field = None
+#    
+#    @property
+#    def field(self):
+#        return(self._field)
+#    
+#    @property
+#    def value(self):
+#        return(self.field.value[self.alias])
         
         
 class VariableCollection(OrderedDict):
@@ -135,9 +135,7 @@ class Field(AbstractSourcedVariable):
         self._has_fancy_temporal_indexing = False
         
         super(Field,self).__init__(data,src_idx=None,value=value,debug=debug)
-        
-        for v in self.variables.itervalues(): v._field = self
-        
+                
     def __getitem__(self,slc):
         slc = get_formatted_slice(slc,5)        
         ret = copy(self)
@@ -147,9 +145,6 @@ class Field(AbstractSourcedVariable):
         ret.spatial = get_none_or_slice(ret.spatial,(slc[3],slc[4]))
         
         ret._value = self._get_value_slice_or_none_(self._value,slc)
-        
-        ## update the field backref for the variables
-        for v in ret.variables.itervalues(): v._field = ret
         
         return(ret)
     

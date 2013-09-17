@@ -36,6 +36,7 @@ class AbstractDimension(object):
         for attr in self._attrs_slice:
             ref_set = get_none_or_slice(getattr(ret,attr),slc)
             setattr(ret,attr,ref_set)
+        ret.properties = self._get_sliced_properties_(slc)
         ret = self._format_slice_state_(ret,slc)
         return(ret)
     
@@ -55,6 +56,12 @@ class AbstractDimension(object):
         if ret is not None and masked and not isinstance(ret,np.ma.MaskedArray):
             ret = np.ma.array(ret,mask=False)
         return(ret)
+    
+    def _get_sliced_properties_(self,slc):
+        if self.properties is not None:
+            raise(NotImplementedError)
+        else:
+            return(None)
     
     
 class AbstractValueDimension(AbstractValueVariable,AbstractDimension):

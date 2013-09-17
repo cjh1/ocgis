@@ -37,8 +37,9 @@ class NcField(Field):
         ds = self._data._open_()
         self._value = {}
         try:
-            for var_name in self.variables.keys():
-                raw = ds.variables[var_name].__getitem__(slc)
+            for var in self.variables.values():
+                var_name = var.alias
+                raw = ds.variables[var.name].__getitem__(slc)
                 if not isinstance(raw,np.ma.MaskedArray):
                     raw = np.ma.array(raw,mask=False)
                 ## reshape the data adding singleton axes where necessary
@@ -48,9 +49,9 @@ class NcField(Field):
                     new_shape = [1,raw.shape[0],raw.shape[1],raw.shape[2],raw.shape[3]]
                 raw = raw.reshape(new_shape)
                 self._value[var_name] = raw
-                ## apply any spatial mask if the geometries have been loaded
-                if self.spatial._geom is not None:
-                    raise(NotImplementedError('needs testing'))
+            ## apply any spatial mask if the geometries have been loaded
+            if self.spatial._geom is not None:
+                self._set_new_value_mask_(self,self.spatial.get_mask())
         finally:
             ds.close()
         ## TODO: remember to apply the geometry mask to fresh values!!

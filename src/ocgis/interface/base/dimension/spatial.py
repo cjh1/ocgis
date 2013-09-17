@@ -212,6 +212,14 @@ class SpatialDimension(base.AbstractUidDimension):
     
     def _format_uid_(self,value):
         return(np.atleast_2d(value))
+    
+    def _get_sliced_properties_(self,slc):
+        if self.properties is not None:
+            ## determine major axis
+            major = self.shape.index(max(self.shape))
+            return(self.properties[slc[major]])
+        else:
+            return(None)
         
     def _get_uid_(self):
         if self._geom is not None:

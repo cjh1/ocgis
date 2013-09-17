@@ -5,9 +5,42 @@ import netCDF4 as nc
 from ocgis.interface.base.crs import WGS84
 import numpy as np
 from datetime import datetime as dt
+from ocgis.interface.base.dimension.spatial import SpatialGeometryPolygonDimension,\
+    SpatialGeometryDimension, SpatialDimension
+import fiona
+from shapely.geometry.geo import shape
 
 
 class TestNcRequestDataset(TestBase):
+    
+    def get_2d_state_boundaries(self):
+        geoms = []
+        build = True
+        with fiona.open('/home/local/WX/ben.koziol/Dropbox/nesii/project/ocg/bin/shp/state_boundaries/state_boundaries.shp','r') as source:
+            for ii,row in enumerate(source):
+                if build:
+                    nrows = len(source)
+                    dtype = []
+                    for k,v in source.schema['properties'].iteritems():
+                        if v.startswith('str'):
+                            v = str('|S{0}'.format(v.split(':')[1]))
+                        else:
+                            v = getattr(np,v.split(':')[0])
+                        dtype.append((str(k),v))
+                    fill = np.empty(nrows,dtype=dtype)
+                    ref_names = fill.dtype.names
+                    build = False
+                fill[ii] = tuple([row['properties'][n] for n in ref_names])
+                geoms.append(shape(row['geometry']))
+        geoms = np.atleast_2d(geoms)
+        return(geoms,fill)
+    
+    def get_2d_state_boundaries_sdim(self):
+        geoms,attrs = self.get_2d_state_boundaries()
+        poly = SpatialGeometryPolygonDimension(value=geoms)
+        geom = SpatialGeometryDimension(polygon=poly)
+        sdim = SpatialDimension(geom=geom,properties=attrs,crs=WGS84())
+        return(sdim)
 
     def test_load(self):
         ref_test = self.test_data['cancm4_tas']
@@ -75,14 +108,14 @@ class TestNcRequestDataset(TestBase):
         self.assertNumpyAll(slced.temporal.bounds,ds.variables['time_bnds'][56:345,:])
         to_test = ds.variables['tas'][56:345,:,:]
         to_test = np.ma.array(to_test.reshape(1,289,1,64,128),mask=False)
-        self.assertEqual(slced.variables['tas']._field._value,None)
-        self.assertNumpyAll(slced.variables['tas'].value,to_test)
+        self.assertNumpyAll(slced.value['tas'],to_test)
         
         slced = field[:,2898,:,5,101]
         to_test = ds.variables['tas'][2898,5,101]
         to_test = np.ma.array(to_test.reshape(1,1,1,1,1),mask=False)
-        self.assertEqual(slced.variables['tas']._field._value,None)
-        self.assertNumpyAll(slced.variables['tas'].value,to_test)
+        with self.assertRaises(AttributeError):
+            slced.variables['tas']._field._value
+        self.assertNumpyAll(slced.value['tas'],to_test)
         
         ds.close()
         
@@ -116,6 +149,44 @@ class TestNcRequestDataset(TestBase):
         self.assertNumpyAll(bounds_temporal,field.temporal.bounds_datetime)
         
         ds.close()
+        
+    def test_load_time_region_with_years(self):
+        ref_test = self.test_data['cancm4_tas']
+        uri = self.test_data.get_uri('cancm4_tas')
+        ds = nc.Dataset(uri,'r')
+        rd = NcRequestDataset(variable=ref_test['variable'],uri=uri,time_region={'month':[8],'year':[2008,2010]})
+        field = rd.get()
+        
+        self.assertEqual(field.shape,(1,62,1,64,128))
+
+        var = ds.variables['time']
+        real_temporal = nc.num2date(var[:],var.units,var.calendar)
+        select = [True if x.month == 8 and x.year in [2008,2010] else False for x in real_temporal]
+        indices = np.arange(0,var.shape[0])[np.array(select)]
+        self.assertNumpyAll(indices,field.temporal._src_idx)
+        self.assertNumpyAll(field.temporal.value_datetime,real_temporal[indices])
+        self.assertNumpyAll(field.value['tas'].data.squeeze(),ds.variables['tas'][indices,:,:])
+
+        bounds_temporal = nc.num2date(ds.variables['time_bnds'][indices,:],var.units,var.calendar)
+        self.assertNumpyAll(bounds_temporal,field.temporal.bounds_datetime)
+        
+        ds.close()
+        
+    def test_load_geometry_subset(self):
+        ref_test = self.test_data['cancm4_tas']
+        uri = self.test_data.get_uri('cancm4_tas')
+        ds = nc.Dataset(uri,'r')
+        rd = NcRequestDataset(variable=ref_test['variable'],uri=uri,alias='foo')
+        field = rd.get()
+        
+        states = self.get_2d_state_boundaries_sdim()
+        ca = states[:,states.properties['STATE_NAME'] == 'California']
+        self.assertTrue(ca.properties['STATE_NAME'] == 'California')
+        ca.crs.unwrap(ca)
+        ca = ca.geom.polygon.value[0,0]
+        ca_sub = field.get_intersects(ca)
+        self.assertEqual(ca_sub.shape,(1, 3650, 1, 5, 4))
+        self.assertFalse(ca_sub.value['foo'].mask.all())
 
 
 if __name__ == "__main__":

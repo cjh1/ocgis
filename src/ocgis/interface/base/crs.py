@@ -5,6 +5,8 @@ from ocgis.util.logging_ocgis import ocgis_lh
 from ocgis.exc import SpatialWrappingError
 from ocgis.util.spatial.wrap import Wrapper
 from ocgis.util.helpers import iter_array
+from shapely.geometry.geo import mapping
+from shapely.geometry.multipolygon import MultiPolygon
 
 
 class CoordinateReferenceSystem(object):
@@ -50,10 +52,22 @@ class WGS84(CoordinateReferenceSystem):
                 check = spatial.grid.col.bounds
         except AttributeError as e:
             ## column dimension is likely missing
-            if spatial.grid.col is None:
-                check = spatial.get_grid_bounds()
-            else:
-                ocgis_lh(exc=e)
+            try:
+                if spatial.grid.col is None:
+                    check = spatial.get_grid_bounds()
+                else:
+                    ocgis_lh(exc=e)
+            except AttributeError as e:
+                ## there may be no grid, access the geometries directly
+                for geom in spatial.geom.polygon.value.compressed():
+                    if isinstance(geom,MultiPolygon):
+                        it = geom
+                    else:
+                        it = [geom]
+                    for sub_geom in it:
+                        if np.any(np.array(sub_geom.exterior.coords) > 180.):
+                            return(True)
+                return(False)
         if np.any(check > 180.):
             ret = True
         else:
