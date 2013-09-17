@@ -190,7 +190,7 @@ class TestNcRequestDataset(TestBase):
         
         ca_sub = field.get_intersects(ca.envelope)
         self.assertEqual(ca_sub.shape,(1, 3650, 1, 5, 4))
-        self.assertFalse(ca_sub.value['foo'].mask.all())
+        self.assertFalse(ca_sub.value['foo'].mask.any())
         
         rd = NcRequestDataset(variable=ref_test['variable'],uri=uri,alias='foo',time_region={'year':[2007]})
         field = rd.get()
