@@ -9,6 +9,7 @@ from ocgis.interface.base.dimension.spatial import SpatialGeometryPolygonDimensi
     SpatialGeometryDimension, SpatialDimension
 import fiona
 from shapely.geometry.geo import shape
+from ocgis.exc import EmptySubsetError
 
 
 class TestNcRequestDataset(TestBase):
@@ -197,6 +198,45 @@ class TestNcRequestDataset(TestBase):
         ca_sub = field.get_intersects(ca)
         self.assertEqual(ca_sub.shape,(1, 365, 1, 5, 4))
         self.assertEqual(set([2007]),set([d.year for d in ca_sub.temporal.value_datetime]))
+        
+    def test_load_time_region_slicing(self):
+        ref_test = self.test_data['cancm4_tas']
+        uri = self.test_data.get_uri('cancm4_tas')
+        
+        rd = NcRequestDataset(variable=ref_test['variable'],uri=uri,alias='foo',time_region={'month':[1,10],'year':[2011,2013]})
+        with self.assertRaises(EmptySubsetError):
+            rd.get()
+            
+        rd = NcRequestDataset(variable=ref_test['variable'],uri=uri,alias='foo',time_region={'month':[1,10],'year':[2005,2007]})
+        field = rd.get()
+        sub = field[:,:,:,50,75]
+        self.assertEqual(sub.shape,(1,124,1,1,1))
+        self.assertEqual(sub.value['foo'].shape,(1,124,1,1,1))
+        
+        field = rd.get()
+        sub = field[:,:,:,50,75:77]
+        sub2 = field[:,:,:,0,1]
+        self.assertEqual(sub2.shape,(1, 124, 1, 1, 1))        
+        
+        
+    def test_load_remote(self):
+        uri = 'http://cida.usgs.gov/thredds/dodsC/maurer/maurer_brekke_w_meta.ncml'
+        variable = 'sresa1b_bccr-bcm2-0_1_Tavg'
+        rd = NcRequestDataset(uri,variable,time_region={'month':[1,10],'year':[2011,2013]})
+        field = rd.get()
+        field.value
+        values = field[:,:,:,50,75]
+        to_test = values.value['sresa1b_bccr-bcm2-0_1_Tavg'].compressed()
+        
+        ds = nc.Dataset('http://cida.usgs.gov/thredds/dodsC/maurer/maurer_brekke_w_meta.ncml','r')
+        try:
+            values = ds.variables['sresa1b_bccr-bcm2-0_1_Tavg'][:,50,75]
+            times = nc.num2date(ds.variables['time'][:],ds.variables['time'].units,ds.variables['time'].calendar)
+            select = np.array([True if time in list(field.temporal.value_datetime) else False for time in times])
+            sel_values = values[select,:,:]
+            self.assertNumpyAll(to_test,sel_values)
+        finally:
+            ds.close()
 
 
 if __name__ == "__main__":

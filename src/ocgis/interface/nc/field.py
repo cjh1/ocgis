@@ -2,6 +2,7 @@ from ocgis.interface.base.field import Field
 from ocgis.util.helpers import get_slice
 import numpy as np
 from copy import deepcopy
+from ocgis.util.logging_ocgis import ocgis_lh
 
 
 class NcField(Field):
@@ -39,7 +40,10 @@ class NcField(Field):
         try:
             for var in self.variables.values():
                 var_name = var.alias
-                raw = ds.variables[var.name].__getitem__(slc)
+                try:
+                    raw = ds.variables[var.name].__getitem__(slc)
+                except IndexError:
+                    ocgis_lh(logger='nc.field',exc=IndexError('variable: {0}'.format(var.name)))
                 if not isinstance(raw,np.ma.MaskedArray):
                     raw = np.ma.array(raw,mask=False)
                 ## reshape the data adding singleton axes where necessary

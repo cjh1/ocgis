@@ -5,7 +5,7 @@ import itertools
 import datetime
 from ocgis import constants
 from ocgis.util.logging_ocgis import ocgis_lh
-from ocgis.exc import TemporalResolutionError
+from ocgis.exc import TemporalResolutionError, EmptySubsetError
 
 
 class TemporalDimension(base.VectorDimension):
@@ -107,6 +107,9 @@ class TemporalDimension(base.VectorDimension):
                     row_check[ii] = False
             if row_check.all():
                 select[idx_row] = True
+        
+        if not select.any():
+            ocgis_lh(logger='nc.temporal',exc=EmptySubsetError(origin='temporal'))
         
         ret = self[select]
         
