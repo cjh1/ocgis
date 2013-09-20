@@ -10,6 +10,7 @@ from ocgis.interface.base.dimension.spatial import SpatialGeometryPolygonDimensi
 import fiona
 from shapely.geometry.geo import shape
 from ocgis.exc import EmptySubsetError
+import datetime
 
 
 class TestNcRequestDataset(TestBase):
@@ -65,6 +66,8 @@ class TestNcRequestDataset(TestBase):
         rv = field.temporal.value_datetime[100]
         rb = field.temporal.bounds_datetime[100]
         self.assertTrue(all([rv > rb[0],rv < rb[1]]))
+        
+        self.assertEqual(field.temporal.extent_datetime,(datetime.datetime(2001,1,1),datetime.datetime(2011,1,1)))
         
         ds.close()
         
@@ -203,11 +206,13 @@ class TestNcRequestDataset(TestBase):
         ref_test = self.test_data['cancm4_tas']
         uri = self.test_data.get_uri('cancm4_tas')
         
-        rd = NcRequestDataset(variable=ref_test['variable'],uri=uri,alias='foo',time_region={'month':[1,10],'year':[2011,2013]})
+        rd = NcRequestDataset(variable=ref_test['variable'],uri=uri,alias='foo',
+                              time_region={'month':[1,10],'year':[2011,2013]})
         with self.assertRaises(EmptySubsetError):
             rd.get()
             
-        rd = NcRequestDataset(variable=ref_test['variable'],uri=uri,alias='foo',time_region={'month':[1,10],'year':[2005,2007]})
+        rd = NcRequestDataset(variable=ref_test['variable'],uri=uri,alias='foo',
+                              time_region={'month':[1,10],'year':[2005,2007]})
         field = rd.get()
         sub = field[:,:,:,50,75]
         self.assertEqual(sub.shape,(1,124,1,1,1))
@@ -216,8 +221,7 @@ class TestNcRequestDataset(TestBase):
         field = rd.get()
         sub = field[:,:,:,50,75:77]
         sub2 = field[:,:,:,0,1]
-        self.assertEqual(sub2.shape,(1, 124, 1, 1, 1))        
-        
+        self.assertEqual(sub2.shape,(1, 124, 1, 1, 1))
         
     def test_load_remote(self):
         uri = 'http://cida.usgs.gov/thredds/dodsC/maurer/maurer_brekke_w_meta.ncml'

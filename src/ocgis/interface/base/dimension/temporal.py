@@ -5,7 +5,7 @@ import itertools
 import datetime
 from ocgis import constants
 from ocgis.util.logging_ocgis import ocgis_lh
-from ocgis.exc import TemporalResolutionError, EmptySubsetError
+from ocgis.exc import EmptySubsetError
 
 
 class TemporalDimension(base.VectorDimension):

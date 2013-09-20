@@ -181,6 +181,14 @@ class VectorDimension(AbstractSourcedVariable,AbstractUidValueDimension):
         self._bounds = get_none_or_2d(value)
         if value is not None:
             self._validate_bounds_(value)
+            
+    @property
+    def extent(self):
+        if self.bounds is None:
+            target = self.value
+        else:
+            target = self.bounds
+        return(target.min(),target.max())
     
     @property
     def resolution(self):

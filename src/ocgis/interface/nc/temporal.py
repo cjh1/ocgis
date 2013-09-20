@@ -33,6 +33,10 @@ class NcTemporalDimension(NcVectorDimension,TemporalDimension):
         self._bounds_datetime = new
         
     @property
+    def extent_datetime(self):
+        return(tuple(self.get_datetime(self.extent)))
+        
+    @property
     def value_datetime(self):
         if self._value_datetime is None:
             self._value_datetime = np.atleast_1d(self.get_datetime(self.value))

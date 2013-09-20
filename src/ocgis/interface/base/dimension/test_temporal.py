@@ -24,6 +24,9 @@ class TestTemporalDimension(TestBase):
         ret,indices = td.get_time_region({'day':[20,31],'month':[9,10],'year':[2003]},return_indices=True)
         self.assertNumpyAll(ret.value,[dt(2003,9,20),dt(2003,10,20),dt(2003,10,31,)])
         self.assertEqual(ret.shape,indices.shape)
+        
+        self.assertEqual(ret.extent,(datetime.datetime(2003,9,20),datetime.datetime(2003,10,31)))
+
 
 class TestTemporalGroupDimension(TestBase):
     
