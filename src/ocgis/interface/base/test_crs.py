@@ -106,6 +106,8 @@ class TestCFLambertConformalConic(TestBase):
         self.assertEqual(crs.value,{'lon_0': -97, 'ellps': 'WGS84', 'y_0': 2700000, 'no_defs': True, 'proj': 'lcc', 'x_0': 3325000, 'units': 'm', 'lat_2': 60, 'lat_1': 30, 'lat_0': 47.5})
         self.assertIsInstance(crs,CFLambertConformal)
         self.assertEqual(['xc','yc'],[crs.projection_x_coordinate,crs.projection_y_coordinate])
+        self.assertNumpyAll(np.array([ 30.,  60.]),crs.map_parameters_values.pop('standard_parallel'))
+        self.assertEqual(crs.map_parameters_values,{u'latitude_of_projection_origin': 47.5, u'longitude_of_central_meridian': -97.0, u'false_easting': 3325000.0, u'false_northing': 2700000.0, 'units': u'm'})
         ds.close()
 
 
