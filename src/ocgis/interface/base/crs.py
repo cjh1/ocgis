@@ -3,7 +3,7 @@ from fiona.crs import from_string, to_string
 import numpy as np
 from ocgis.util.logging_ocgis import ocgis_lh
 from ocgis.exc import SpatialWrappingError, ProjectionCoordinateNotFound,\
-    ProjectionDoesNotMatch
+    ProjectionDoesNotMatch, ImproperPolygonBoundsError
 from ocgis.util.spatial.wrap import Wrapper
 from ocgis.util.helpers import iter_array, assert_raise
 from shapely.geometry.multipolygon import MultiPolygon
@@ -71,7 +71,10 @@ class WGS84(CoordinateReferenceSystem):
             ## column dimension is likely missing
             try:
                 if spatial.grid.col is None:
-                    check = spatial.get_grid_bounds()
+                    try:
+                        check = spatial.get_grid_bounds()
+                    except ImproperPolygonBoundsError:
+                        check = spatial.grid.value[1,:,:]
                 else:
                     ocgis_lh(exc=e)
             except AttributeError as e:

@@ -9,7 +9,7 @@ from ocgis.interface.base.dimension.spatial import SpatialGeometryPolygonDimensi
     SpatialGeometryDimension, SpatialDimension
 import fiona
 from shapely.geometry.geo import shape
-from ocgis.exc import EmptySubsetError
+from ocgis.exc import EmptySubsetError, ImproperPolygonBoundsError
 import datetime
 
 
@@ -251,7 +251,12 @@ class TestNcRequestDataset(TestBase):
         self.assertIsInstance(field.spatial.crs,CFWGS84)
         self.assertEqual(field.spatial.grid.row,None)
         self.assertAlmostEqual(field.spatial.grid.value.mean(),-26.269666952512416)
-
+        field.spatial.crs.unwrap(field.spatial)
+        self.assertAlmostEqual(field.spatial.grid.value.mean(),153.73033342462003)
+        with self.assertRaises(ImproperPolygonBoundsError):
+            field.spatial.geom.polygon
+        self.assertAlmostEqual(field.spatial.geom.point.value[0,100].x,278.52630062012787)
+        self.assertAlmostEqual(field.spatial.geom.point.value[0,100].y,21.4615681252577)
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']
