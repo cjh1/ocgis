@@ -20,6 +20,16 @@ class EmptyIterationError(OcgException):
     
     def __init__(self,obj):
         self.message = 'Iteration on the object "{0}" requested, but the object is empty.'.format(obj)
+        
+        
+class CFException(OcgException):
+    pass
+
+
+class ProjectionCoordinateNotFound(CFException):
+    
+    def __init__(self,target):
+        self.message = 'The projection coordinate "{0}" was not found in the dataset.'
 
 
 class DefinitionValidationError(OcgException):

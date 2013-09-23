@@ -1,5 +1,6 @@
 import unittest
-from ocgis.interface.base.crs import CoordinateReferenceSystem, WGS84
+from ocgis.interface.base.crs import CoordinateReferenceSystem, WGS84,\
+    CFAlbersEqualArea, CFLambertConformal
 from ocgis.interface.base.dimension.base import VectorDimension
 from ocgis.interface.base.dimension.spatial import SpatialGridDimension,\
     SpatialDimension
@@ -9,6 +10,8 @@ import numpy as np
 from copy import deepcopy
 from shapely.geometry.multipolygon import MultiPolygon
 from ocgis.util.helpers import get_temp_path
+import netCDF4 as nc
+from ocgis.interface.metadata import NcMetadata
 
 
 class TestCoordinateReferenceSystem(TestBase):
@@ -72,6 +75,38 @@ class TestWGS84(TestBase):
         for target in ['point','polygon']:
             path = get_temp_path(name=target,suffix='.shp',wd=self._test_dir)
             sdim.write_fiona(path,target)
+            
+            
+class TestCFAlbersEqualArea(TestBase):
+    
+    def test_constructor(self):
+        crs = CFAlbersEqualArea(standard_parallel=[29.5,45.5],longitude_of_central_meridian=-96,
+                                latitude_of_projection_origin=37.5,false_easting=0,
+                                false_northing=0)
+        self.assertEqual(crs.value,{'lon_0': -96, 'ellps': 'WGS84', 'y_0': 0, 'no_defs': True, 'proj': 'aea', 'x_0': 0, 'units': 'm', 'lat_2': 45.5, 'lat_1': 29.5, 'lat_0': 37.5})
+    
+    def test_empty(self):
+        with self.assertRaises(ValueError):
+            CFAlbersEqualArea()
+            
+    def test_bad_parms(self):
+        with self.assertRaises(ValueError):
+            CFAlbersEqualArea(standard_parallel=[29.5,45.5],longitude_of_central_meridian=-96,
+                              latitude_of_projection_origin=37.5,false_easting=0,
+                              false_nothing=0)
+
+
+class TestCFLambertConformalConic(TestBase):
+    
+    def test_load_from_metadata(self):
+        uri = self.test_data.get_uri('narccap_wrfg')
+        ds = nc.Dataset(uri,'r')
+        meta = NcMetadata(ds)
+        crs = CFLambertConformal.load_from_metadata('pr',meta)
+        self.assertEqual(crs.value,{'lon_0': -97, 'ellps': 'WGS84', 'y_0': 2700000, 'no_defs': True, 'proj': 'lcc', 'x_0': 3325000, 'units': 'm', 'lat_2': 60, 'lat_1': 30, 'lat_0': 47.5})
+        self.assertIsInstance(crs,CFLambertConformal)
+        self.assertEqual(['xc','yc'],[crs.projection_x_coordinate,crs.projection_y_coordinate])
+        ds.close()
 
 
 if __name__ == "__main__":

@@ -2,11 +2,13 @@ from osgeo.osr import SpatialReference
 from fiona.crs import from_string, to_string
 import numpy as np
 from ocgis.util.logging_ocgis import ocgis_lh
-from ocgis.exc import SpatialWrappingError
+from ocgis.exc import SpatialWrappingError, ProjectionCoordinateNotFound
 from ocgis.util.spatial.wrap import Wrapper
-from ocgis.util.helpers import iter_array
+from ocgis.util.helpers import iter_array, assert_raise
 from shapely.geometry.geo import mapping
 from shapely.geometry.multipolygon import MultiPolygon
+import abc
+import numpy as np
 
 
 class CoordinateReferenceSystem(object):
@@ -21,10 +23,25 @@ class CoordinateReferenceSystem(object):
                 crs = from_string(sr.ExportToProj4())
             else:
                 raise(NotImplementedError)
+        else:
+            ## remove unicode and change to python types
+            for k,v in crs.iteritems():
+                if type(v) == unicode:
+                    crs[k] = str(v)
+                else:
+                    try:
+                        crs[k] = v.tolist()
+                    except AttributeError:
+                        continue
             
         sr = SpatialReference()
         sr.ImportFromProj4(to_string(crs))
         self.value = from_string(sr.ExportToProj4())
+    
+        try:
+            assert(self.value != {})
+        except AssertionError:
+            ocgis_lh(logger='crs',exc=ValueError('Empty CRS: The conversion to PROJ4 may have failed. The CRS value is: {0}'.format(crs)))
     
     def __eq__(self,other):
         return(self.value == other.value)
@@ -99,3 +116,105 @@ class WGS84(CoordinateReferenceSystem):
             spatial.grid = None
         else:
             ocgis_lh(exc=SpatialWrappingError('Data does not have a 0 to 360 coordinate system.'))
+            
+            
+class CFCoordinateReferenceSystem(CoordinateReferenceSystem):
+    __metaclass__ = abc.ABCMeta
+    
+    def __init__(self,**kwds):
+        self.projection_x_coordinate = kwds.pop('projection_x_coordinate',None)
+        self.projection_y_coordinate = kwds.pop('projection_y_coordinate',None)
+        
+        assert_raise(set(kwds.keys()) == set(self.map_parameters.keys()),logger='crs',
+                     exc=ValueError('Proper keyword arguments are: {0}'.format(self.map_parameters.keys())))
+        
+        self.map_parameters_values = kwds
+        crs = {'proj':self.proj_name}
+        for k,v in kwds.iteritems():
+            if k in self.iterable_parameters:
+                v = getattr(self,self.iterable_parameters[k])(v)
+                crs.update(v)
+            else:
+                crs.update({self.map_parameters[k]:v})
+                
+        super(CFCoordinateReferenceSystem,self).__init__(crs=crs)
+            
+    @abc.abstractproperty
+    def grid_mapping_name(self): str
+    
+    @abc.abstractproperty
+    def iterable_parameters(self): dict
+    
+    @abc.abstractproperty
+    def map_parameters(self): dict
+    
+    @abc.abstractproperty
+    def proj_name(self): str
+    
+    def format_standard_parallel(self,value):
+        if isinstance(value,np.ndarray):
+            value = value.tolist()
+            
+        ret = {}
+        try:
+            it = iter(value)
+        except TypeError:
+            it = [value]
+        for ii,v in enumerate(it,start=1):
+            ret.update({self.map_parameters['standard_parallel'].format(ii):v})
+        return(ret)
+    
+    @classmethod
+    def load_from_metadata(cls,var,meta):
+        
+        def _get_projection_coordinate_(target,meta):
+            key = 'projection_{0}_coordinate'.format(target)
+            for k,v in meta['variables'].iteritems():
+                if 'standard_name' in v['attrs']:
+                    if v['attrs']['standard_name'] == key:
+                        return(k)
+            ocgis_lh(logger='crs',exc=ProjectionCoordinateNotFound(key))
+            
+        r_var = meta['variables'][var]
+        r_grid_mapping = meta['variables'][r_var['attrs']['grid_mapping']]
+        pc_x,pc_y = [_get_projection_coordinate_(target,meta) for target in ['x','y']]
+        
+        kwds = r_grid_mapping['attrs']
+        kwds.pop('grid_mapping_name',None)
+        kwds['projection_x_coordinate'] = pc_x
+        kwds['projection_y_coordinate'] = pc_y
+        
+        cls._load_from_metadata_finalize_(kwds,var,meta)
+
+        return(cls(**kwds))
+    
+    @classmethod
+    def _load_from_metadata_finalize_(cls,kwds,var,meta):
+        pass
+    
+    
+class CFAlbersEqualArea(CFCoordinateReferenceSystem):
+    grid_mapping_name = 'albers_conical_equal_area'
+    iterable_parameters = {'standard_parallel':'format_standard_parallel'}
+    map_parameters = {'standard_parallel':'lat_{0}',
+                      'longitude_of_central_meridian':'lon_0',
+                      'latitude_of_projection_origin':'lat_0',
+                      'false_easting':'x_0',
+                      'false_northing':'y_0'}
+    proj_name = 'aea'
+
+
+class CFLambertConformal(CFCoordinateReferenceSystem):
+    grid_mapping_name = 'lambert_conformal_conic'
+    iterable_parameters = {'standard_parallel':'format_standard_parallel'}
+    map_parameters = {'standard_parallel':'lat_{0}',
+                      'longitude_of_central_meridian':'lon_0',
+                      'latitude_of_projection_origin':'lat_0',
+                      'false_easting':'x_0',
+                      'false_northing':'y_0',
+                      'units':'units'}
+    proj_name = 'lcc'
+    
+    @classmethod
+    def _load_from_metadata_finalize_(cls,kwds,var,meta):
+        kwds['units'] = meta['variables'][kwds['projection_x_coordinate']]['attrs'].get('units')

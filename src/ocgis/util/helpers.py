@@ -14,7 +14,14 @@ from ocgis.exc import DefinitionValidationError
 import sys
 import datetime
 from copy import deepcopy
+from ocgis.util.logging_ocgis import ocgis_lh
 
+
+def assert_raise(test,**kwds):
+    try:
+        assert(test)
+    except AssertionError:
+        ocgis_lh(**kwds)
 
 def get_default_or_apply(target,f,default=None):
     if target is None:
