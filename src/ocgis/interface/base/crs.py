@@ -2,13 +2,13 @@ from osgeo.osr import SpatialReference
 from fiona.crs import from_string, to_string
 import numpy as np
 from ocgis.util.logging_ocgis import ocgis_lh
-from ocgis.exc import SpatialWrappingError, ProjectionCoordinateNotFound
+from ocgis.exc import SpatialWrappingError, ProjectionCoordinateNotFound,\
+    ProjectionDoesNotMatch
 from ocgis.util.spatial.wrap import Wrapper
 from ocgis.util.helpers import iter_array, assert_raise
-from shapely.geometry.geo import mapping
 from shapely.geometry.multipolygon import MultiPolygon
 import abc
-import numpy as np
+import logging
 
 
 class CoordinateReferenceSystem(object):
@@ -59,7 +59,7 @@ class CoordinateReferenceSystem(object):
 class WGS84(CoordinateReferenceSystem):
     
     def __init__(self):
-        super(WGS84,self).__init__(epsg=4326)
+        CoordinateReferenceSystem.__init__(self,epsg=4326)
 
     def get_is_360(self,spatial):
         try:
@@ -176,7 +176,19 @@ class CFCoordinateReferenceSystem(CoordinateReferenceSystem):
             ocgis_lh(logger='crs',exc=ProjectionCoordinateNotFound(key))
             
         r_var = meta['variables'][var]
-        r_grid_mapping = meta['variables'][r_var['attrs']['grid_mapping']]
+        
+        try:
+            ## look for the grid_mapping attribute on the target variable
+            r_grid_mapping = meta['variables'][r_var['attrs']['grid_mapping']]
+        except KeyError:
+            raise(ProjectionDoesNotMatch)
+        try:
+            grid_mapping_name = r_grid_mapping['attrs']['grid_mapping_name']
+        except KeyError:
+            ocgis_lh(logger='crs',level=logging.WARN,msg='"grid_mapping" variable "{0}" does not have a "grid_mapping_name" attribute'.format(r_grid_mapping['name']))
+            raise(ProjectionDoesNotMatch)
+        if grid_mapping_name != cls.grid_mapping_name:
+            raise(ProjectionDoesNotMatch)
         pc_x,pc_y = [_get_projection_coordinate_(target,meta) for target in ['x','y']]
         
         kwds = r_grid_mapping['attrs']
@@ -191,6 +203,27 @@ class CFCoordinateReferenceSystem(CoordinateReferenceSystem):
     @classmethod
     def _load_from_metadata_finalize_(cls,kwds,var,meta):
         pass
+
+
+class CFWGS84(WGS84,CFCoordinateReferenceSystem,):
+    grid_mapping_name = 'latitude_longitude'
+    iterable_parameters = None
+    map_parameters = None
+    proj_name = None
+    
+    def __init__(self):
+        WGS84.__init__(self)
+    
+    @classmethod
+    def load_from_metadata(cls,var,meta):
+        try:
+            r_grid_mapping = meta['variables'][var]['attrs']['grid_mapping']
+            if r_grid_mapping == cls.grid_mapping_name:
+                return(cls())
+            else:
+                raise(ProjectionDoesNotMatch)
+        except KeyError:
+            raise(ProjectionDoesNotMatch)
     
     
 class CFAlbersEqualArea(CFCoordinateReferenceSystem):

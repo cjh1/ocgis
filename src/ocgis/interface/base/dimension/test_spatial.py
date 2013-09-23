@@ -180,6 +180,7 @@ class TestSpatialDimension(TestSpatialBase):
             to_crs = CoordinateReferenceSystem(epsg=2163)
             sdim.update_crs(to_crs)
             self.assertNumpyNotAll(sdim.grid.value,orig)
+            self.assertEqual(sdim.grid.row,None)
 
     def test_grid_value(self):
         for b in [True,False]:

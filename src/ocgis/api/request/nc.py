@@ -1,10 +1,10 @@
-from ocgis.exc import DefinitionValidationError
+from ocgis.exc import DefinitionValidationError, ProjectionDoesNotMatch
 #from ocgis.util.inspect import Inspect
 from copy import deepcopy
 import inspect
 import os
 from ocgis import env, constants
-from ocgis.util.helpers import locate, validate_time_subset
+from ocgis.util.helpers import locate, validate_time_subset, itersubclasses
 from datetime import datetime
 import netCDF4 as nc
 from ocgis.interface.metadata import NcMetadata
@@ -14,7 +14,7 @@ from ocgis.interface.nc.temporal import NcTemporalDimension
 import numpy as np
 from ocgis.interface.base.dimension.spatial import SpatialGridDimension,\
     SpatialDimension
-from ocgis.interface.base.crs import WGS84
+from ocgis.interface.base.crs import WGS84, CFCoordinateReferenceSystem, CFWGS84
 from ocgis.interface.base.field import Variable, VariableCollection
 from ocgis.interface.nc.dimension import NcVectorDimension
 from ocgis.interface.nc.field import NcField
@@ -131,16 +131,20 @@ class NcRequestDataset(object):
             loaded[k] = fill
             
         grid = SpatialGridDimension(row=loaded['row'],col=loaded['col'])
+        crs = None
         if self.s_crs is not None:
             crs = self.s_crs
         else:
-            grid_mapping = self._source_metadata['variables'][self.variable]['attrs'].get('grid_mapping')
-            if grid_mapping is None:
-                ocgis_lh('No "grid_mapping" attribute available assuming WGS84: {0}'.format(self.uri),
-                         'request',logging.WARN)
-                crs = WGS84()
-            else:
-                raise(NotImplementedError)
+            for potential in itersubclasses(CFCoordinateReferenceSystem):
+                try:
+                    crs = potential.load_from_metadata(self.variable,self._source_metadata)
+                    break
+                except ProjectionDoesNotMatch:
+                    continue
+        if crs is None:
+            ocgis_lh('No "grid_mapping" attribute available assuming WGS84: {0}'.format(self.uri),
+                     'request',logging.WARN)
+            crs = CFWGS84()
         spatial = SpatialDimension(name_uid='gid',grid=grid,crs=crs,abstraction=self.s_abstraction)
         
         variable_meta = self._source_metadata['variables'][self.variable]

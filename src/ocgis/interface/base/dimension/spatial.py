@@ -202,6 +202,10 @@ class SpatialDimension(base.AbstractUidDimension):
                     x,y = geom.x,geom.y
                     r_grid_value[0,idx_row,idx_col] = y
                     r_grid_value[1,idx_row,idx_col] = x
+                ## remove row and columns if they exist as this requires interpolation
+                ## to make them vectors again.
+                self.grid.row = None
+                self.grid.col = None
             
             self.crs = to_crs
             

@@ -30,6 +30,10 @@ class ProjectionCoordinateNotFound(CFException):
     
     def __init__(self,target):
         self.message = 'The projection coordinate "{0}" was not found in the dataset.'
+        
+        
+class ProjectionDoesNotMatch(CFException):
+    pass
 
 
 class DefinitionValidationError(OcgException):

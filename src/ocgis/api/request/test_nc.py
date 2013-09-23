@@ -2,7 +2,7 @@ import unittest
 from ocgis.test.base import TestBase
 from ocgis.api.request.nc import NcRequestDataset
 import netCDF4 as nc
-from ocgis.interface.base.crs import WGS84
+from ocgis.interface.base.crs import WGS84, CFWGS84, CFLambertConformal
 import numpy as np
 from datetime import datetime as dt
 from ocgis.interface.base.dimension.spatial import SpatialGeometryPolygonDimension,\
@@ -241,6 +241,16 @@ class TestNcRequestDataset(TestBase):
             self.assertNumpyAll(to_test,sel_values)
         finally:
             ds.close()
+            
+    def test_load_with_projection(self):
+        uri = self.test_data.get_uri('narccap_wrfg')
+        rd = NcRequestDataset(uri,'pr')
+        field = rd.get()
+        self.assertIsInstance(field.spatial.crs,CFLambertConformal)
+        field.spatial.update_crs(CFWGS84())
+        self.assertIsInstance(field.spatial.crs,CFWGS84)
+        self.assertEqual(field.spatial.grid.row,None)
+        self.assertAlmostEqual(field.spatial.grid.value.mean(),-26.269666952512416)
 
 
 if __name__ == "__main__":

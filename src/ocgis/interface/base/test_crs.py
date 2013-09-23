@@ -109,7 +109,7 @@ class TestCFLambertConformalConic(TestBase):
         self.assertNumpyAll(np.array([ 30.,  60.]),crs.map_parameters_values.pop('standard_parallel'))
         self.assertEqual(crs.map_parameters_values,{u'latitude_of_projection_origin': 47.5, u'longitude_of_central_meridian': -97.0, u'false_easting': 3325000.0, u'false_northing': 2700000.0, 'units': u'm'})
         ds.close()
-
+        
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']
