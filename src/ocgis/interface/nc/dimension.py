@@ -16,7 +16,7 @@ class NcVectorDimension(VectorDimension):
             self._value = var[slc]
             ## now, we should check for bounds here as the inheritance for making
             ## this process more transparent is not in place.
-            bounds_name = self._data._source_metadata['dim_map'][self._axis]['bounds']
+            bounds_name = self._data._source_metadata['dim_map'][self._axis].get('bounds')
             if bounds_name is not None:
                 self.bounds = ds.variables[bounds_name][slc,:]
         finally:

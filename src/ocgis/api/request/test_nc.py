@@ -9,7 +9,8 @@ from ocgis.interface.base.dimension.spatial import SpatialGeometryPolygonDimensi
     SpatialGeometryDimension, SpatialDimension
 import fiona
 from shapely.geometry.geo import shape
-from ocgis.exc import EmptySubsetError, ImproperPolygonBoundsError
+from ocgis.exc import EmptySubsetError, ImproperPolygonBoundsError,\
+    DimensionNotFound
 import datetime
 
 
@@ -262,8 +263,17 @@ class TestNcRequestDataset(TestBase):
         uri = self.test_data.get_uri('cmip3_extraction')
         variable = 'Tavg'
         rd = NcRequestDataset(uri,variable)
+        with self.assertRaises(DimensionNotFound):
+            rd.get()
+        rd = NcRequestDataset(uri,variable,dimension_map={'R':'projection','T':'time','X':'longitude','Y':'latitude'})
         field = rd.get()
+        self.assertEqual(field.shape,(36, 1800, 1, 7, 12))
+        self.assertEqual(field.temporal.value_datetime[0],datetime.datetime(1950, 1, 16, 0, 0))
+        self.assertEqual(field.temporal.value_datetime[-1],datetime.datetime(2099, 12, 15, 0, 0))
+        self.assertEqual(field.level,None)
+        field.realization.value
         import ipdb;ipdb.set_trace()
+
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']

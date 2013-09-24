@@ -36,6 +36,10 @@ class ProjectionDoesNotMatch(CFException):
     pass
 
 
+class DimensionNotFound(CFException):
+    pass
+
+
 class DefinitionValidationError(OcgException):
     """Raised when validation fails on :class:`~ocgis.OcgOperations`.
     

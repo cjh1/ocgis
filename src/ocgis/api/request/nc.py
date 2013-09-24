@@ -1,4 +1,5 @@
-from ocgis.exc import DefinitionValidationError, ProjectionDoesNotMatch
+from ocgis.exc import DefinitionValidationError, ProjectionDoesNotMatch,\
+    DimensionNotFound
 #from ocgis.util.inspect import Inspect
 from copy import deepcopy
 import inspect
@@ -54,6 +55,10 @@ class NcRequestDataset(object):
     :type t_calendar: str
     :param s_abstraction: Abstract the geometry data to either 'point' or 'polygon'. If 'polygon' is not possible due to missing bounds, 'point' will be used instead.
     :type s_abstraction: str
+    :param dimension_map: Maps dimensions to axes in the case of a projection/realization axis or an uncommon axis ordering. All axes must be in the dictionary.
+    :type dimension_map: dict
+    
+    >>> dimension_map = {'T':'time','X':'longitude','Y':'latitude','R':'projection'}
     
     .. note:: The `abstraction` argument in the ~`ocgis.OcgOperations` will overload this.
     
@@ -63,7 +68,8 @@ class NcRequestDataset(object):
     
     def __init__(self,uri=None,variable=None,alias=None,time_range=None,
                  time_region=None,level_range=None,s_crs=None,t_units=None,
-                 t_calendar=None,did=None,meta=None,s_abstraction=None):
+                 t_calendar=None,did=None,meta=None,s_abstraction=None,
+                 dimension_map=None):
         
         self._uri = self._get_uri_(uri)
         self.variable = variable
@@ -74,6 +80,7 @@ class NcRequestDataset(object):
         self.s_crs = deepcopy(s_crs)
         self.t_units = self._str_format_(t_units)
         self.t_calendar = self._str_format_(t_calendar)
+        self.dimension_map = deepcopy(dimension_map)
         self.did = did
         self.meta = meta or {}
         
@@ -95,7 +102,18 @@ class NcRequestDataset(object):
             try:
                 self.__source_metadata = NcMetadata(ds)
                 var = ds.variables[self.variable]
-                self.__source_metadata['dim_map'] = get_dimension_map(ds,var,self._source_metadata)
+                if self.dimension_map is None:
+                    self.__source_metadata['dim_map'] = get_dimension_map(ds,var,self._source_metadata)
+                else:
+                    for k,v in self.dimension_map.iteritems():
+                        try:
+                            variable_name = ds.variables.get(v)._name
+                        except AttributeError:
+                            variable_name = None
+                        self.dimension_map[k] = {'variable':variable_name,
+                                                 'dimension':v,
+                                                 'pos':var.dimensions.index(v)}
+                        self.__source_metadata['dim_map'] = self.dimension_map
             finally:
                 ds.close()
         return(self.__source_metadata)
@@ -106,27 +124,32 @@ class NcRequestDataset(object):
             return({'units':self.t_units or ref_attrs['units'],
                     'calendar':self.t_calendar or ref_attrs['calendar']})
         
-        to_load = {'temporal':{'cls':NcTemporalDimension,'adds':_get_temporal_adds_,'axis':None,'name_uid':'tid','name_value':'time'},
+        ## parameters for the loading loop
+        to_load = {'temporal':{'cls':NcTemporalDimension,'adds':_get_temporal_adds_,'axis':'T','name_uid':'tid','name_value':'time'},
                    'level':{'cls':NcVectorDimension,'adds':None,'axis':'Z','name_uid':'lid','name_value':'level'},
                    'row':{'cls':NcVectorDimension,'adds':None,'axis':'Y','name_uid':'row_id','name_value':'row'},
-                   'col':{'cls':NcVectorDimension,'adds':None,'axis':'X','name_uid':'col_id','name_value':'col'}}
+                   'col':{'cls':NcVectorDimension,'adds':None,'axis':'X','name_uid':'col_id','name_value':'col'},
+                   'realization':{'cls':NcVectorDimension,'adds':None,'axis':'R','name_uid':'rlz_id','name_value':'rlz'}}
         loaded = {}
         
         for k,v in to_load.iteritems():
+            ## this is the string axis representation
             axis_value = v['axis'] or v['cls']._axis
-            cls = v['cls']
-            ref_axis = self._source_metadata['dim_map'][axis_value]
+            ## pull the axis information out of the dimension map
+            ref_axis = self._source_metadata['dim_map'].get(axis_value)
+            ## if the axis is not represented, fill it with none. this happens
+            ## when a dataset does not have a vertical level or projection axis
+            ## for example.
             if ref_axis is None:
                 fill = None
             else:
-                ref_attrs = self._source_metadata['variables'][ref_axis['variable']]['attrs']
-                ref_variable = self._source_metadata['variables'][ref_axis['variable']]
+                ref_variable = self._source_metadata['variables'].get(ref_axis['variable'])
                 length = self._source_metadata['dimensions'][ref_axis['dimension']]['len']
                 src_idx = np.arange(0,length)
                 kwds = dict(name_uid=v['name_uid'],name_value=v['name_value'],src_idx=src_idx,
                             data=self,meta=ref_variable,axis=axis_value)
                 if v['adds'] is not None:
-                    kwds.update(v['adds'](ref_attrs))
+                    kwds.update(v['adds'](ref_variable['attrs']))
                 fill = v['cls'](**kwds)
             loaded[k] = fill
             
@@ -152,7 +175,7 @@ class NcRequestDataset(object):
         variable = Variable(self.variable,self.alias,variable_units,meta=variable_meta)
         variable_collection = VariableCollection(variables=[variable])
         ret = NcField(variables=variable_collection,spatial=spatial,temporal=loaded['temporal'],level=loaded['level'],
-                    data=self)
+                    data=self,realization=loaded['realization'])
         
         ## apply any subset parameters after the field is loaded
         if self.time_range is not None:
@@ -371,6 +394,7 @@ def get_dimension_map(ds,var,metadata):
     
     ## try to pull dimensions
     for dim in dims:
+        dimvar = None
         try:
             dimvar = ds.variables[dim]
         except KeyError:
@@ -379,6 +403,10 @@ def get_dimension_map(ds,var,metadata):
                 if len(value['dimensions']) == 1 and value['dimensions'][0] == dim:
                     dimvar = ds.variables[key]
                     break
+        ## the dimension variable may not exist
+        if dimvar is None:
+            msg = 'Dimension variable not found for axis: "{0}". You may need to use the "dimension_map" parameter.'.format(dim)
+            ocgis_lh(logger='request.nc',exc=DimensionNotFound(msg))
         axis = get_axis(dimvar,dims,dim)
         mp[axis] = {'variable':dimvar._name,'dimension':dim,'pos':var.dimensions.index(dimvar._name)}
         
@@ -406,7 +434,7 @@ def get_dimension_map(ds,var,metadata):
                 try:
                     bounds_var = ds.variables[getattr(value['variable'],'climatology')]
                     ocgis_lh('Climatological bounds found for variable: {0}'.format(var._name),
-                             logger='nc.dataset',
+                             logger='request.nc',
                              level=logging.INFO)
                 ## climatology is not found on time axis
                 except AttributeError:
@@ -414,7 +442,7 @@ def get_dimension_map(ds,var,metadata):
             ## bounds variable not found by other methods
             if bounds_var is None:
                 ocgis_lh('No bounds attribute found for variable "{0}". Searching variable dimensions for bounds information.'.format(var._name),
-                         logger='nc.dataset',
+                         logger='request.nc',
                          level=logging.WARN,
                          check_duplicate=True)
                 bounds_names_copy = bounds_names.copy()
