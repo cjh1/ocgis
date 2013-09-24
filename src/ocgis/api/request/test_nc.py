@@ -72,6 +72,13 @@ class TestNcRequestDataset(TestBase):
         
         ds.close()
         
+    def test_multifile_load(self):
+        uri = self.test_data.get_uri('narccap_pr_wrfg_ncep')
+        rd = NcRequestDataset(uri,'pr')
+        field = rd.get()
+        self.assertEqual(field.temporal.extent_datetime,(datetime.datetime(1981, 1, 1, 0, 0), datetime.datetime(1991, 1, 1, 0, 0)))
+        self.assertAlmostEqual(field.temporal.resolution,0.125)
+        
     def test_load_datetime_slicing(self):
         ref_test = self.test_data['cancm4_tas']
         uri = self.test_data.get_uri('cancm4_tas')
@@ -108,12 +115,12 @@ class TestNcRequestDataset(TestBase):
         field = rd.get()
         ds = nc.Dataset(uri,'r')
         
-#        slced = field[:,56:345,:,:,:]
-#        self.assertNumpyAll(slced.temporal.value,ds.variables['time'][56:345])
-#        self.assertNumpyAll(slced.temporal.bounds,ds.variables['time_bnds'][56:345,:])
-#        to_test = ds.variables['tas'][56:345,:,:]
-#        to_test = np.ma.array(to_test.reshape(1,289,1,64,128),mask=False)
-#        self.assertNumpyAll(slced.value['tas'],to_test)
+        slced = field[:,56:345,:,:,:]
+        self.assertNumpyAll(slced.temporal.value,ds.variables['time'][56:345])
+        self.assertNumpyAll(slced.temporal.bounds,ds.variables['time_bnds'][56:345,:])
+        to_test = ds.variables['tas'][56:345,:,:]
+        to_test = np.ma.array(to_test.reshape(1,289,1,64,128),mask=False)
+        self.assertNumpyAll(slced.value['tas'],to_test)
         
         slced = field[:,2898,:,5,101]
         to_test = ds.variables['tas'][2898,5,101]

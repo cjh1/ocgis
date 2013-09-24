@@ -93,7 +93,11 @@ class NcRequestDataset(object):
         self.__source_metadata = None
         
     def _open_(self):
-        return(nc.Dataset(self.uri,'r'))
+        try:
+            ret = nc.Dataset(self.uri,'r')
+        except TypeError:
+            ret = nc.MFDataset(self.uri,'r')
+        return(ret)
             
     @property
     def _source_metadata(self):
