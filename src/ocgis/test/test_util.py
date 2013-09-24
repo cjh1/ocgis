@@ -12,13 +12,26 @@ class TestHelpers(TestBase):
     
     def test_get_formatted_slc(self):
         ret = get_formatted_slice(slice(None,None,None),10)
-        self.assertEqual(ret,slice(None,None,None))
+        self.assertEqual(ret,[slice(None,None,None)]*10)
+        
         ret = get_formatted_slice(0,1)
         self.assertEqual(slice(0,1),ret)
-        with self.assertRaises(ValueError):
+        with self.assertRaises(IndexError):
             get_formatted_slice(slice(0,1),2)
+            
         ret = get_formatted_slice((slice(0,1),0),2)
         self.assertEqual(ret,[slice(0,1,None),slice(0,1,None)])
+        
+        ret = get_formatted_slice([(1,2,3),slice(None)],2)
+        self.assertNumpyAll(ret[0],np.arange(1,4))
+        self.assertEqual(ret[1],slice(None))
+        self.assertEqual(len(ret),2)
+        
+        ret = get_formatted_slice((1,2),1)
+        self.assertEqual(ret,slice(1,2))
+        
+        ret = get_formatted_slice((1,),1)
+        self.assertEqual(ret,slice(1))
     
     def test_validate_time_subset(self):
         time_range = [dt(2000,1,1),dt(2001,1,1)]

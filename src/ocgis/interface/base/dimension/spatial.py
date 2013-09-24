@@ -1,8 +1,8 @@
 import base
 import numpy as np
 from ocgis.util.logging_ocgis import ocgis_lh
-from ocgis.util.helpers import iter_array, get_none_or_slice, get_slice,\
-    get_formatted_slice
+from ocgis.util.helpers import iter_array, get_none_or_slice, \
+    get_formatted_slice, get_reduced_slice
 from shapely.geometry.point import Point
 from ocgis import constants
 import itertools
@@ -278,8 +278,8 @@ class SpatialGridDimension(base.AbstractUidValueDimension):
             ret._value = None
             ret.row,row_indices = self.row.get_between(min_row,max_row,return_indices=True)
             ret.col,col_indices = self.col.get_between(min_col,max_col,return_indices=True)
-            row_slc = get_slice(row_indices)
-            col_slc = get_slice(col_indices)
+            row_slc = get_reduced_slice(row_indices)
+            col_slc = get_reduced_slice(col_indices)
             ret.uid = self.uid[row_slc,col_slc]
         if return_indices:
             ret = (ret,(row_slc,col_slc))

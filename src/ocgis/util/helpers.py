@@ -51,10 +51,10 @@ def get_none_or_slice(target,slc):
         ret = target[slc]
     return(ret)
 
-def get_slice(arr):
-    start = arr.min()
-    stop = arr.max() + 1
-    ret = slice(start,stop)
+def get_reduced_slice(arr):
+    arr_min,arr_max = arr.min(),arr.max()
+    assert(arr_max-arr_min+1 == arr.shape[0])
+    ret = slice(arr_min,arr_max+1)
     return(ret)
 
 def get_formatted_slice(slc,n_dims):
@@ -65,12 +65,14 @@ def get_formatted_slice(slc,n_dims):
         elif isinstance(slc,slice):
             ret = slc
         elif isinstance(slc,np.ndarray):
-            if slc.dtype == bool:
-                ret = slc
-            else:
-                raise(NotImplementedError(slc))
+            ret = slc
         else:
-            ret = slice(slc[0],slc[1])
+            if len(slc) == 1:
+                ret = slice(slc[0])
+            elif len(slc) > 1:
+                ret = np.array(slc)
+            else:
+                raise(NotImplementedError(slc,n_dims))
         return(ret)
     
     if isinstance(slc,slice) and slc == slice(None):

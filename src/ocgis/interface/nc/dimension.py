@@ -1,6 +1,6 @@
 from ocgis.interface.base.dimension.base import VectorDimension
-from ocgis.util.helpers import get_slice
 from ocgis.util.logging_ocgis import ocgis_lh
+from ocgis.util.helpers import get_reduced_slice
 
 
 class NcVectorDimension(VectorDimension):
@@ -21,7 +21,7 @@ class NcVectorDimension(VectorDimension):
                 else:
                     ocgis_lh(logger='interface.nc',exc=e)
             ## format the slice
-            slc = get_slice(self._src_idx)
+            slc = get_reduced_slice(self._src_idx)
             ## set the value
             self._value = var[slc]
             ## now, we should check for bounds here as the inheritance for making

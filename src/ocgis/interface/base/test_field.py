@@ -266,6 +266,20 @@ class TestField(TestBase):
         self.assertEqual(var_slc.value['tmax'].shape,(2,2,1,3,4))
         ref_var_real_slc = var.value['tmax'][:,0:2,0,:,:]
         self.assertNumpyAll(ref_var_real_slc.flatten(),var_slc.value['tmax'].flatten())
+        
+    def test_fancy_indexing(self):
+        field = self.get_field(with_value=True)
+        sub = field[:,(3,5,10,15),:,:,:]
+        self.assertEqual(sub.shape,(2,4,2,3,4))
+        self.assertNumpyAll(sub.value['tmax'],field.value['tmax'][:,(3,5,10,15),:,:,:])
+        
+        sub = field[:,(3,15),:,:,:]
+        self.assertEqual(sub.shape,(2,2,2,3,4))
+        self.assertNumpyAll(sub.value['tmax'],field.value['tmax'][:,(3,15),:,:,:])
+        
+        sub = field[:,3:15,:,:,:]
+        self.assertEqual(sub.shape,(2,12,2,3,4))
+        self.assertNumpyAll(sub.value['tmax'],field.value['tmax'][:,3:15,:,:,:])
 
 
 if __name__ == "__main__":

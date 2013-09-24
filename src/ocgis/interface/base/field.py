@@ -1,7 +1,7 @@
 import abc
 from ocgis.util.logging_ocgis import ocgis_lh
 from ocgis.util.helpers import get_default_or_apply, get_none_or_slice,\
-    get_none_or_1d, get_formatted_slice, get_slice
+    get_formatted_slice, get_reduced_slice
 import numpy as np
 from copy import copy, deepcopy
 from collections import OrderedDict, deque
@@ -112,6 +112,7 @@ class VariableCollection(OrderedDict):
 
 class Field(AbstractSourcedVariable):
     _axis_map = {'realization':0,'temporal':1,'level':2}
+    _axes = ['R','T','Z','Y','X']
     
     def __init__(self,variables=None,value=None,realization=None,temporal=None,
                  level=None,spatial=None,units=None,data=None,debug=False,meta=None):
@@ -130,16 +131,14 @@ class Field(AbstractSourcedVariable):
         self.meta = meta or {}
         ## holds raw values for aggregated datasets.
         self._raw = None
-        ## determines if fancy indexing is used for the temporal dimension. this
-        ## will occur with temporal region subsetting.
-        self._has_fancy_temporal_indexing = False
         
         super(Field,self).__init__(data,src_idx=None,value=value,debug=debug)
                 
     def __getitem__(self,slc):
         slc = get_formatted_slice(slc,5)        
         ret = copy(self)
-        ret.realization = get_none_or_1d(get_none_or_slice(ret.realization,slc[0]))
+        
+        ret.realization = get_none_or_slice(ret.realization,slc[0])
         ret.temporal = get_none_or_slice(ret.temporal,slc[1])
         ret.level = get_none_or_slice(ret.level,slc[2])
         ret.spatial = get_none_or_slice(ret.spatial,(slc[3],slc[4]))
@@ -163,7 +162,7 @@ class Field(AbstractSourcedVariable):
         new_dim,indices = ref.get_between(lower,upper,return_indices=True)
         ret = copy(self)
         setattr(ret,dim,new_dim)
-        slc = get_slice(indices)
+        slc = get_reduced_slice(indices)
         slc_field = [slice(None)]*5
         slc_field[pos] = slc
         ret._value = self._get_value_slice_or_none_(ret._value,slc_field)
@@ -180,9 +179,6 @@ class Field(AbstractSourcedVariable):
         ret.temporal,indices = self.temporal.get_time_region(time_region,return_indices=True)
         slc = [slice(None),indices,slice(None),slice(None),slice(None)]
         ret._value = self._get_value_slice_or_none_(ret._value,slc)
-        ## indicate the indices are not sequential. this flag may be used by
-        ## subclasses for loading fancy indexed arrays. from source.
-        ret._has_fancy_temporal_indexing = True
         return(ret)
     
     def _get_spatial_operation_(self,attr,point_or_polygon):
