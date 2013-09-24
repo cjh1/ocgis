@@ -271,7 +271,8 @@ class TestNcRequestDataset(TestBase):
         self.assertEqual(field.temporal.value_datetime[0],datetime.datetime(1950, 1, 16, 0, 0))
         self.assertEqual(field.temporal.value_datetime[-1],datetime.datetime(2099, 12, 15, 0, 0))
         self.assertEqual(field.level,None)
-        field.realization.value
+        self.assertNumpyAll(field.realization.value,np.arange(1,37))
+        field.value
         import ipdb;ipdb.set_trace()
 
 

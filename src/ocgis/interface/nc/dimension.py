@@ -1,5 +1,6 @@
 from ocgis.interface.base.dimension.base import VectorDimension
 from ocgis.util.helpers import get_slice
+from ocgis.util.logging_ocgis import ocgis_lh
 
 
 class NcVectorDimension(VectorDimension):
@@ -9,7 +10,16 @@ class NcVectorDimension(VectorDimension):
         ds = self._data._open_()
         try:
             ## get the variable
-            var = ds.variables[self.meta['name']]
+            try:
+                var = ds.variables[self.meta['name']]
+            except KeyError as e:
+                ## for the realization/projection axis, there may in fact be no
+                ## value associated with it. in it's place, put a standard integer
+                ## array.
+                if self._axis == 'R':
+                    var = self._src_idx + 1
+                else:
+                    ocgis_lh(logger='interface.nc',exc=e)
             ## format the slice
             slc = get_slice(self._src_idx)
             ## set the value
