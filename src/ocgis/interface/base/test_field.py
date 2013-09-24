@@ -5,13 +5,14 @@ from ocgis.interface.base.dimension.base import VectorDimension
 import datetime
 from ocgis.interface.base.dimension.spatial import SpatialGridDimension,\
     SpatialDimension
-from ocgis.interface.base.field import Field, Variable, VariableCollection
+from ocgis.interface.base.field import Field
 import numpy as np
 import itertools
 from ocgis.test.base import TestBase
 from ocgis.exc import EmptySubsetError
 from shapely import wkt
 from shapely.ops import cascaded_union
+from ocgis.interface.base.variable import Variable, VariableCollection
 
 
 class TestField(TestBase):

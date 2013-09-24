@@ -1,7 +1,5 @@
 import abc
 import numpy as np
-from ocgis.interface.base.field import AbstractSourcedVariable,\
-    AbstractValueVariable
 from ocgis import constants
 from ocgis.util.logging_ocgis import ocgis_lh
 from ocgis.util.helpers import get_none_or_1d, get_none_or_2d, get_none_or_slice,\
@@ -9,6 +7,8 @@ from ocgis.util.helpers import get_none_or_1d, get_none_or_2d, get_none_or_slice
 from copy import copy
 from ocgis.exc import EmptySubsetError
 from operator import mul
+from ocgis.interface.base.variable import AbstractValueVariable,\
+    AbstractSourcedVariable
 
 
 class AbstractDimension(object):

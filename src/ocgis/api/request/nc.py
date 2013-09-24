@@ -16,9 +16,9 @@ import numpy as np
 from ocgis.interface.base.dimension.spatial import SpatialGridDimension,\
     SpatialDimension
 from ocgis.interface.base.crs import WGS84, CFCoordinateReferenceSystem, CFWGS84
-from ocgis.interface.base.field import Variable, VariableCollection
 from ocgis.interface.nc.dimension import NcVectorDimension
 from ocgis.interface.nc.field import NcField
+from ocgis.interface.base.variable import Variable, VariableCollection
 
 
 class NcRequestDataset(object):
