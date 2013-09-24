@@ -82,15 +82,6 @@ class Variable(object):
         self.units = units
         self.meta = meta or {}
         self.uid = uid
-#        self._field = None
-#    
-#    @property
-#    def field(self):
-#        return(self._field)
-#    
-#    @property
-#    def value(self):
-#        return(self.field.value[self.alias])
         
         
 class VariableCollection(OrderedDict):

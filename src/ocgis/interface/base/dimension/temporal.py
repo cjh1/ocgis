@@ -118,96 +118,6 @@ class TemporalDimension(base.VectorDimension):
             ret = (ret,raw_idx)
         
         return(ret)
-        
-#        if bounds is None:  
-#            check = bounds
-#            import ipdb;ipdb.set_trace()
-#        else:
-#            raise(NotImplementedError)
-#        
-#        if time_region['month'] is None and time_region['year'] is None:
-#            ret = self
-#        else:
-#            if bounds is None:
-#                ## get years and months from dates
-#                parts = np.array([[dt.year,dt.month] for dt in value],dtype=int)
-#                ## get matching months
-#                if time_region['month'] is not None:
-#                    idx_months = np.zeros(parts.shape[0],dtype=bool)
-#                    for month in time_region['month']:
-#                        idx_months = np.logical_or(idx_months,parts[:,1] == month)
-#                ## potentially return all months if none are in the region
-#                ## dictionary.
-#                else:
-#                    idx_months = np.ones(parts.shape[0],dtype=bool)
-#                ## get matching years
-#                if time_region['year'] is not None:
-#                    idx_years = np.zeros(parts.shape[0],dtype=bool)
-#                    for year in time_region['year']:
-#                        idx_years = np.logical_or(idx_years,parts[:,0] == year)
-#                ## potentially return all years.
-#                else:
-#                    idx_years = np.ones(parts.shape[0],dtype=bool)
-#                ## combine the index arrays
-#                idx_dates = np.logical_and(idx_months,idx_years)
-#                ret = self[idx_dates]
-#            else:
-#                
-#                def _get_parts_(start,end,day_step=29.5):
-#                    parts_months = set()
-#                    parts_years = set()
-#                    delta = datetime.timedelta(days=day_step)
-#                    while start < end:
-#                        parts_months.update([start.month])
-#                        parts_years.update([start.year])
-#                        start += delta
-#                    return(parts_months,parts_years)
-#                
-#                ## get the temporal resolution
-#                try:
-#                    res = self.resolution
-#                    if res > 28 and res < 31:
-#                        res = 'month'
-#                    else:
-#                        res = 'day'
-#                except TemporalResolutionError:
-#                    res = 'day'
-#                
-#                ## assemble ranges from the bounds
-#                select_years = np.zeros(bounds.shape[0],dtype=bool)
-#                select_months = np.zeros(bounds.shape[0],dtype=bool)
-#                if res == 'day':
-#                    for ii in range(bounds.shape[0]):
-#                        row = bounds[ii]
-#                        p_months,p_years = _get_parts_(row[0],row[1])
-#                        if time_region['month'] is not None:
-#                            if any([month in p_months for month in time_region['month']]):
-#                                select_months[ii] = True
-#                        else:
-#                            select_months[:] = True
-#                        if time_region['year'] is not None:
-#                            if any([year in p_years for year in time_region['year']]):
-#                                select_years[ii] = True
-#                        else:
-#                            select_years[:] = True
-#                elif res == 'month':
-#                    if time_region['month'] is None:
-#                        select_months[:] = True
-#                    else:
-#                        for ii in range(value.shape[0]):
-#                            if value[ii].month in time_region['month']:
-#                                select_months[ii] = True
-#                    if time_region['year'] is None:
-#                        select_years[:] = True
-#                    else:
-#                        for ii in range(self.bounds.shape[0]):
-#                            row = bounds[ii]
-#                            p_months,p_years = _get_parts_(row[0],row[1])
-#                            if any([year in p_years for year in time_region['year']]):
-#                                select_years[ii] = True
-#                select = np.logical_and(select_years,select_months)
-#                ret = self[select]
-#            return(ret)
     
     def _get_datetime_bounds_(self):
         '''Intended for subclasses to overload the method for accessing the datetime
@@ -228,17 +138,6 @@ class TemporalGroupDimension(base.VectorDimension):
         self._representative_datetime = None
         
         super(TemporalGroupDimension,self).__init__(*args,**kwds)
-        
-#        self.grouping = grouping
-#        self.value = np.atleast_1d(value)
-#        assert(isinstance(self.value,np.ndarray))
-#        self.bounds = np.atleast_2d(bounds)
-#        assert(isinstance(self.bounds[0,0],datetime.datetime))
-#        self.dgroups = dgroups
-#        if uid is None:
-#            uid = np.arange(1,self.value.shape[0]+1,dtype=int)
-#        self.uid = uid
-#        self._representative_datetime = None
     
     @property
     def representative_datetime(self):
@@ -285,7 +184,7 @@ class TemporalGroupDimension(base.VectorDimension):
                     day,year,month = ref_value[idx]['day'],ref_value[idx]['year'],ref_value[idx]['month']
                     ret[idx] = datetime.datetime(year,month,day,12)
             else:
-                raise(NotImplementedError('grouping: {0}'.format(self.grouping)))
+                ocgis_lh(logger='interface.temporal',exc=NotImplementedError('grouping: {0}'.format(self.grouping)))
             return(ret)
             
     def _validate_bounds_(self,value):
