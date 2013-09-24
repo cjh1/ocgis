@@ -17,7 +17,7 @@ class Field(AbstractSourcedVariable):
     _axes = ['R','T','Z','Y','X']
     
     def __init__(self,variables=None,value=None,realization=None,temporal=None,
-                 level=None,spatial=None,units=None,data=None,debug=False,meta=None):
+                 level=None,spatial=None,data=None,debug=False,meta=None):
         try:
             assert(isinstance(variables,VariableCollection))
         except AssertionError:
@@ -28,7 +28,6 @@ class Field(AbstractSourcedVariable):
         self.temporal = self._format_dimension_(temporal)
         self.level = self._format_dimension_(level)
         self.spatial = self._format_dimension_(spatial)
-        self.units = units
         self.value_dimension_names = ('realization','temporal','level','row','column')
         self.meta = meta or {}
         ## holds raw values for aggregated datasets.
