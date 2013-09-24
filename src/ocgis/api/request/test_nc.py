@@ -257,6 +257,13 @@ class TestNcRequestDataset(TestBase):
             field.spatial.geom.polygon
         self.assertAlmostEqual(field.spatial.geom.point.value[0,100].x,278.52630062012787)
         self.assertAlmostEqual(field.spatial.geom.point.value[0,100].y,21.4615681252577)
+        
+    def test_load_projection_axes(self):
+        uri = self.test_data.get_uri('cmip3_extraction')
+        variable = 'Tavg'
+        rd = NcRequestDataset(uri,variable)
+        field = rd.get()
+        import ipdb;ipdb.set_trace()
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']
