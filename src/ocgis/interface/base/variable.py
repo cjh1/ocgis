@@ -78,7 +78,7 @@ class Variable(object):
         
 class VariableCollection(OrderedDict):
     
-    def __init__(self,*args,**kwds):
+    def __init__(self,**kwds):
         variables = kwds.pop('variables',None)
         
         super(VariableCollection,self).__init__()

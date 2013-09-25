@@ -193,3 +193,7 @@ class Field(AbstractSourcedVariable):
     def _set_value_from_source_(self):
         raise(NotImplementedError)
         ## TODO: remember to apply the geometry mask to fresh values!!
+
+
+class DerivedField(Field):
+    pass

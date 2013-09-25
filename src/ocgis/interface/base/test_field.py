@@ -5,7 +5,7 @@ from ocgis.interface.base.dimension.base import VectorDimension
 import datetime
 from ocgis.interface.base.dimension.spatial import SpatialGridDimension,\
     SpatialDimension
-from ocgis.interface.base.field import Field
+from ocgis.interface.base.field import Field, DerivedField
 import numpy as np
 import itertools
 from ocgis.test.base import TestBase
@@ -13,13 +13,14 @@ from ocgis.exc import EmptySubsetError
 from shapely import wkt
 from shapely.ops import cascaded_union
 from ocgis.interface.base.variable import Variable, VariableCollection
+from ocgis.interface.base.dimension.temporal import TemporalDimension
 
 
-class TestField(TestBase):
+class AbstractTestField(TestBase):
     
     def setUp(self):
         np.random.seed(1)
-        super(TestField,self).setUp()
+        super(AbstractTestField,self).setUp()
     
     def get_col(self,bounds=True):
         value = [-100.,-99.,-98.,-97.]
@@ -40,19 +41,24 @@ class TestField(TestBase):
         return(row)
     
     def get_field(self,with_bounds=True,with_value=False,with_level=True,with_temporal=True,
-                     with_realization=True):
+                     with_realization=True,month_count=1):
         
         if with_temporal:
             temporal_start = dt(2000,1,1,12)
-            temporal_stop = dt(2000,1,31,12)
+            if month_count == 1:
+                temporal_stop = dt(2000,1,31,12)
+            elif month_count == 2:
+                temporal_stop = dt(2000,2,28,12)
+            else:
+                raise(NotImplementedError)
             temporal_value = get_date_list(temporal_start,temporal_stop,1)
             delta_bounds = datetime.timedelta(hours=12)
             if with_bounds:
                 temporal_bounds = [[v-delta_bounds,v+delta_bounds] for v in temporal_value]
             else:
                 temporal_bounds = None
-            temporal = VectorDimension(value=temporal_value,bounds=temporal_bounds,name='time',
-                                       units='days')
+            temporal = TemporalDimension(value=temporal_value,bounds=temporal_bounds,name='time',
+                                         units='days')
         else:
             temporal = None
         
@@ -91,6 +97,9 @@ class TestField(TestBase):
             var._value = {'tmax':np.random.rand(*var.shape)}
         
         return(var)
+
+
+class TestField(AbstractTestField):
         
     def test_get_intersects_domain_polygon(self):
         regular = make_poly((36.61,41.39),(-101.41,-95.47))
@@ -281,6 +290,19 @@ class TestField(TestBase):
         sub = field[:,3:15,:,:,:]
         self.assertEqual(sub.shape,(2,12,2,3,4))
         self.assertNumpyAll(sub.value['tmax'],field.value['tmax'][:,3:15,:,:,:])
+
+
+class TestDerivedField(AbstractTestField):
+    
+    def test_constructor(self):
+        field = self.get_field(with_value=True,month_count=2)
+        tgd = field.temporal.get_grouping(['month'])
+        new_data = np.random.rand(2,2,2,3,4)
+        mu = Variable('mu')
+        vc = VariableCollection(variables=[mu])
+        df = DerivedField(variables=vc,value={'mu':new_data},temporal=tgd,spatial=field.spatial,
+                          level=field.level,realization=field.realization)
+        import ipdb;ipdb.set_trace()
 
 
 if __name__ == "__main__":
