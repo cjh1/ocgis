@@ -1,29 +1,45 @@
 from ocgis.util.logging_ocgis import ocgis_lh
 from ocgis.util.helpers import get_default_or_apply, get_none_or_slice,\
-    get_formatted_slice, get_reduced_slice
+    get_formatted_slice, get_reduced_slice, get_iter
 import numpy as np
 from copy import copy, deepcopy
-from collections import deque
+from collections import deque, OrderedDict
 import itertools
 from shapely.ops import cascaded_union
 from shapely.geometry.multipoint import MultiPoint
 from shapely.geometry.multipolygon import MultiPolygon
-from ocgis.interface.base.variable import AbstractSourcedVariable,\
-    VariableCollection
+from ocgis.interface.base.variable import AbstractSourcedVariable, Variable
 
+
+class FieldCollection(OrderedDict):
+    
+    def __init__(self,**kwds):
+        fields = kwds.pop('fields',None)
+        
+        super(FieldCollection,self).__init__()
+        
+        if fields is not None:
+            for field in get_iter(fields):
+                self.add_field(field)
+                
+    def add_field(self,field):
+        assert(isinstance(field,Field))
+        assert(field.variable.alias not in self)
+        self.update({field.variable.alias:field})
+        
 
 class Field(AbstractSourcedVariable):
     _axis_map = {'realization':0,'temporal':1,'level':2}
     _axes = ['R','T','Z','Y','X']
     
-    def __init__(self,variables=None,value=None,realization=None,temporal=None,
+    def __init__(self,variable=None,value=None,realization=None,temporal=None,
                  level=None,spatial=None,data=None,debug=False,meta=None):
         try:
-            assert(isinstance(variables,VariableCollection))
+            assert(isinstance(variable,Variable))
         except AssertionError:
-            ocgis_lh(exc=ValueError('The "variables" keyword must be a VariableCollection.'))
+            ocgis_lh(exc=ValueError('The "variable" keyword must be a Variable object.'))
         
-        self.variables = variables
+        self.variable = variable
         self.realization = realization
         self.temporal = temporal
         self.level = level
@@ -44,7 +60,7 @@ class Field(AbstractSourcedVariable):
         ret.level = get_none_or_slice(ret.level,slc[2])
         ret.spatial = get_none_or_slice(ret.spatial,(slc[3],slc[4]))
         
-        ret._value = self._get_value_slice_or_none_(self._value,slc)
+        ret._value = get_none_or_slice(self._value,slc)
         
         return(ret)
     
@@ -66,7 +82,7 @@ class Field(AbstractSourcedVariable):
         slc = get_reduced_slice(indices)
         slc_field = [slice(None)]*5
         slc_field[pos] = slc
-        ret._value = self._get_value_slice_or_none_(ret._value,slc_field)
+        ret._value = get_none_or_slice(ret._value,slc_field)
         return(ret)
     
     def get_clip(self,polygon):
@@ -79,7 +95,7 @@ class Field(AbstractSourcedVariable):
         ret = copy(self)
         ret.temporal,indices = self.temporal.get_time_region(time_region,return_indices=True)
         slc = [slice(None),indices,slice(None),slice(None),slice(None)]
-        ret._value = self._get_value_slice_or_none_(ret._value,slc)
+        ret._value = get_none_or_slice(ret._value,slc)
         return(ret)
     
     def _get_spatial_operation_(self,attr,point_or_polygon):
@@ -87,7 +103,7 @@ class Field(AbstractSourcedVariable):
         ret = copy(self)
         ret.spatial,slc = ref(point_or_polygon,return_indices=True)
         slc = [slice(None),slice(None),slice(None)] + list(slc)
-        ret._value = self._get_value_slice_or_none_(ret._value,slc)
+        ret._value = get_none_or_slice(ret._value,slc)
 
         ## we need to update the value mask with the geometry mask
         if ret._value is not None:
@@ -137,11 +153,10 @@ class Field(AbstractSourcedVariable):
         weights = self.spatial.weights
         ref_average = np.ma.average
 
-        for k,v in ret.value.iteritems():
-            fill = np.ma.array(np.zeros(shp),mask=False,dtype=v.dtype)
-            for idx_r,idx_t,idx_l in itertools.product(*itrs):
-                fill[idx_r,idx_t,idx_l] = ref_average(v[idx_r,idx_t,idx_l],weights=weights)
-            ret.value[k] = fill
+        fill = np.ma.array(np.zeros(shp),mask=False,dtype=ret.value.dtype)
+        for idx_r,idx_t,idx_l in itertools.product(*itrs):
+            fill[idx_r,idx_t,idx_l] = ref_average(ret.value[idx_r,idx_t,idx_l],weights=weights)
+        ret._value = fill
             
         ## we want to keep a copy of the raw data around for later calculations.
         ret._raw = self
@@ -152,13 +167,11 @@ class Field(AbstractSourcedVariable):
         if value is None:
             ret = value
         else:
-            assert(isinstance(value,dict))
+            assert(isinstance(value,np.ndarray))
+            assert(value.shape == self.shape)
             ret = value
-            for k,v in ret.iteritems():
-                assert(k in self.variables)
-                assert(v.shape == self.shape)
-                if not isinstance(v,np.ma.MaskedArray):
-                    ret[k] = np.ma.array(v,mask=False)
+            if not isinstance(ret,np.ma.MaskedArray):
+                ret = np.ma.array(ret,mask=False)
         return(ret)
     
     def _get_value_(self):
@@ -168,23 +181,16 @@ class Field(AbstractSourcedVariable):
             self._set_value_from_source_()
         return(self._value)
     
-    def _get_value_slice_or_none_(self,value,slc):
-        if value is None:
-            ret = value
-        else:
-            ret = {k:v[slc] for k,v in value.iteritems()}
-        return(ret)
-    
     def _set_new_value_mask_(self,field,mask):
         ret_shp = field.shape
         rng_realization = range(ret_shp[0])
         rng_temporal = range(ret_shp[1])
         rng_level = range(ret_shp[2])
         ref_logical_or = np.logical_or
-        for v in field._value.itervalues():
-            for idx_r,idx_t,idx_l in itertools.product(rng_realization,rng_temporal,rng_level):
-                ref = v[idx_r,idx_t,idx_l]
-                ref.mask = ref_logical_or(ref.mask,mask)
+        v = field.value
+        for idx_r,idx_t,idx_l in itertools.product(rng_realization,rng_temporal,rng_level):
+            ref = v[idx_r,idx_t,idx_l]
+            ref.mask = ref_logical_or(ref.mask,mask)
                 
     def _set_value_from_source_(self):
         raise(NotImplementedError)

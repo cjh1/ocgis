@@ -12,7 +12,7 @@ from ocgis.test.base import TestBase
 from ocgis.exc import EmptySubsetError
 from shapely import wkt
 from shapely.ops import cascaded_union
-from ocgis.interface.base.variable import Variable, VariableCollection
+from ocgis.interface.base.variable import Variable
 from ocgis.interface.base.dimension.temporal import TemporalDimension
 
 
@@ -89,14 +89,13 @@ class AbstractTestField(TestBase):
             data = 'foo'
         
         var = Variable('tmax',units='C')
-        vcoll = VariableCollection(variables=[var])
-        var = Field(variables=vcoll,temporal=temporal,level=level,realization=realization,
+        field = Field(variable=var,temporal=temporal,level=level,realization=realization,
                     spatial=spatial,data=data,debug=True)
         
         if with_value:
-            var._value = {'tmax':np.random.rand(*var.shape)}
+            field._value = np.random.rand(*field.shape)
         
-        return(var)
+        return(field)
 
 
 class TestField(AbstractTestField):
@@ -105,7 +104,7 @@ class TestField(AbstractTestField):
         regular = make_poly((36.61,41.39),(-101.41,-95.47))
         field = self.get_field(with_value=True)
         ret = field.get_intersects(regular)
-        self.assertNumpyAll(ret.value['tmax'],field.value['tmax'])
+        self.assertNumpyAll(ret.value,field.value)
         self.assertNumpyAll(field.spatial.grid.value,ret.spatial.grid.value)
     
     def test_get_intersects_irregular_polygon(self):
@@ -113,7 +112,7 @@ class TestField(AbstractTestField):
         field = self.get_field(with_value=True)
         ret = field.get_intersects(irregular)
         self.assertEqual(ret.shape,(2,31,2,2,2))
-        self.assertNumpyAll(ret.value['tmax'].mask[0,2,1,:,:],np.array([[True,False],[False,False]]))
+        self.assertNumpyAll(ret.value.mask[0,2,1,:,:],np.array([[True,False],[False,False]]))
         self.assertEqual(ret.spatial.uid[ret.spatial.get_mask()][0],5)
         
     def test_get_clip_single_cell(self):
@@ -165,11 +164,11 @@ class TestField(AbstractTestField):
             self.assertNotEqual(field.spatial.grid,None)
             self.assertEqual(agg.spatial.grid,None)
             self.assertEqual(agg.shape,(2,31,2,1,1))
-            self.assertNumpyAll(field.value['tmax'],agg._raw.value['tmax'])
-            self.assertTrue(np.may_share_memory(field.value['tmax'],agg._raw.value['tmax']))
+            self.assertNumpyAll(field.value,agg._raw.value)
+            self.assertTrue(np.may_share_memory(field.value,agg._raw.value))
             
-            to_test = field.value['tmax'][0,0,0,:,:].mean()
-            self.assertNumpyAll(to_test,agg.value['tmax'][0,0,0,0,0])
+            to_test = field.value[0,0,0,:,:].mean()
+            self.assertNumpyAll(to_test,agg.value[0,0,0,0,0])
         
     def test_subsetting(self):
         for wv in [True,False]:
@@ -187,7 +186,7 @@ class TestField(AbstractTestField):
             self.assertIsInstance(ret,Field)
             self.assertEqual(ret.shape,field.shape)
             if wv:
-                self.assertNumpyAll(field.value['tmax'],ret.value['tmax'])
+                self.assertNumpyAll(field.value,ret.value)
             else:
                 with self.assertRaises(NotImplementedError):
                     ret.value
@@ -199,7 +198,7 @@ class TestField(AbstractTestField):
             ret = field.get_between('realization',1,1)
             self.assertEqual(ret.shape,(1, 31, 2, 3, 4))
             if wv:
-                self.assertNumpyAll(ret.value['tmax'],field.value['tmax'][0:1,:,:,:,:])
+                self.assertNumpyAll(ret.value,field.value[0:1,:,:,:,:])
                 
             ret = field.get_between('temporal',dt(2000,1,15),dt(2000,1,30))
             self.assertEqual(ret.temporal.value[0],dt(2000,1,14,12))
@@ -215,9 +214,9 @@ class TestField(AbstractTestField):
             ref = var.shape
             self.assertEqual(ref,(2,31,2,3,4))
             value = np.random.rand(*var.shape)
-            var._value = {'tmax':value}
-            self.assertIsInstance(var.value,dict)
-            self.assertIsInstance(var.value['tmax'],np.ma.MaskedArray)
+            var._value = value
+            self.assertNotIsInstance(var.value,dict)
+            self.assertIsInstance(var.value,np.ma.MaskedArray)
             value = np.random.rand(3)
             with self.assertRaises(AssertionError):
                 var._value = value
@@ -250,20 +249,20 @@ class TestField(AbstractTestField):
             self.assertTrue(np.may_share_memory(var.spatial.geom.point.value,var_slc.spatial.geom.point.value))
             
             if iv:
-                self.assertNumpyAll(var._value['tmax'],var_slc._value['tmax'])
+                self.assertNumpyAll(var._value,var_slc._value)
             else:
                 self.assertNumpyAll(var._value,var_slc._value)
                 
             if iv == True:
-                self.assertTrue(np.may_share_memory(var._value['tmax'],var_slc._value['tmax']))
+                self.assertTrue(np.may_share_memory(var._value,var_slc._value))
             else:
                 self.assertEqual(var_slc._value,None)
             
             var_slc = var[0,0,0,0,0]
             self.assertEqual(var_slc.shape,(1,1,1,1,1))
             if iv:
-                self.assertEqual(var_slc.value['tmax'].shape,(1,1,1,1,1))
-                self.assertNumpyAll(var_slc.value['tmax'],var.value['tmax'][0,0,0,0,0])
+                self.assertEqual(var_slc.value.shape,(1,1,1,1,1))
+                self.assertNumpyAll(var_slc.value,var.value[0,0,0,0,0])
             else:
                 self.assertEqual(var_slc._value,None)
                 self.assertEqual(var_slc._value,var._value)
@@ -272,23 +271,23 @@ class TestField(AbstractTestField):
         var = self.get_field(with_value=True)
         var_slc = var[:,0:2,0,:,:]
         self.assertEqual(var_slc.shape,(2,2,1,3,4))
-        self.assertEqual(var_slc.value['tmax'].shape,(2,2,1,3,4))
-        ref_var_real_slc = var.value['tmax'][:,0:2,0,:,:]
-        self.assertNumpyAll(ref_var_real_slc.flatten(),var_slc.value['tmax'].flatten())
+        self.assertEqual(var_slc.value.shape,(2,2,1,3,4))
+        ref_var_real_slc = var.value[:,0:2,0,:,:]
+        self.assertNumpyAll(ref_var_real_slc.flatten(),var_slc.value.flatten())
         
     def test_fancy_indexing(self):
         field = self.get_field(with_value=True)
         sub = field[:,(3,5,10,15),:,:,:]
         self.assertEqual(sub.shape,(2,4,2,3,4))
-        self.assertNumpyAll(sub.value['tmax'],field.value['tmax'][:,(3,5,10,15),:,:,:])
+        self.assertNumpyAll(sub.value,field.value[:,(3,5,10,15),:,:,:])
         
         sub = field[:,(3,15),:,:,:]
         self.assertEqual(sub.shape,(2,2,2,3,4))
-        self.assertNumpyAll(sub.value['tmax'],field.value['tmax'][:,(3,15),:,:,:])
+        self.assertNumpyAll(sub.value,field.value[:,(3,15),:,:,:])
         
         sub = field[:,3:15,:,:,:]
         self.assertEqual(sub.shape,(2,12,2,3,4))
-        self.assertNumpyAll(sub.value['tmax'],field.value['tmax'][:,3:15,:,:,:])
+        self.assertNumpyAll(sub.value,field.value[:,3:15,:,:,:])
 
 
 class TestDerivedField(AbstractTestField):
@@ -298,8 +297,7 @@ class TestDerivedField(AbstractTestField):
         tgd = field.temporal.get_grouping(['month'])
         new_data = np.random.rand(2,2,2,3,4)
         mu = Variable('mu')
-        vc = VariableCollection(variables=[mu])
-        df = DerivedField(variables=vc,value={'mu':new_data},temporal=tgd,spatial=field.spatial,
+        df = DerivedField(variable=mu,value=new_data,temporal=tgd,spatial=field.spatial,
                           level=field.level,realization=field.realization)
         self.assertIsInstance(df.temporal.value[0],datetime.datetime)
         self.assertEqual(df.temporal.value.tolist(),[datetime.datetime(2000, 1, 16, 0, 0),datetime.datetime(2000, 2, 16, 0, 0)])

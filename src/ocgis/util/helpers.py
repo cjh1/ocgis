@@ -22,6 +22,16 @@ def assert_raise(test,**kwds):
         assert(test)
     except AssertionError:
         ocgis_lh(**kwds)
+        
+def get_iter(element):
+    if isinstance(element,basestring):
+        it = [element]
+    else:
+        try:
+            it = iter(element)
+        except TypeError:
+            it = [element]
+    return(it)
 
 def get_default_or_apply(target,f,default=None):
     if target is None:

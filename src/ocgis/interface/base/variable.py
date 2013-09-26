@@ -76,23 +76,6 @@ class Variable(object):
         self.uid = uid
         
         
-class VariableCollection(OrderedDict):
-    
-    def __init__(self,**kwds):
-        variables = kwds.pop('variables',None)
-        
-        super(VariableCollection,self).__init__()
-        
-        if variables is not None:
-            for variable in variables:
-                self.add_variable(variable)
-                
-    def add_variable(self,variable):
-        assert(isinstance(variable,Variable))
-        assert(variable.alias not in self)
-        self.update({variable.alias:variable})
-        
-        
 class DerivedVariable(Variable):
     
     def __init__(self,**kwds):

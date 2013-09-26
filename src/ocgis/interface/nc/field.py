@@ -35,33 +35,30 @@ class NcField(Field):
         
         ds = self._data._open_()
         try:
-            self._value = {}
-            for var in self.variables.values():
-                var_name = var.alias
-                try:
-                    raw = ds.variables[var.name].__getitem__(slc)
-                except IndexError:
-                    ocgis_lh(logger='nc.field',exc=IndexError('variable: {0}'.format(var.name)))
-                if not isinstance(raw,np.ma.MaskedArray):
-                    raw = np.ma.array(raw,mask=False)
-                ## reshape the data adding singleton axes where necessary
-                new_shape = []
-                for axis in self._axes:
-                    if axis in axes:
-                        try:    
-                            to_append = raw.shape[axes.index(axis)]
-                        except IndexError as e:
-                            ## it may be a singleton index request
-                            if len(slc[axes.index(axis)]) == 1:
-                                to_append = 1
-                            else:
-                                ocgis_lh(logger='nc.field',exc=e)
-                    else:
-                        to_append = 1
-                    new_shape.append(to_append)
-                raw = raw.reshape(new_shape)
-                ## insert the value into the dictionary
-                self._value[var_name] = raw
+            try:
+                raw = ds.variables[self.variable.name].__getitem__(slc)
+            except IndexError:
+                ocgis_lh(logger='nc.field',exc=IndexError('variable: {0}'.format(self.variable.name)))
+            if not isinstance(raw,np.ma.MaskedArray):
+                raw = np.ma.array(raw,mask=False)
+            ## reshape the data adding singleton axes where necessary
+            new_shape = []
+            for axis in self._axes:
+                if axis in axes:
+                    try:    
+                        to_append = raw.shape[axes.index(axis)]
+                    except IndexError as e:
+                        ## it may be a singleton index request
+                        if len(slc[axes.index(axis)]) == 1:
+                            to_append = 1
+                        else:
+                            ocgis_lh(logger='nc.field',exc=e)
+                else:
+                    to_append = 1
+                new_shape.append(to_append)
+            raw = raw.reshape(new_shape)
+            ## insert the value into the dictionary
+            self._value = raw
             ## apply any spatial mask if the geometries have been loaded
             if self.spatial._geom is not None:
                 self._set_new_value_mask_(self,self.spatial.get_mask())

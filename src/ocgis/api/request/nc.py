@@ -1,6 +1,5 @@
 from ocgis.exc import DefinitionValidationError, ProjectionDoesNotMatch,\
     DimensionNotFound
-#from ocgis.util.inspect import Inspect
 from copy import deepcopy
 import inspect
 import os
@@ -15,10 +14,10 @@ from ocgis.interface.nc.temporal import NcTemporalDimension
 import numpy as np
 from ocgis.interface.base.dimension.spatial import SpatialGridDimension,\
     SpatialDimension
-from ocgis.interface.base.crs import WGS84, CFCoordinateReferenceSystem, CFWGS84
+from ocgis.interface.base.crs import CFCoordinateReferenceSystem, CFWGS84
 from ocgis.interface.nc.dimension import NcVectorDimension
 from ocgis.interface.nc.field import NcField
-from ocgis.interface.base.variable import Variable, VariableCollection
+from ocgis.interface.base.variable import Variable
 
 
 class NcRequestDataset(object):
@@ -177,8 +176,7 @@ class NcRequestDataset(object):
         variable_meta = self._source_metadata['variables'][self.variable]
         variable_units = variable_meta['attrs'].get('units')
         variable = Variable(self.variable,self.alias,variable_units,meta=variable_meta)
-        variable_collection = VariableCollection(variables=[variable])
-        ret = NcField(variables=variable_collection,spatial=spatial,temporal=loaded['temporal'],level=loaded['level'],
+        ret = NcField(variable=variable,spatial=spatial,temporal=loaded['temporal'],level=loaded['level'],
                     data=self,realization=loaded['realization'])
         
         ## apply any subset parameters after the field is loaded
