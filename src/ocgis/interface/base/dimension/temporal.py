@@ -72,10 +72,11 @@ class TemporalDimension(base.VectorDimension):
             new_bounds[idx,:] = [sel.min(),sel.max()]
         
         new_bounds = np.atleast_2d(new_bounds).reshape(-1,2)
-        new_value = np.atleast_1d(new_value)
+        date_parts = np.atleast_1d(new_value)
+        repr_dt = self._get_grouping_representative_datetime_(grouping,new_bounds,date_parts)
 
-        return(TemporalGroupDimension(grouping=grouping,value=new_value,bounds=new_bounds,
-                                      dgroups=dgroups))
+        return(TemporalGroupDimension(grouping=grouping,date_parts=date_parts,bounds=new_bounds,
+                                      dgroups=dgroups,value=repr_dt))
         
     def get_time_region(self,time_region,return_indices=False):
         assert(isinstance(time_region,dict))
@@ -128,65 +129,63 @@ class TemporalDimension(base.VectorDimension):
         '''Intended for subclasses to overload the method for accessing the datetime
         value. For example, netCDF times are floats that must be converted.'''
         return(self.value)
-        
-        
+    
+    def _get_grouping_representative_datetime_(self,grouping,bounds,value):
+        ref_value = value
+        ref_bounds = bounds
+        ret = np.empty((ref_value.shape[0],),dtype=object)
+        set_grouping = set(grouping)
+        if set_grouping == set(['month']):
+            ref_calc_month_centroid = constants.calc_month_centroid
+            for idx in range(ret.shape[0]):
+                month = ref_value[idx]['month']
+                ## get the start year from the bounds data
+                start_year = ref_bounds[idx][0].year
+                ## create the datetime object
+                ret[idx] = datetime.datetime(start_year,month,ref_calc_month_centroid)
+        elif set_grouping == set(['year']):
+            ref_calc_year_centroid_month = constants.calc_year_centroid_month
+            ref_calc_year_centroid_day = constants.calc_year_centroid_day
+            for idx in range(ret.shape[0]):
+                year = ref_value[idx]['year']
+                ## create the datetime object
+                ret[idx] = datetime.datetime(year,ref_calc_year_centroid_month,ref_calc_year_centroid_day)
+        elif set_grouping == set(['month','year']):
+            ref_calc_month_centroid = constants.calc_month_centroid
+            for idx in range(ret.shape[0]):
+                year,month = ref_value[idx]['year'],ref_value[idx]['month']
+                ret[idx] = datetime.datetime(year,month,ref_calc_month_centroid)
+        elif set_grouping == set(['day']):
+            for idx in range(ret.shape[0]):
+                start_year,start_month = ref_bounds[idx][0].year,ref_bounds[idx][0].month
+                ret[idx] = datetime.datetime(start_year,start_month,ref_value[idx]['day'],12)
+        elif set_grouping == set(['day','month']):
+            for idx in range(ret.shape[0]):
+                start_year = ref_bounds[idx][0].year
+                day,month = ref_value[idx]['day'],ref_value[idx]['month']
+                ret[idx] = datetime.datetime(start_year,month,day,12)
+        elif set_grouping == set(['day','year']):
+            for idx in range(ret.shape[0]):
+                day,year = ref_value[idx]['day'],ref_value[idx]['year']
+                ret[idx] = datetime.datetime(year,1,day,12)
+        elif set_grouping == set(['day','year','month']):
+            for idx in range(ret.shape[0]):
+                day,year,month = ref_value[idx]['day'],ref_value[idx]['year'],ref_value[idx]['month']
+                ret[idx] = datetime.datetime(year,month,day,12)
+        else:
+            ocgis_lh(logger='interface.temporal',exc=NotImplementedError('grouping: {0}'.format(self.grouping)))
+        return(ret)
+
+
 class TemporalGroupDimension(base.VectorDimension):
     
     def __init__(self,*args,**kwds):
-        self.grouping = kwds.pop('grouping',None)
-        self.dgroups = kwds.pop('dgroups',None)
-        self._representative_datetime = None
-        
+        self.grouping = kwds.pop('grouping')
+        self.dgroups = kwds.pop('dgroups')
+        self.date_parts = kwds.pop('date_parts')
+                
         super(TemporalGroupDimension,self).__init__(*args,**kwds)
-    
-    @property
-    def representative_datetime(self):
-        if self._representative_datetime is None:
-            ref_value = self.value
-            ref_bounds = self.bounds
-            ret = np.empty((ref_value.shape[0],),dtype=object)
-            set_grouping = set(self.grouping)
-            if set_grouping == set(['month']):
-                ref_calc_month_centroid = constants.calc_month_centroid
-                for idx in range(ret.shape[0]):
-                    month = ref_value[idx]['month']
-                    ## get the start year from the bounds data
-                    start_year = ref_bounds[idx][0].year
-                    ## create the datetime object
-                    ret[idx] = datetime.datetime(start_year,month,ref_calc_month_centroid)
-            elif set_grouping == set(['year']):
-                ref_calc_year_centroid_month = constants.calc_year_centroid_month
-                ref_calc_year_centroid_day = constants.calc_year_centroid_day
-                for idx in range(ret.shape[0]):
-                    year = ref_value[idx]['year']
-                    ## create the datetime object
-                    ret[idx] = datetime.datetime(year,ref_calc_year_centroid_month,ref_calc_year_centroid_day)
-            elif set_grouping == set(['month','year']):
-                ref_calc_month_centroid = constants.calc_month_centroid
-                for idx in range(ret.shape[0]):
-                    year,month = ref_value[idx]['year'],ref_value[idx]['month']
-                    ret[idx] = datetime.datetime(year,month,ref_calc_month_centroid)
-            elif set_grouping == set(['day']):
-                for idx in range(ret.shape[0]):
-                    start_year,start_month = ref_bounds[idx][0].year,ref_bounds[idx][0].month
-                    ret[idx] = datetime.datetime(start_year,start_month,ref_value[idx]['day'],12)
-            elif set_grouping == set(['day','month']):
-                for idx in range(ret.shape[0]):
-                    start_year = ref_bounds[idx][0].year
-                    day,month = ref_value[idx]['day'],ref_value[idx]['month']
-                    ret[idx] = datetime.datetime(start_year,month,day,12)
-            elif set_grouping == set(['day','year']):
-                for idx in range(ret.shape[0]):
-                    day,year = ref_value[idx]['day'],ref_value[idx]['year']
-                    ret[idx] = datetime.datetime(year,1,day,12)
-            elif set_grouping == set(['day','year','month']):
-                for idx in range(ret.shape[0]):
-                    day,year,month = ref_value[idx]['day'],ref_value[idx]['year'],ref_value[idx]['month']
-                    ret[idx] = datetime.datetime(year,month,day,12)
-            else:
-                ocgis_lh(logger='interface.temporal',exc=NotImplementedError('grouping: {0}'.format(self.grouping)))
-            return(ret)
-            
+
     def _validate_bounds_(self,value):
         try:
             assert(value.shape[0] == self._value.shape[0])

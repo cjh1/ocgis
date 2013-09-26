@@ -91,3 +91,11 @@ class VariableCollection(OrderedDict):
         assert(isinstance(variable,Variable))
         assert(variable.alias not in self)
         self.update({variable.alias:variable})
+        
+        
+class DerivedVariable(Variable):
+    
+    def __init__(self,**kwds):
+        self.function = kwds.pop('function')
+        
+        super(DerivedVariable,self).__init__(**kwds)

@@ -48,7 +48,7 @@ class AbstractTestField(TestBase):
             if month_count == 1:
                 temporal_stop = dt(2000,1,31,12)
             elif month_count == 2:
-                temporal_stop = dt(2000,2,28,12)
+                temporal_stop = dt(2000,2,29,12)
             else:
                 raise(NotImplementedError)
             temporal_value = get_date_list(temporal_start,temporal_stop,1)
@@ -302,7 +302,9 @@ class TestDerivedField(AbstractTestField):
         vc = VariableCollection(variables=[mu])
         df = DerivedField(variables=vc,value={'mu':new_data},temporal=tgd,spatial=field.spatial,
                           level=field.level,realization=field.realization)
-        import ipdb;ipdb.set_trace()
+        self.assertIsInstance(df.temporal.value[0],datetime.datetime)
+        self.assertEqual(df.temporal.value.tolist(),[datetime.datetime(2000, 1, 16, 0, 0),datetime.datetime(2000, 2, 16, 0, 0)])
+        self.assertEqual(df.temporal.bounds[1,1],datetime.datetime(2000, 3, 1, 0, 0))
 
 
 if __name__ == "__main__":
