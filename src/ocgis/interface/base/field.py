@@ -24,10 +24,10 @@ class Field(AbstractSourcedVariable):
             ocgis_lh(exc=ValueError('The "variables" keyword must be a VariableCollection.'))
         
         self.variables = variables
-        self.realization = self._format_dimension_(realization)
-        self.temporal = self._format_dimension_(temporal)
-        self.level = self._format_dimension_(level)
-        self.spatial = self._format_dimension_(spatial)
+        self.realization = realization
+        self.temporal = temporal
+        self.level = level
+        self.spatial = spatial
         self.value_dimension_names = ('realization','temporal','level','row','column')
         self.meta = meta or {}
         ## holds raw values for aggregated datasets.
@@ -147,11 +147,6 @@ class Field(AbstractSourcedVariable):
         ret._raw = self
             
         return(ret)
-            
-    def _format_dimension_(self,dim):
-        if dim is not None:
-            dim._field = self
-        return(dim)
         
     def _format_private_value_(self,value):
         if value is None:

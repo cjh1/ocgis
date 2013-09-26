@@ -175,7 +175,6 @@ class TestField(AbstractTestField):
         for wv in [True,False]:
             field = self.get_field(with_value=wv)
             self.assertNotIsInstance(field.temporal.value,np.ma.MaskedArray)
-            self.assertIsInstance(field.temporal._field,Field)
             
             temporal_start = dt(2000,1,1,12)
             temporal_stop = dt(2000,1,31,12)
