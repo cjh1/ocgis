@@ -6,13 +6,7 @@ from shapely.geometry.multipolygon import MultiPolygon
 import csv
 from osgeo.ogr import CreateGeometryFromWkb
 from shapely.geometry.polygon import Polygon
-from osgeo.osr import SpatialReference
-from copy import deepcopy
-from shapely import wkb, wkt
-import numpy as np
-from ocgis.interface.base.dimension.spatial import SpatialGeometryPolygonDimension,\
-    SpatialDimension
-from ocgis.interface.base.crs import CoordinateReferenceSystem
+from shapely import wkb
 
 
 class ShpCabinet(object):
