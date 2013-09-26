@@ -9,6 +9,10 @@ from shapely.geometry.polygon import Polygon
 from osgeo.osr import SpatialReference
 from copy import deepcopy
 from shapely import wkb, wkt
+import numpy as np
+from ocgis.interface.base.dimension.spatial import SpatialGeometryPolygonDimension,\
+    SpatialDimension
+from ocgis.interface.base.crs import CoordinateReferenceSystem
 
 
 class ShpCabinet(object):
@@ -69,12 +73,12 @@ class ShpCabinet(object):
         if ret is None:
             raise(ValueError('a shapefile with key "{0}" was not found under the directory: {1}'.format(key,self.path)))
     
-    def get_geoms(self,key,select_ugid=None):
-        """Return geometries from a shapefile specified by `key`.
+    def iter_geoms(self,key,select_ugid=None):
+        """Iterate over geometries from a shapefile specified by `key`.
         
         >>> sc = ShpCabinet()
-        >>> geoms = sc.get_geoms('state_boundaries',select_ugid=[1,48])
-        >>> len(geoms)
+        >>> geoms = sc.iter_geoms('state_boundaries',select_ugid=[1,48])
+        >>> len(list(geoms))
         2
         
         :param key: The shapefile identifier.
@@ -106,66 +110,13 @@ class ShpCabinet(object):
             else:
                 features = lyr
             
-            geoms = [None]*len(features)
-            for idx,feature in enumerate(features):
-                attrs = feature.items()
-                attrs.update({'geom':wkb.loads(feature.geometry().ExportToWkb())})
-                geoms[idx] = attrs
+            for feature in features:
+                yld = {'geom':wkb.loads(feature.geometry().ExportToWkb()),'properties':feature.items()}
+                assert('UGID' in yld['properties'])
+                yield(yld)
         finally:
             ds.Destroy()
             ds = None
-        
-#        cfg_path = self.get_cfg_path(key)
-#        config = ConfigParser()
-#        config.read(cfg_path)
-#        id_attr = config.get('mapping','ugid')
-#        ## adjust the id attribute name for auto-generation in the shapefile
-#        ## reader.
-#        if id_attr.lower() == 'none':
-#            id_attr = None
-#            make_id = True
-#        else:
-#            make_id = False
-#        other_attrs = config.get('mapping','attributes').split(',')
-#        ## allow for no attributes to be loaded.
-#        if len(other_attrs) == 1 and other_attrs[0].lower() == 'none':
-#            other_attrs = []
-#        ## allow for all attributes to be loaded
-#        elif len(other_attrs) == 1 and other_attrs[0].lower() == 'all':
-#            other_attrs = 'all'
-#        ## get the geometry objects.
-#        geoms = get_shp_as_multi(shp_path,
-#                                 uid_field=id_attr,
-#                                 attr_fields=other_attrs,
-#                                 make_id=make_id)
-#
-#        ## filter the returned geometries if an attribute filter is passed
-#        if attr_filter is not None:
-#            ## get the attribute
-#            attr = attr_filter.keys()[0].lower()
-##            ## rename ugid to id to prevent confusion on the front end.
-##            if attr == 'ugid':
-##                attr = 'id'
-#            ## get the target attribute data type
-#            dtype = type(geoms[0][attr])
-#            ## attempt to convert the filter values to that data type
-#            fvalues = [dtype(ii) for ii in attr_filter.values()[0]]
-#            ## if the filter data type is a string, do a conversion
-#            if dtype == str:
-#                fvalues = [f.lower() for f in fvalues]
-#            ## filter function
-#            def _filter_(x):
-#                ref = x[attr]
-#                ## attempt to lower the string value, otherwise move on
-#                try:
-#                    ref = ref.lower()
-#                except AttributeError:
-#                    pass
-#                if ref in fvalues: return(True)
-#            ## filter the geometry dictionary
-#            geoms = filter(_filter_,geoms)
-        
-        return(SelectionGeometry(geoms))
     
     def get_headers(self,geoms):
         ret = ['UGID']

@@ -37,6 +37,13 @@ class SpatialDimension(base.AbstractUidDimension):
         else:
             self._geom_to_grid = False
         
+        ## attempt to build the geometry dimension
+        point = kwds.pop('point',None)
+        polygon = kwds.pop('polygon',None)
+        geom_kwds = dict(point=point,polygon=polygon)
+        if any([g != None for g in geom_kwds.values()]):
+            self._geom = SpatialGeometryDimension(**geom_kwds)
+        
         if self.grid is None and self._geom is None:
             try:
                 self.grid = SpatialGridDimension(row=kwds.pop('row'),
