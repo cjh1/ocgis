@@ -136,6 +136,7 @@ class Field(AbstractSourcedVariable):
         itrs = [range(dim) for dim in shp[0:3]]
         weights = self.spatial.weights
         ref_average = np.ma.average
+
         for k,v in ret.value.iteritems():
             fill = np.ma.array(np.zeros(shp),mask=False,dtype=v.dtype)
             for idx_r,idx_t,idx_l in itertools.product(*itrs):
