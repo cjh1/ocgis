@@ -106,7 +106,7 @@ class ShpCabinet(object):
                 else:
                     sql_where = 'UGID IN {0}'.format(tuple(select_ugid))
                 sql = 'SELECT * FROM {0} WHERE {1}'.format(lyr_name,sql_where)
-                features = ds.ExecuteSQL        raise(SkipTest('dev - long'))(sql)
+                features = ds.ExecuteSQL(sql)
             else:
                 features = lyr
             
@@ -226,3 +226,4 @@ class ShpCabinet(object):
         for header in headers:
             ogr_fields.append(OgrField(fcache,header,type(self._get_(row,header))))
         return(ogr_fields)
+    
