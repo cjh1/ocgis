@@ -1,6 +1,5 @@
 from ocgis.util.logging_ocgis import ocgis_lh
 import abc
-from collections import OrderedDict
 
 
 class AbstractValueVariable(object):
