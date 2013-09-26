@@ -8,7 +8,7 @@ from osgeo.ogr import CreateGeometryFromWkb
 from shapely.geometry.polygon import Polygon
 from osgeo.osr import SpatialReference
 from copy import deepcopy
-from shapely import wkb
+from shapely import wkb, wkt
 
 
 class ShpCabinet(object):
