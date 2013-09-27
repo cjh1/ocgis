@@ -3,7 +3,7 @@ import numpy as np
 from ocgis import constants
 from ocgis.util.logging_ocgis import ocgis_lh
 from ocgis.util.helpers import get_none_or_1d, get_none_or_2d, get_none_or_slice,\
-    get_formatted_slice
+    get_formatted_slice, assert_raise
 from copy import copy
 from ocgis.exc import EmptySubsetError
 from operator import mul
@@ -40,8 +40,8 @@ class AbstractDimension(object):
         ret = self._format_slice_state_(ret,slc)
         return(ret)
     
-    @abc.abstractmethod
-    def get_iter(self): pass
+    def get_iter(self):
+        raise(NotImplementedError)
         
     def _format_slice_state_(self,state,slc):
         return(state)
@@ -80,22 +80,6 @@ class AbstractValueDimension(AbstractValueVariable,AbstractDimension):
     @property
     def shape(self):
         return(self.value.shape)
-    
-    def get_iter(self):
-        raise(NotImplementedError)
-        ref_value = self.value
-        ref_bounds = self.bounds
-        ref_uid = self.uid
-        ref_name = self.name
-        ref_name_uid = self.name_uid
-        ref_name_bounds_lower = '{0}_lower'.format(self.name_bounds)
-        ref_name_bounds_upper = '{0}_upper'.format(self.name_bounds)
-        
-        for ii in range(self.value.shape[0]):
-            yld = {ref_name:ref_value[ii],ref_name_uid:ref_uid[ii],
-                   ref_name_bounds_lower:ref_bounds[ii,0],
-                   ref_name_bounds_upper:ref_bounds[ii,1]}
-            yield(ii,yld)
     
     
 class AbstractUidDimension(AbstractDimension):
@@ -228,6 +212,31 @@ class VectorDimension(AbstractSourcedVariable,AbstractUidValueDimension):
             ret = (ret,indices[select])
         
         return(ret)
+    
+    def get_iter(self):
+        ref_value = self.value
+        if self.bounds is None:
+            has_bounds = False
+        else:
+            has_bounds = True
+            ref_bounds = self.bounds
+        ref_uid = self.uid
+        ref_name = self.name
+        assert_raise(self.name != None,logger='interface.dimension.base',
+                     exc=ValueError('A "name" attribute is required for iteration.'))
+        ref_name_uid = self.name_uid
+        ref_name_bounds_lower = '{0}_lower'.format(self.name_bounds)
+        ref_name_bounds_upper = '{0}_upper'.format(self.name_bounds)
+        
+        for ii in range(self.value.shape[0]):
+            yld = {ref_name:ref_value[ii],ref_name_uid:ref_uid[ii]}
+            if has_bounds:
+                yld.update({ref_name_bounds_lower:ref_bounds[ii,0],
+                            ref_name_bounds_upper:ref_bounds[ii,1]})
+            else:
+                yld.update({ref_name_bounds_lower:None,
+                            ref_name_bounds_upper:None})
+            yield(ii,yld)
     
     def _format_private_value_(self,value):
         return(self._get_none_or_array_(value,masked=False))

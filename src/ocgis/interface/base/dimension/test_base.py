@@ -12,6 +12,19 @@ class TestVectorDimension(unittest.TestCase):
     def assertNumpyNotAll(self,arr1,arr2):
         return(self.assertFalse(np.all(arr1 == arr2)))
     
+    def test_get_iter(self):
+        vdim = VectorDimension(value=[10,20,30,40,50])
+        with self.assertRaises(ValueError):
+            list(vdim.get_iter())
+            
+        vdim = VectorDimension(value=[10,20,30,40,50],name='foo')
+        tt = list(vdim.get_iter())
+        self.assertEqual(tt[3],(3, {'foo_uid': 4, 'foo': 40, 'foo_bnds_lower': None, 'foo_bnds_upper': None}))
+        
+        vdim = VectorDimension(value=[10,20,30,40,50],bounds=[(ii-5,ii+5) for ii in [10,20,30,40,50]],name='foo',name_uid='hi')
+        tt = list(vdim.get_iter())
+        self.assertEqual(tt[3],(3, {'hi': 4, 'foo': 40, 'foo_bnds_lower': 35, 'foo_bnds_upper': 45}))
+    
     def test_bad_keywords(self):
         with self.assertRaises(ValueError):
             VectorDimension(value=40,bounds=[38,42],dtype=float)

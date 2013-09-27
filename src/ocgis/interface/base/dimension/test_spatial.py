@@ -91,6 +91,24 @@ class TestSpatialDimension(TestSpatialBase):
         self.assertTrue(poly.almost_equals(ret.geom.polygon.value[0,0]))
         self.assertEqual(ret.geom.point,None)
         
+    def test_get_geom_iter(self):
+        sdim = self.get_sdim(bounds=True)
+        tt = list(sdim.get_geom_iter())
+        ttt = list(tt[4])
+        ttt[2] = ttt[2].bounds
+        self.assertEqual(ttt,[1, 0, (-100.5, 38.5, -99.5, 39.5)])
+        
+        sdim = self.get_sdim(bounds=False)
+        tt = list(sdim.get_geom_iter(target='point'))
+        ttt = list(tt[4])
+        ttt[2] = [ttt[2].x,ttt[2].y]
+        self.assertEqual(ttt,[1, 0, [-100.0, 39.0]])
+        
+        sdim = self.get_sdim(bounds=False)
+        self.assertEqual(sdim.abstraction,'polygon')
+        with self.assertRaises(ImproperPolygonBoundsError):
+            list(sdim.get_geom_iter(target='polygon'))
+        
     def test_get_intersects_polygon_small(self):
         for b in [True,False]:
             sdim = self.get_sdim(bounds=b)

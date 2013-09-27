@@ -52,11 +52,11 @@ class SpatialDimension(base.AbstractUidDimension):
                 ocgis_lh(exc=ValueError('A SpatialDimension without "grid" or "geom" arguments requires a "row" and "column".'))
         
         super(SpatialDimension,self).__init__(*args,**kwds)
-        
+    
     @property
     def abstraction_geometry(self):
         if self.abstraction is None:
-            ocgis_lh(exc=ValueError('The abstraction attribute value is None.'))
+            ocgis_lh(exc=ValueError('The abstraction attribute value is "None".'))
         else:
             return(getattr(self.geom,self.abstraction))
     
@@ -176,8 +176,20 @@ class SpatialDimension(base.AbstractUidDimension):
         
         return(ret)
     
-    def get_iter(self):
-        ocgis_lh(exc=NotImplementedError('Spatial dimensions do not have a direct iterator.'))
+    def get_geom_iter(self,target=None,as_multipolygon=True):
+        target = target or self.abstraction
+        value = getattr(self.geom,target).value
+        
+        ## no need to attempt and convert to MultiPolygon if we are working with
+        ## point data.
+        if as_multipolygon and target == 'point':
+            as_multipolygon = False
+        
+        for (row_idx,col_idx),geom in iter_array(value,return_value=True):
+            if as_multipolygon:
+                if isinstance(geom,Polygon):
+                    geom = MultiPolygon([geom])
+            yield(row_idx,col_idx,geom)
     
     def get_mask(self):
         if self.grid is None:
