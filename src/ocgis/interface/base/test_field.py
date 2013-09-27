@@ -99,6 +99,13 @@ class AbstractTestField(TestBase):
 
 
 class TestField(AbstractTestField):
+    
+    def test_get_iter(self):
+        field = self.get_field(with_value=True)
+        rows = list(field.get_iter())
+        self.assertEqual(len(rows),2*31*2*3*4)
+        rows[100]['geom'] = rows[100]['geom'].bounds
+        self.assertEqual(rows[100],{'realization_bnds_lower': None, 'level': 150, 'level_bnds_lower': 100, 'var_name': 'tmax', 'time': datetime.datetime(2000, 1, 31, 12, 0), 'value': 0.94615239545676533, 'time_bnds_upper': datetime.datetime(2000, 2, 1, 0, 0), 'alias': 'tmax', 'realization_bnds_upper': None, 'realization_uid': 1, 'realization': 1, 'time_uid': 31, 'level_uid': 2, 'level_bnds_upper': 200, 'time_bnds_lower': datetime.datetime(2000, 1, 31, 0, 0), 'geom': (-97.5, 37.5, -96.5, 38.5)})
         
     def test_get_intersects_domain_polygon(self):
         regular = make_poly((36.61,41.39),(-101.41,-95.47))

@@ -9,6 +9,7 @@ from shapely.ops import cascaded_union
 from shapely.geometry.multipoint import MultiPoint
 from shapely.geometry.multipolygon import MultiPolygon
 from ocgis.interface.base.variable import AbstractSourcedVariable, Variable
+from ocgis import constants
 
 
 class FieldCollection(OrderedDict):
@@ -90,6 +91,39 @@ class Field(AbstractSourcedVariable):
     
     def get_intersects(self,point_or_polygon):
         return(self._get_spatial_operation_('get_intersects',point_or_polygon))
+    
+    def get_iter(self,add_masked_value=True):
+        
+        def _get_dimension_iterator_1d_(target):
+            attr = getattr(self,target)
+            if attr is None:
+                ret = [(0,{})]
+            else:
+                ret = attr.get_iter()
+            return(ret)
+        
+        name_value = self.variable.name
+        name_alias = self.variable.alias
+        is_masked = np.ma.is_masked
+        masked_value = constants.fill_value
+        ref_value = self.value
+        
+        iters = map(_get_dimension_iterator_1d_,['realization','temporal','level'])
+        iters.append(self.spatial.get_geom_iter())
+        for [(ridx,rlz),(tidx,t),(lidx,l),(sridx,scidx,geom)] in itertools.product(*iters):
+            ref_idx = ref_value[ridx,tidx,lidx,sridx,scidx]
+            if is_masked(ref_idx):
+                if add_masked_value:
+                    ref_idx = masked_value
+                else:
+                    continue
+            rlz.update(t)
+            rlz.update(l)
+            rlz['var_name'] = name_value
+            rlz['alias'] = name_alias
+            rlz['value'] = ref_idx
+            rlz['geom'] = geom
+            yield(rlz)
     
     def get_time_region(self,time_region):
         ret = copy(self)
