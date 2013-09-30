@@ -76,6 +76,8 @@ class Field(object):
         return(self._variables)
     @variables.setter
     def variables(self,value):
+        if isinstance(value,Variable):
+            value = VariableCollection(variables=[value])
         assert_raise(isinstance(value,VariableCollection),exc=ValueError('The "variables" keyword must be a Variable object.'))
         self._variables = value
         for v in value.itervalues():
@@ -84,16 +86,14 @@ class Field(object):
                 assert(v._value.shape == self.shape)
     
     def get_between(self,dim,lower,upper):
-        raise(NotImplementedError)
         pos = self._axis_map[dim]
         ref = getattr(self,dim)
+        ## TODO: minor redundancy in slicing and returning dimension
         new_dim,indices = ref.get_between(lower,upper,return_indices=True)
-        ret = copy(self)
-        setattr(ret,dim,new_dim)
         slc = get_reduced_slice(indices)
         slc_field = [slice(None)]*5
         slc_field[pos] = slc
-        ret._value = get_none_or_slice(ret._value,slc_field)
+        ret = self[slc_field]
         return(ret)
     
     def get_clip(self,polygon):

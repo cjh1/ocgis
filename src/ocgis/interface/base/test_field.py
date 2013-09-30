@@ -270,10 +270,10 @@ class TestField(AbstractTestField):
             self.assertIsInstance(ret,Field)
             self.assertEqual(ret.shape,field.shape)
             if wv:
-                self.assertNumpyAll(field.value,ret.value)
+                self.assertNumpyAll(field.variables['tmax'].value,ret.variables['tmax'].value)
             else:
                 with self.assertRaises(NotImplementedError):
-                    ret.value
+                    ret.variables['tmax'].value
                     
             ## try empty subset
             with self.assertRaises(EmptySubsetError):
@@ -282,7 +282,7 @@ class TestField(AbstractTestField):
             ret = field.get_between('realization',1,1)
             self.assertEqual(ret.shape,(1, 31, 2, 3, 4))
             if wv:
-                self.assertNumpyAll(ret.value,field.value[0:1,:,:,:,:])
+                self.assertNumpyAll(ret.variables['tmax'].value,field.variables['tmax'].value[0:1,:,:,:,:])
                 
             ret = field.get_between('temporal',dt(2000,1,15),dt(2000,1,30))
             self.assertEqual(ret.temporal.value[0],dt(2000,1,14,12))
@@ -330,8 +330,8 @@ class TestDerivedField(AbstractTestField):
         field = self.get_field(with_value=True,month_count=2)
         tgd = field.temporal.get_grouping(['month'])
         new_data = np.random.rand(2,2,2,3,4)
-        mu = Variable('mu')
-        df = DerivedField(variable=mu,value=new_data,temporal=tgd,spatial=field.spatial,
+        mu = Variable(name='mu',value=new_data)
+        df = DerivedField(variables=mu,temporal=tgd,spatial=field.spatial,
                           level=field.level,realization=field.realization)
         self.assertIsInstance(df.temporal.value[0],datetime.datetime)
         self.assertEqual(df.temporal.value.tolist(),[datetime.datetime(2000, 1, 16, 0, 0),datetime.datetime(2000, 2, 16, 0, 0)])
