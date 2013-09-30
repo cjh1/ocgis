@@ -32,13 +32,15 @@ class FieldCollection(OrderedDict):
 class Field(AbstractSourcedVariable):
     _axis_map = {'realization':0,'temporal':1,'level':2}
     _axes = ['R','T','Z','Y','X']
+    _specials = ['variable','value','meta','data']
     
     def __init__(self,variable=None,value=None,realization=None,temporal=None,
                  level=None,spatial=None,data=None,debug=False,meta=None):
-        try:
-            assert(isinstance(variable,Variable))
-        except AssertionError:
-            ocgis_lh(exc=ValueError('The "variable" keyword must be a Variable object.'))
+#        try:
+#            for var in get_iter(variable):
+#                assert(isinstance(var,Variable))
+#        except AssertionError:
+#            ocgis_lh(exc=ValueError('The "variable" keyword must be a Variable object.'))
         
         self.variable = variable
         self.realization = realization
@@ -51,6 +53,13 @@ class Field(AbstractSourcedVariable):
         self._raw = None
         
         super(Field,self).__init__(data,src_idx=None,value=value,debug=debug)
+        
+    def __getattribute__(self,attr):
+        if attr in super(Field,self).__getattribute__('_specials'):
+            import ipdb;ipdb.set_trace()
+        else:
+            ret = super(Field,self).__getattribute__(attr)
+        return(ret)
                 
     def __getitem__(self,slc):
         slc = get_formatted_slice(slc,5)        
@@ -64,6 +73,9 @@ class Field(AbstractSourcedVariable):
         ret._value = get_none_or_slice(self._value,slc)
         
         return(ret)
+    
+    def __setattribute__(self,attr,value):
+        raise(NotImplementedError)
     
     @property
     def shape(self):
