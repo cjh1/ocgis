@@ -106,11 +106,10 @@ class SpatialDimension(base.AbstractUidDimension):
         return(ret)
     
     def get_clip(self,polygon,return_indices=False):
-        raise(NotImplementedError)
         assert(type(polygon) in (Polygon,MultiPolygon))
         
         ret,slc = self.get_intersects(polygon,return_indices=True)
-        
+
         ref_value = ret.geom.polygon.value
         for (row_idx,col_idx),geom in iter_array(ref_value,return_value=True):
             ref_value[row_idx,col_idx] = geom.intersection(polygon)
@@ -145,8 +144,6 @@ class SpatialDimension(base.AbstractUidDimension):
         return(fill)
     
     def get_intersects(self,point_or_polygon,return_indices=False):
-        raise(NotImplementedError)
-        ret = copy(self)
         if type(point_or_polygon) in (Point,MultiPoint):
             raise(NotImplementedError)
         elif type(point_or_polygon) in (Polygon,MultiPolygon):
@@ -157,25 +154,33 @@ class SpatialDimension(base.AbstractUidDimension):
             if self.grid is None:
                 raise(NotImplementedError)
             else:
-                ## reset any geometries
-                ret._geom = None
                 ## subset the grid by its bounding box
-                ret.grid,slc = ret.grid.get_subset_bbox(miny,minx,maxy,maxx,return_indices=True)
+                new_grid,slc = self.grid.get_subset_bbox(miny,minx,maxy,maxx,return_indices=True)
+                ## make the new spatial dimension with the grid then mask any geometries
+                new_spatial = SpatialDimension(grid=new_grid,crs=self.crs,abstraction=self.abstraction,
+                                               name_uid=self.name_uid,uid=new_grid.uid,meta=self.meta,
+                                               name=self.name,properties=self.properties)
                 ## attempt to mask the polygons
                 try:
-                    ret.geom._polygon = ret.geom.polygon.get_intersects_masked(point_or_polygon)
-                    grid_mask = ret.geom._polygon.value.mask
+                    new_polygon = new_spatial.geom.polygon.get_intersects_masked(point_or_polygon)
+                    grid_mask = new_polygon.value.mask
+                    new_point = None
                 except ImproperPolygonBoundsError:
-                    ret.geom._point = ret.geom.point.get_intersects_masked(point_or_polygon)
-                    grid_mask = ret.geom._point.value.mask
+                    new_polygon = None
+                    new_point = new_spatial.geom.point.get_intersects_masked(point_or_polygon)
+                    grid_mask = new_point.value.mask
+                ## insert the new geometry dimensions
+                new_spatial.geom._polygon = new_polygon
+                new_spatial.geom._point = new_point
                 ## transfer the geometry mask to the grid mask
-                ret.grid.value.mask[:,:,:] = grid_mask.copy()
+                new_spatial.grid.value.mask[:,:,:] = grid_mask.copy()
+                ret = new_spatial
         else:
             raise(NotImplementedError)
         
         if return_indices:
-            ret = (ret,slc)
-        
+            ret = (new_spatial,slc)
+
         return(ret)
     
     def get_geom_iter(self,target=None,as_multipolygon=True):
@@ -300,19 +305,26 @@ class SpatialGridDimension(base.AbstractUidValueDimension):
         return(ret)
         
     def get_subset_bbox(self,min_row,min_col,max_row,max_col,return_indices=False):
-        raise(NotImplementedError)
         if self.row is None:
-            raise(NotImplementedError('no slicing w/out rows and columns'))
+            raise(NotImplementedError('no bbox subset w/out rows and columns'))
         else:
-            ret = copy(self)
-            ret._value = None
-            ret.row,row_indices = self.row.get_between(min_row,max_row,return_indices=True)
-            ret.col,col_indices = self.col.get_between(min_col,max_col,return_indices=True)
+            new_row,row_indices = self.row.get_between(min_row,max_row,return_indices=True)
+            new_col,col_indices = self.col.get_between(min_col,max_col,return_indices=True)
             row_slc = get_reduced_slice(row_indices)
             col_slc = get_reduced_slice(col_indices)
-            ret.uid = self.uid[row_slc,col_slc]
+            new_uid = self.uid[row_slc,col_slc]
+            
+        if self._value is None:
+            new_value = None
+        else:
+            new_value = self._value[:,row_slc,col_slc]
+        
+        ret = SpatialGridDimension(value=new_value,uid=new_uid,row=new_row,col=new_col,name_value=self.name_value,
+                                   units=self.units,meta=self.meta,name=self.name,name_uid=self.name_uid)
+        
         if return_indices:
             ret = (ret,(row_slc,col_slc))
+            
         return(ret)
     
     def _format_private_value_(self,value):
@@ -426,7 +438,6 @@ class SpatialGeometryPointDimension(base.AbstractUidValueDimension):
         return(ret)
         
     def get_intersects_masked(self,point_or_polygon):
-        raise(NotImplementedError)
         
         def _intersects_point_(prepared,target):
             return(prepared.intersects(target))
@@ -447,9 +458,9 @@ class SpatialGeometryPointDimension(base.AbstractUidValueDimension):
         else:
             raise(NotImplementedError)
         
-        ret = copy(self)
+#        ret = copy(self)
         
-        fill = np.ma.array(ret.value,mask=True)
+        fill = np.ma.array(self.value,mask=True)
         ref_fill_mask = fill.mask
         prepared = prep(point_or_polygon)
 
@@ -460,8 +471,12 @@ class SpatialGeometryPointDimension(base.AbstractUidValueDimension):
         
         if ref_fill_mask.all():
             ocgis_lh(exc=EmptySubsetError(self.name))
-            
-        ret._value = fill
+        
+#        ret._value = fill
+        
+        ret = self.__class__(grid=self.grid,name_value=self.name_value,uid=self.uid,
+                             name_uid=self.name_uid,meta=self.meta,name=self.name,
+                             properties=self.properties,value=fill)
         
         return(ret)
     

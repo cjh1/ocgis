@@ -182,13 +182,13 @@ class TestField(AbstractTestField):
         rows = list(field.get_iter())
         self.assertEqual(len(rows),2*31*2*3*4)
         rows[100]['geom'] = rows[100]['geom'].bounds
-        self.assertEqual(rows[100],{'realization_bnds_lower': None, 'level': 150, 'level_bnds_lower': 100, 'var_name': 'tmax', 'time': datetime.datetime(2000, 1, 31, 12, 0), 'value': 0.94615239545676533, 'time_bnds_upper': datetime.datetime(2000, 2, 1, 0, 0), 'alias': 'tmax', 'realization_bnds_upper': None, 'realization_uid': 1, 'realization': 1, 'time_uid': 31, 'level_uid': 2, 'level_bnds_upper': 200, 'time_bnds_lower': datetime.datetime(2000, 1, 31, 0, 0), 'geom': (-97.5, 37.5, -96.5, 38.5)})
+        self.assertEqual(rows[100],{'vid':1, 'realization_bnds_lower': None, 'level': 150, 'level_bnds_lower': 100, 'var_name': 'tmax', 'time': datetime.datetime(2000, 1, 31, 12, 0), 'value': 0.94615239545676533, 'time_bnds_upper': datetime.datetime(2000, 2, 1, 0, 0), 'alias': 'tmax', 'realization_bnds_upper': None, 'realization_uid': 1, 'realization': 1, 'time_uid': 31, 'level_uid': 2, 'level_bnds_upper': 200, 'time_bnds_lower': datetime.datetime(2000, 1, 31, 0, 0), 'geom': (-97.5, 37.5, -96.5, 38.5)})
         
     def test_get_intersects_domain_polygon(self):
         regular = make_poly((36.61,41.39),(-101.41,-95.47))
         field = self.get_field(with_value=True)
         ret = field.get_intersects(regular)
-        self.assertNumpyAll(ret.value,field.value)
+        self.assertNumpyAll(ret.variables['tmax'].value,field.variables['tmax'].value)
         self.assertNumpyAll(field.spatial.grid.value,ret.spatial.grid.value)
     
     def test_get_intersects_irregular_polygon(self):
@@ -196,7 +196,7 @@ class TestField(AbstractTestField):
         field = self.get_field(with_value=True)
         ret = field.get_intersects(irregular)
         self.assertEqual(ret.shape,(2,31,2,2,2))
-        self.assertNumpyAll(ret.value.mask[0,2,1,:,:],np.array([[True,False],[False,False]]))
+        self.assertNumpyAll(ret.variables['tmax'].value.mask[0,2,1,:,:],np.array([[True,False],[False,False]]))
         self.assertEqual(ret.spatial.uid[ret.spatial.get_mask()][0],5)
         
     def test_get_clip_single_cell(self):
@@ -223,7 +223,7 @@ class TestField(AbstractTestField):
             self.assertAlmostEqual(ret.spatial.weights.sum(),1.776435)
             if not wv:
                 with self.assertRaises(NotImplementedError):
-                    ret.value
+                    ret.variables['tmax'].value
                     
     def test_get_aggregated_irregular(self):
         single = wkt.loads('POLYGON((-99.894355 40.230645,-98.725806 40.196774,-97.726613 40.027419,-97.032258 39.942742,-97.681452 39.626613,-97.850806 39.299194,-98.178226 39.643548,-98.844355 39.920161,-99.894355 40.230645))')
@@ -248,11 +248,11 @@ class TestField(AbstractTestField):
             self.assertNotEqual(field.spatial.grid,None)
             self.assertEqual(agg.spatial.grid,None)
             self.assertEqual(agg.shape,(2,31,2,1,1))
-            self.assertNumpyAll(field.value,agg._raw.value)
-            self.assertTrue(np.may_share_memory(field.value,agg._raw.value))
+            self.assertNumpyAll(field.variables['tmax'].value,agg._raw.variables['tmax'].value)
+            self.assertTrue(np.may_share_memory(field.variables['tmax'].value,agg._raw.variables['tmax'].value))
             
-            to_test = field.value[0,0,0,:,:].mean()
-            self.assertNumpyAll(to_test,agg.value[0,0,0,0,0])
+            to_test = field.variables['tmax'].value[0,0,0,:,:].mean()
+            self.assertNumpyAll(to_test,agg.variables['tmax'].value[0,0,0,0,0])
         
     def test_subsetting(self):
         for wv in [True,False]:
@@ -304,15 +304,15 @@ class TestField(AbstractTestField):
         field = self.get_field(with_value=True)
         sub = field[:,(3,5,10,15),:,:,:]
         self.assertEqual(sub.shape,(2,4,2,3,4))
-        self.assertNumpyAll(sub.value,field.value[:,(3,5,10,15),:,:,:])
+        self.assertNumpyAll(sub.variables['tmax'].value,field.variables['tmax'].value[:,(3,5,10,15),:,:,:])
         
         sub = field[:,(3,15),:,:,:]
         self.assertEqual(sub.shape,(2,2,2,3,4))
-        self.assertNumpyAll(sub.value,field.value[:,(3,15),:,:,:])
+        self.assertNumpyAll(sub.variables['tmax'].value,field.variables['tmax'].value[:,(3,15),:,:,:])
         
         sub = field[:,3:15,:,:,:]
         self.assertEqual(sub.shape,(2,12,2,3,4))
-        self.assertNumpyAll(sub.value,field.value[:,3:15,:,:,:])
+        self.assertNumpyAll(sub.variables['tmax'].value,field.variables['tmax'].value[:,3:15,:,:,:])
         
 #    def test_iterables(self):
 #        field = self.get_field(with_value=True)

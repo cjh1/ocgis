@@ -43,8 +43,8 @@ class Field(object):
         self.level = level
         self.spatial = spatial
         self.meta = meta or {}
-#        ## holds raw values for aggregated datasets.
-#        self._raw = None
+        ## holds raw values for aggregated datasets.
+        self._raw = None
         ## add variables - dimensions are needed first for shape checking
         self.variables = variables
                         
@@ -97,15 +97,12 @@ class Field(object):
         return(ret)
     
     def get_clip(self,polygon):
-        raise(NotImplementedError)
         return(self._get_spatial_operation_('get_clip',polygon))
     
     def get_intersects(self,point_or_polygon):
-        raise(NotImplementedError)
         return(self._get_spatial_operation_('get_intersects',point_or_polygon))
     
     def get_iter(self,add_masked_value=True):
-        raise(NotImplementedError)
         
         def _get_dimension_iterator_1d_(target):
             attr = getattr(self,target)
@@ -115,29 +112,32 @@ class Field(object):
                 ret = attr.get_iter()
             return(ret)
         
-        name_value = self.variable.name
-        name_alias = self.variable.alias
         is_masked = np.ma.is_masked
         masked_value = constants.fill_value
-        ref_value = self.value
         
         iters = map(_get_dimension_iterator_1d_,['realization','temporal','level'])
         iters.append(self.spatial.get_geom_iter())
-        for [(ridx,rlz),(tidx,t),(lidx,l),(sridx,scidx,geom)] in itertools.product(*iters):
-            ref_idx = ref_value[ridx,tidx,lidx,sridx,scidx]
-            if is_masked(ref_idx):
-                if add_masked_value:
-                    ref_idx = masked_value
-                else:
-                    continue
-            rlz.update(t)
-            rlz.update(l)
-            rlz['var_name'] = name_value
-            rlz['alias'] = name_alias
-            rlz['value'] = ref_idx
-            rlz['geom'] = geom
-            
-            yield(rlz)
+        for variable in self.variables.itervalues():
+            ref_value = variable.value
+            name_value = variable.name
+            name_alias = variable.alias
+            vid = variable.uid
+            for [(ridx,rlz),(tidx,t),(lidx,l),(sridx,scidx,geom)] in itertools.product(*iters):
+                ref_idx = ref_value[ridx,tidx,lidx,sridx,scidx]
+                if is_masked(ref_idx):
+                    if add_masked_value:
+                        ref_idx = masked_value
+                    else:
+                        continue
+                rlz.update(t)
+                rlz.update(l)
+                rlz['var_name'] = name_value
+                rlz['alias'] = name_alias
+                rlz['value'] = ref_idx
+                rlz['geom'] = geom
+                rlz['vid'] = vid
+                
+                yield(rlz)
     
     def get_time_region(self,time_region):
         raise(NotImplementedError)
@@ -148,21 +148,19 @@ class Field(object):
         return(ret)
     
     def _get_spatial_operation_(self,attr,point_or_polygon):
-        raise(NotImplementedError)
         ref = getattr(self.spatial,attr)
-        ret = copy(self)
-        ret.spatial,slc = ref(point_or_polygon,return_indices=True)
+        new_spatial,slc = ref(point_or_polygon,return_indices=True)
         slc = [slice(None),slice(None),slice(None)] + list(slc)
-        ret._value = get_none_or_slice(ret._value,slc)
+        variables = self.variables._get_sliced_variables_(slc)
+        ret = Field(variables=variables,temporal=self.temporal,spatial=new_spatial,
+                    level=self.level,realization=self.realization,meta=self.meta)
 
         ## we need to update the value mask with the geometry mask
-        if ret._value is not None:
-            self._set_new_value_mask_(ret,ret.spatial.get_mask())
+        self._set_new_value_mask_(ret,ret.spatial.get_mask())
         
         return(ret)
     
     def get_spatially_aggregated(self,new_spatial_uid=None):
-        raise(NotImplementedError)
 
         def _get_geometry_union_(value):
             to_union = [geom for geom in value.compressed().flat]
@@ -203,11 +201,12 @@ class Field(object):
         itrs = [range(dim) for dim in shp[0:3]]
         weights = self.spatial.weights
         ref_average = np.ma.average
-
-        fill = np.ma.array(np.zeros(shp),mask=False,dtype=ret.value.dtype)
-        for idx_r,idx_t,idx_l in itertools.product(*itrs):
-            fill[idx_r,idx_t,idx_l] = ref_average(ret.value[idx_r,idx_t,idx_l],weights=weights)
-        ret._value = fill
+        
+        for variable in ret.variables.itervalues():
+            fill = np.ma.array(np.zeros(shp),mask=False,dtype=variable.value.dtype)
+            for idx_r,idx_t,idx_l in itertools.product(*itrs):
+                fill[idx_r,idx_t,idx_l] = ref_average(variable.value[idx_r,idx_t,idx_l],weights=weights)
+            variable._value = fill
             
         ## we want to keep a copy of the raw data around for later calculations.
         ret._raw = self
@@ -238,16 +237,19 @@ class Field(object):
 #            self._set_value_from_source_()
 #        return(self._value)
 #    
-#    def _set_new_value_mask_(self,field,mask):
-#        ret_shp = field.shape
-#        rng_realization = range(ret_shp[0])
-#        rng_temporal = range(ret_shp[1])
-#        rng_level = range(ret_shp[2])
-#        ref_logical_or = np.logical_or
-#        v = field.value
-#        for idx_r,idx_t,idx_l in itertools.product(rng_realization,rng_temporal,rng_level):
-#            ref = v[idx_r,idx_t,idx_l]
-#            ref.mask = ref_logical_or(ref.mask,mask)
+    def _set_new_value_mask_(self,field,mask):
+        ret_shp = field.shape
+        rng_realization = range(ret_shp[0])
+        rng_temporal = range(ret_shp[1])
+        rng_level = range(ret_shp[2])
+        ref_logical_or = np.logical_or
+        
+        for var in field.variables.itervalues():
+            if var._value is not None:
+                v = var._value
+                for idx_r,idx_t,idx_l in itertools.product(rng_realization,rng_temporal,rng_level):
+                    ref = v[idx_r,idx_t,idx_l]
+                    ref.mask = ref_logical_or(ref.mask,mask)
 #                
 #    def _set_value_from_source_(self):
 #        raise(NotImplementedError)

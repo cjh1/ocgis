@@ -116,6 +116,7 @@ class Variable(AbstractSourcedVariable):
 class VariableCollection(OrderedDict):
     
     def __init__(self,**kwds):
+        self._uid_ctr = 1
         variables = kwds.pop('variables',None)
         
         super(VariableCollection,self).__init__()
@@ -127,6 +128,9 @@ class VariableCollection(OrderedDict):
     def add_variable(self,variable):
         assert(isinstance(variable,Variable))
         assert(variable.alias not in self)
+        if variable.uid is None:
+            variable.uid = self._uid_ctr
+            self._uid_ctr += 1
         self.update({variable.alias:variable})
         
     def _get_sliced_variables_(self,slc):

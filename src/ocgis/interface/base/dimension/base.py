@@ -25,7 +25,6 @@ class AbstractDimension(object):
         self.meta = meta or {}
         self.name = name or self._axis
         self.properties = properties
-        self._field = None
         
         if self.properties is not None:
             assert(isinstance(self.properties,np.ndarray))
@@ -115,11 +114,11 @@ class AbstractUidValueDimension(AbstractValueDimension,AbstractUidDimension):
     def __init__(self,*args,**kwds):
         for key in kwds.keys():
             try:
-                assert(key in ('value','name_value','units','meta','name','uid','name_uid'))
+                assert(key in ('value','name_value','units','meta','name','uid','name_uid','properties'))
             except AssertionError:
                 ocgis_lh(exc=ValueError('"{0}" is not a valid keyword argument for "{1}".'.format(key,self.__class__.__name__)))
                
-        kwds_value = {key:kwds.get(key,None) for key in ('value','name_value','units','meta','name')}
+        kwds_value = {key:kwds.get(key,None) for key in ('value','name_value','units','meta','name','properties')}
         kwds_uid = {key:kwds.get(key,None) for key in ('uid','name_uid','meta','name')}
 
         AbstractValueDimension.__init__(self,*args,**kwds_value)
