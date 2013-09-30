@@ -123,6 +123,7 @@ class Field(AbstractSourcedVariable):
             rlz['alias'] = name_alias
             rlz['value'] = ref_idx
             rlz['geom'] = geom
+            
             yield(rlz)
     
     def get_time_region(self,time_region):
