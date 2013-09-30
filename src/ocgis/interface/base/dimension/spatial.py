@@ -106,6 +106,7 @@ class SpatialDimension(base.AbstractUidDimension):
         return(ret)
     
     def get_clip(self,polygon,return_indices=False):
+        raise(NotImplementedError)
         assert(type(polygon) in (Polygon,MultiPolygon))
         
         ret,slc = self.get_intersects(polygon,return_indices=True)
@@ -144,6 +145,7 @@ class SpatialDimension(base.AbstractUidDimension):
         return(fill)
     
     def get_intersects(self,point_or_polygon,return_indices=False):
+        raise(NotImplementedError)
         ret = copy(self)
         if type(point_or_polygon) in (Point,MultiPoint):
             raise(NotImplementedError)
@@ -265,15 +267,23 @@ class SpatialGridDimension(base.AbstractUidValueDimension):
         
     def __getitem__(self,slc):
         slc = get_formatted_slice(slc,2)
-        ret = copy(self)
-        ret.uid = ret.uid[slc]
         
-        if ret._value is not None:
-            ret._value = ret._value[:,slc[0],slc[1]]
-            
-        if ret.row is not None:
-            ret.row = ret.row[slc[0]]
-            ret.col = ret.col[slc[1]]
+        uid = self.uid[slc]
+        
+        if self._value is not None:
+            value = self._value[:,slc[0],slc[1]]
+        else:
+            value = None
+        
+        if self.row is not None:
+            row = self.row[slc[0]]
+            col = self.col[slc[1]]
+        else:
+            row = None
+            col = None
+        
+        ret = SpatialGridDimension(value=value,uid=uid,row=row,col=col,name_value=self.name_value,
+                                   units=self.units,meta=self.meta,name=self.name,name_uid=self.name_uid)
             
         return(ret)
         
@@ -290,6 +300,7 @@ class SpatialGridDimension(base.AbstractUidValueDimension):
         return(ret)
         
     def get_subset_bbox(self,min_row,min_col,max_row,max_col,return_indices=False):
+        raise(NotImplementedError)
         if self.row is None:
             raise(NotImplementedError('no slicing w/out rows and columns'))
         else:
@@ -415,6 +426,7 @@ class SpatialGeometryPointDimension(base.AbstractUidValueDimension):
         return(ret)
         
     def get_intersects_masked(self,point_or_polygon):
+        raise(NotImplementedError)
         
         def _intersects_point_(prepared,target):
             return(prepared.intersects(target))

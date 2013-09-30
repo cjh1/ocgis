@@ -23,14 +23,19 @@ def assert_raise(test,**kwds):
     except AssertionError:
         ocgis_lh(**kwds)
         
-def get_iter(element):
-    if isinstance(element,basestring):
+def get_iter(element,dtype=None):
+    if dtype is not None:
+        if isinstance(element,dtype):
+            element = [element]
+            
+    if isinstance(element,basestring) or isinstance(element,np.ndarray):
         it = [element]
     else:
         try:
             it = iter(element)
         except TypeError:
             it = [element]
+            
     return(it)
 
 def get_default_or_apply(target,f,default=None):

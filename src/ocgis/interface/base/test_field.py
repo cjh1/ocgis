@@ -12,9 +12,10 @@ from ocgis.test.base import TestBase
 from ocgis.exc import EmptySubsetError
 from shapely import wkt
 from shapely.ops import cascaded_union
-from ocgis.interface.base.variable import Variable
+from ocgis.interface.base.variable import Variable, VariableCollection
 from ocgis.interface.base.dimension.temporal import TemporalDimension
 from copy import deepcopy
+from collections import OrderedDict
 
 
 class AbstractTestField(TestBase):
@@ -60,8 +61,10 @@ class AbstractTestField(TestBase):
                 temporal_bounds = None
             temporal = TemporalDimension(value=temporal_value,bounds=temporal_bounds,name='time',
                                          units='days')
+            t_shape = temporal.shape[0]
         else:
             temporal = None
+            t_shape = 1
         
         if with_level:
             level_value = [50,150]
@@ -71,35 +74,108 @@ class AbstractTestField(TestBase):
                 level_bounds = None
             level = VectorDimension(value=level_value,bounds=level_bounds,name='level',
                                     units='meters')
+            l_shape = level.shape[0]
         else:
             level = None
+            l_shape = 1
         
         row = self.get_row(bounds=with_bounds)
         col = self.get_col(bounds=with_bounds)
         grid = SpatialGridDimension(row=row,col=col)
         spatial = SpatialDimension(grid=grid)
+        row_shape = row.shape[0]
+        col_shape = col.shape[0]
         
         if with_realization:
             realization = VectorDimension(value=[1,2],name='realization')
+            r_shape = realization.shape[0]
         else:
             realization = None
+            r_shape = 1
             
         if with_value:
-            data = None
+            value = np.random.rand(r_shape,t_shape,l_shape,row_shape,col_shape)
         else:
-            data = 'foo'
+            value = None
         
-        var = Variable('tmax',units='C')
-        field = Field(variable=var,temporal=temporal,level=level,realization=realization,
-                    spatial=spatial,data=data,debug=True)
-        
-        if with_value:
-            field._value = np.random.rand(*field.shape)
+        var = Variable('tmax',units='C',debug=True,data=None,value=value)
+        vc = VariableCollection(variables=var)
+        field = Field(variables=vc,temporal=temporal,level=level,realization=realization,
+                    spatial=spatial)
         
         return(field)
 
 
 class TestField(AbstractTestField):
+    
+    def test_slicing(self):
+        field = self.get_field(with_value=True)
+        with self.assertRaises(IndexError):
+            field[0]
+        sub = field[0,0,0,0,0]
+        self.assertEqual(sub.shape,(1,1,1,1,1))
+        self.assertEqual(sub.variables['tmax'].value.shape,(1,1,1,1,1))
+    
+    def test_slicing_general(self):
+        ibounds = [True,False]
+        ivalue = [True,False]
+        ilevel = [True,False]
+        itemporal = [True,False]
+        irealization = [True,False]
+        for ib,iv,il,it,ir in itertools.product(ibounds,ivalue,ilevel,itemporal,irealization):
+            field = self.get_field(with_bounds=ib,with_value=iv,with_level=il,
+                                 with_temporal=it,with_realization=ir)
+            
+            if il:
+                self.assertEqual(field.shape[2],2)
+            else:
+                self.assertEqual(field.shape[2],1)
+            
+            ## try a bad slice
+            with self.assertRaises(IndexError):
+                field[0]
+                
+            ## now good slices
+            
+            ## if data is loaded prior to slicing then memory is shared
+            field.spatial.geom.point.value
+            field_slc = field[:,:,:,:,:]
+            self.assertTrue(np.may_share_memory(field.spatial.grid.value,field_slc.spatial.grid.value))
+            self.assertTrue(np.may_share_memory(field.spatial.geom.point.value,field_slc.spatial.geom.point.value))
+            
+            field_value = field.variables['tmax']._value
+            field_slc_value = field_slc.variables['tmax']._value
+            self.assertNumpyAll(field_value,field_slc_value)
+                
+            if iv == True:
+                self.assertTrue(np.may_share_memory(field_value,field_slc_value))
+            else:
+                self.assertEqual(field_slc_value,None)
+            
+            field_slc = field[0,0,0,0,0]
+            self.assertEqual(field_slc.shape,(1,1,1,1,1))
+            if iv:
+                self.assertEqual(field_slc.variables['tmax'].value.shape,(1,1,1,1,1))
+                self.assertNumpyAll(field_slc.variables['tmax'].value,field.variables['tmax'].value[0,0,0,0,0])
+            else:
+                self.assertEqual(field_slc.variables['tmax']._value,None)
+                self.assertEqual(field_slc.variables['tmax']._value,field.variables['tmax']._value)
+    
+    def test_constructor(self):
+        for b,wv in itertools.product([True,False],[True,False]):
+            field = self.get_field(with_bounds=b,with_value=wv)
+            ref = field.shape
+            self.assertEqual(ref,(2,31,2,3,4))
+            with self.assertRaises(AttributeError):
+                field.value
+            self.assertIsInstance(field.variables,VariableCollection)
+            self.assertIsInstance(field.variables['tmax'],Variable)
+            if wv:
+                self.assertIsInstance(field.variables['tmax'].value,np.ma.MaskedArray)
+                self.assertEqual(field.variables['tmax'].value.shape,field.shape)
+            else:
+                with self.assertRaises(Exception):
+                    field.variables['tmax'].value
     
     def test_get_iter(self):
         field = self.get_field(with_value=True)
@@ -215,73 +291,14 @@ class TestField(AbstractTestField):
     def test_empty(self):
         with self.assertRaises(ValueError):
             Field()
-
-    def test_constructor(self):
-        for b in [True,False]:
-            var = self.get_field(with_bounds=b)
-            ref = var.shape
-            self.assertEqual(ref,(2,31,2,3,4))
-            value = np.random.rand(*var.shape)
-            var._value = value
-            self.assertNotIsInstance(var.value,dict)
-            self.assertIsInstance(var.value,np.ma.MaskedArray)
-            value = np.random.rand(3)
-            with self.assertRaises(AssertionError):
-                var._value = value
-                
-    def test_slicing_general(self):
-        ibounds = [True,False]
-        ivalue = [True,False]
-        ilevel = [True,False]
-        itemporal = [True,False]
-        irealization = [True,False]
-        for ib,iv,il,it,ir in itertools.product(ibounds,ivalue,ilevel,itemporal,irealization):
-            var = self.get_field(with_bounds=ib,with_value=iv,with_level=il,
-                                 with_temporal=it,with_realization=ir)
-            
-            if il:
-                self.assertEqual(var.shape[2],2)
-            else:
-                self.assertEqual(var.shape[2],1)
-            
-            ## try a bad slice
-            with self.assertRaises(IndexError):
-                var[0]
-                
-            ## now good slices
-            
-            ## if data is loaded prior to slicing then memory is shared
-            var.spatial.geom.point.value
-            var_slc = var[:,:,:,:,:]
-            self.assertTrue(np.may_share_memory(var.spatial.grid.value,var_slc.spatial.grid.value))
-            self.assertTrue(np.may_share_memory(var.spatial.geom.point.value,var_slc.spatial.geom.point.value))
-            
-            if iv:
-                self.assertNumpyAll(var._value,var_slc._value)
-            else:
-                self.assertNumpyAll(var._value,var_slc._value)
-                
-            if iv == True:
-                self.assertTrue(np.may_share_memory(var._value,var_slc._value))
-            else:
-                self.assertEqual(var_slc._value,None)
-            
-            var_slc = var[0,0,0,0,0]
-            self.assertEqual(var_slc.shape,(1,1,1,1,1))
-            if iv:
-                self.assertEqual(var_slc.value.shape,(1,1,1,1,1))
-                self.assertNumpyAll(var_slc.value,var.value[0,0,0,0,0])
-            else:
-                self.assertEqual(var_slc._value,None)
-                self.assertEqual(var_slc._value,var._value)
     
     def test_slicing_specific(self):
-        var = self.get_field(with_value=True)
-        var_slc = var[:,0:2,0,:,:]
-        self.assertEqual(var_slc.shape,(2,2,1,3,4))
-        self.assertEqual(var_slc.value.shape,(2,2,1,3,4))
-        ref_var_real_slc = var.value[:,0:2,0,:,:]
-        self.assertNumpyAll(ref_var_real_slc.flatten(),var_slc.value.flatten())
+        field = self.get_field(with_value=True)
+        field_slc = field[:,0:2,0,:,:]
+        self.assertEqual(field_slc.shape,(2,2,1,3,4))
+        self.assertEqual(field_slc.variables['tmax'].value.shape,(2,2,1,3,4))
+        ref_field_real_slc = field.variables['tmax'].value[:,0:2,0,:,:]
+        self.assertNumpyAll(ref_field_real_slc.flatten(),field_slc.variables['tmax'].value.flatten())
         
     def test_fancy_indexing(self):
         field = self.get_field(with_value=True)
