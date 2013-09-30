@@ -67,12 +67,16 @@ class AbstractSourcedVariable(AbstractValueVariable):
 
 class Variable(object):
     
-    def __init__(self,name,alias=None,units=None,meta=None,uid=None):
+    def __init__(self,name=None,alias=None,units=None,meta=None,uid=None):
         self.name = name
         self.alias = alias or name
         self.units = units
         self.meta = meta or {}
         self.uid = uid
+        
+    def __repr__(self):
+        ret = '{0}(**{1})'.format(self.__class__.__name__,self.__dict__)
+        return(ret)
         
         
 class DerivedVariable(Variable):

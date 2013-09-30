@@ -14,6 +14,7 @@ from shapely import wkt
 from shapely.ops import cascaded_union
 from ocgis.interface.base.variable import Variable
 from ocgis.interface.base.dimension.temporal import TemporalDimension
+from copy import deepcopy
 
 
 class AbstractTestField(TestBase):
@@ -295,6 +296,15 @@ class TestField(AbstractTestField):
         sub = field[:,3:15,:,:,:]
         self.assertEqual(sub.shape,(2,12,2,3,4))
         self.assertNumpyAll(sub.value,field.value[:,3:15,:,:,:])
+        
+    def test_iterables(self):
+        field = self.get_field(with_value=True)
+        values = deepcopy([field.value,field.value+10])
+        variables = [deepcopy(field.variable),Variable(name='tmin',alias='hi_there')]
+        ifield = Field(value=values,variable=variables,temporal=field.temporal,
+                       level=field.level,realization=field.realization,
+                       spatial=field.spatial)
+        import ipdb;ipdb.set_trace()
 
 
 class TestDerivedField(AbstractTestField):
