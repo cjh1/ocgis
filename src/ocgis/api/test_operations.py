@@ -10,6 +10,7 @@ from ocgis.util.helpers import make_poly
 import itertools
 import ocgis
 from ocgis.api.request.base import RequestDataset, RequestDatasetCollection
+from ocgis.util.shp_cabinet import ShpCabinetIterator
 
 
 class Test(TestBase):
@@ -73,34 +74,31 @@ class Test(TestBase):
     
     def test_geom_string(self):
         ops = OcgOperations(dataset=self.datasets,geom='state_boundaries')
-        self.assertEqual(len(ops.geom),51)
+        self.assertEqual(len(list(ops.geom)),51)
         ops.geom = None
         self.assertEqual(ops.geom,None)
         ops.geom = 'mi_watersheds'
-        self.assertEqual(len(ops.geom),60)
-        ops.geom = '-120|40|-110|50'
-        self.assertEqual(ops.geom.spatial.geom[0].bounds,(-120.0,40.0,-110.0,50.0))
+        self.assertEqual(len(list(ops.geom)),60)
         ops.geom = [-120,40,-110,50]
-        self.assertEqual(ops.geom.spatial.geom[0].bounds,(-120.0,40.0,-110.0,50.0))
+        self.assertEqual(ops.geom[0]['geom'].bounds,(-120.0,40.0,-110.0,50.0))
         
     def test_geom(self):
         geom = make_poly((37.762,38.222),(-102.281,-101.754))
         g = definition.Geom(geom)
-        self.assertEqual(type(g.value),GeometryDataset)
+        self.assertEqual(type(g.value),list)
+        self.assertEqual(g.value[0]['geom'].bounds,(-102.281, 37.762, -101.754, 38.222))
         
         g = definition.Geom(None)
         self.assertEqual(g.value,None)
         self.assertEqual(str(g),'geom=None')
         
-        g = definition.Geom('-120|40|-110|50')
-        self.assertEqual(str(g),'geom=-120.0|40.0|-110.0|50.0')
-        
         g = definition.Geom('mi_watersheds')
         self.assertEqual(str(g),'geom=mi_watersheds')
         
-        geoms = ShpDataset('mi_watersheds')
+        geoms = ShpCabinetIterator('mi_watersheds')
         g = definition.Geom(geoms)
-        self.assertEqual(len(g.value),60)
+        self.assertEqual(len(list(g.value)),60)
+        self.assertEqual(g._shp_key,'mi_watersheds')
         
     def test_headers(self):
         headers = ['did','value']

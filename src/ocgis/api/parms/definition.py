@@ -11,6 +11,7 @@ from shapely.geometry.multipolygon import MultiPolygon
 from types import NoneType
 from shapely.geometry.point import Point
 from ocgis import constants
+from ocgis.util.shp_cabinet import ShpCabinet, ShpCabinetIterator
 
 
 class Abstraction(base.StringOptionParameter):
@@ -244,8 +245,8 @@ class Geom(base.OcgParameter):
     name = 'geom'
     nullable = True
     default = None
-    input_types = [list,tuple,Polygon,MultiPolygon]
-    return_type = []
+    input_types = [list,tuple,Polygon,MultiPolygon,ShpCabinetIterator]
+    return_type = [list,ShpCabinetIterator]
     _shp_key = None
     _bounds = None
     
@@ -268,13 +269,21 @@ class Geom(base.OcgParameter):
     
     def parse(self,value):
         if type(value) in [Polygon,MultiPolygon,Point]:
-            ret = GeometryDataset(1,value)
+            ret = [{'geom':value,'properties':{'UGID':1}}]
         elif type(value) in [list,tuple]:
-            if len(value) in (2,4):
-                ret = self.parse_string('|'.join(map(str,value)))
-            else:
-                raise(DefinitionValidationError(self,'Bounding coordinates passed with length not equal to 2 (point) or 4 (bounding box).'))
-        elif isinstance(value,ShpDataset):
+            if len(value) == 2:
+                geom = Point(value[0],value[1])
+            elif len(value) == 4:
+                minx,miny,maxx,maxy = value
+                geom = Polygon(((minx,miny),
+                                (minx,maxy),
+                                (maxx,maxy),
+                                (maxx,miny)))
+            if not geom.is_valid:
+                raise(DefinitionValidationError(self,'Parsed geometry is not valid.'))
+            ret = [{'geom':geom,'properties':{'UGID':1}}]
+            self._bounds = geom.bounds
+        elif isinstance(value,ShpCabinetIterator):
             self._shp_key = value.key
             ret = value
         else:
@@ -297,7 +306,8 @@ class Geom(base.OcgParameter):
                                 (maxx,miny)))
             if not geom.is_valid:
                 raise(DefinitionValidationError(self,'Parsed geometry is not valid.'))
-            ret = GeometryDataset(1,geom)
+#            ret = GeometryDataset(1,geom)
+            ret = [{'geom':geom,'properties':{'UGID':1}}]
             self._bounds = elements
         except ValueError:
             self._shp_key = value
@@ -310,7 +320,8 @@ class Geom(base.OcgParameter):
                 select_ugid = None
             else:
                 select_ugid = test_value
-            ret = ShpDataset(value,select_ugid=select_ugid)
+            ret = ShpCabinetIterator(value,select_ugid=select_ugid)
+#            ret = ShpDataset(value,select_ugid=select_ugid)
         return(ret)
     
     def _get_meta_(self):

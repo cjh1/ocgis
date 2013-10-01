@@ -10,6 +10,18 @@ from shapely import wkb
 import fiona
 
 
+class ShpCabinetIterator(object):
+    
+    def __init__(self,key,select_ugid=None):
+        self.key = key
+        self.select_ugid = select_ugid
+        self.sc = ShpCabinet()
+        
+    def __iter__(self):
+        for row in self.sc.iter_geoms(self.key,select_ugid=self.select_ugid):
+            yield(row)
+
+
 class ShpCabinet(object):
     '''A utility object designed for accessing shapefiles stored in a locally
     accessible location.

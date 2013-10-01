@@ -381,7 +381,7 @@ class NcRequestDataset(object):
                 '    Time Region/Selection: {0}'.format(self.time_region),
                 '    Level Range: {0}'.format(lr),
                 '    Overloaded Parameters:',
-                '      PROJ4 String: {0}'.format(self.s_proj),
+                '      PROJ4 String: {0}'.format(self.s_crs),
                 '      Time Units: {0}'.format(self.t_units),
                 '      Time Calendar: {0}'.format(self.t_calendar)]
         return(rows)
