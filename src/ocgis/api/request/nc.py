@@ -4,7 +4,8 @@ from copy import deepcopy
 import inspect
 import os
 from ocgis import env, constants
-from ocgis.util.helpers import locate, validate_time_subset, itersubclasses
+from ocgis.util.helpers import locate, validate_time_subset, itersubclasses,\
+    assert_raise
 from datetime import datetime
 import netCDF4 as nc
 from ocgis.interface.metadata import NcMetadata
@@ -73,6 +74,9 @@ class NcRequestDataset(object):
         
         self._uri = self._get_uri_(uri)
         self.variable = variable
+        assert(self.uri is not None)
+        assert(self.variable is not None)
+        
         self.alias = self._str_format_(alias) or variable
         self.time_range = deepcopy(time_range)
         self.time_region = deepcopy(time_region)
@@ -157,6 +161,9 @@ class NcRequestDataset(object):
                 fill = v['cls'](**kwds)
             loaded[k] = fill
             
+        assert_raise(set(('temporal','row','col')).issubset(set([k for k,v in loaded.iteritems() if v != None])),
+                     logger='request',exc=ValueError('Target variable must at least have temporal, row, and column dimensions.'))
+            
         grid = SpatialGridDimension(row=loaded['row'],col=loaded['col'])
         crs = None
         if self.s_crs is not None:
@@ -180,14 +187,14 @@ class NcRequestDataset(object):
                             data=self)
         vc = VariableCollection(variables=[variable])
         ret = NcField(variables=vc,spatial=spatial,temporal=loaded['temporal'],level=loaded['level'],
-                      realization=loaded['realization'])
+                      realization=loaded['realization'],meta=self._source_metadata)
         
         ## apply any subset parameters after the field is loaded
         if self.time_range is not None:
             ret = ret.get_between('temporal',self.time_range[0],self.time_range[1])
         if self.time_region is not None:
             ret = ret.get_time_region(self.time_region)
-        
+            
         return(ret)
     
     def inspect(self):

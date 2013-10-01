@@ -32,11 +32,16 @@ class TestRequestDataset(TestBase):
         rd.inspect()
         
     def test_inspect_as_dct(self):
-        variables = [self.variable,None,'foo','time']
+        variables = [
+                     self.variable,
+                     None,
+                     'foo',
+                     'time'
+                     ]
         
         for variable in variables:
-            rd = RequestDataset(self.uri,variable)
             try:
+                rd = RequestDataset(self.uri,variable)   
                 ret = rd.inspect_as_dct()
             except KeyError:
                 if variable == 'foo':
@@ -48,6 +53,11 @@ class TestRequestDataset(TestBase):
                     continue
                 else:
                     raise
+            except AssertionError:
+                if variable is not None:
+                    raise
+                else:
+                    continue
             ref = ret['derived']
             
             if variable is None:

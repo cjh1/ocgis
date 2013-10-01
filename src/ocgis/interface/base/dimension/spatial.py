@@ -284,6 +284,26 @@ class SpatialGridDimension(base.AbstractUidValueDimension):
                                    units=self.units,meta=self.meta,name=self.name,name_uid=self.name_uid)
             
         return(ret)
+    
+    @property
+    def extent(self):
+        if self.row is None:
+            minx = self.value[1,:,:].min()
+            miny = self.value[0,:,:].min()
+            maxx = self.value[1,:,:].max()
+            maxy = self.value[0,:,:].max()
+        else:
+            if self.row.bounds is None:
+                minx = self.col.value.min()
+                miny = self.row.value.min()
+                maxx = self.col.value.max()
+                maxy = self.row.value.max()
+            else:
+                minx = self.col.bounds.min()
+                miny = self.row.bounds.min()
+                maxx = self.col.bounds.max()
+                maxy = self.row.bounds.max()
+        return(minx,miny,maxx,maxy)
         
     @property
     def resolution(self):
@@ -393,6 +413,13 @@ class SpatialGeometryDimension(base.AbstractUidDimension):
             ret = self.polygon.shape
         else:
             ret = self.point.shape
+        return(ret)
+    
+    def get_highest_order_abstraction(self):
+        try:
+            ret = self.polygon
+        except ImproperPolygonBoundsError:
+            ret = self.point
         return(ret)
     
     def get_iter(self):

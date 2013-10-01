@@ -1,12 +1,9 @@
 import netCDF4 as nc
 from ocgis.interface.metadata import NcMetadata
-from ocgis.interface.nc.dataset import NcDataset
 from ocgis.exc import TemporalResolutionError
 from collections import OrderedDict
 import re
-import datetime
 from warnings import warn
-from ocgis.interface.nc.dimension import NcGridMatrixDimension
 
 
 class Inspect(object):
@@ -48,17 +45,17 @@ class Inspect(object):
                 finally:
                     rootgrp.close()
             else:
-                from ocgis.api.request import RequestDataset
+                from ocgis.api.request.base import RequestDataset
                 kwds = {'uri':uri,'variable':variable}
                 kwds.update(interface_overload)
                 rd = RequestDataset(**kwds)
-                self.ds = NcDataset(request_dataset=rd)
-                self.meta = self.ds.metadata
+                self.ds = rd.get()
+                self.meta = self.ds.meta
         else:
             self.uri = self.request_dataset.uri
             self.variable = self.request_dataset.variable
-            self.ds = self.request_dataset.ds
-            self.meta = self.request_dataset.ds.metadata
+            self.ds = self.request_dataset.get()
+            self.meta = self.ds.meta
             self.alias = self.request_dataset.alias
             self.did = self.request_dataset.did
         
@@ -124,8 +121,8 @@ class Inspect(object):
             if isinstance(self._s.grid,NcGridMatrixDimension):
                 extent = '<not implemented for grid matrices>'
             else: raise
-        itype = self._s.vector.__class__.__name__
-        projection = self.ds.spatial.projection
+        itype = self._s.geom.get_highest_order_abstraction().__class__.__name__
+        projection = self.ds.spatial.crs
         
         lines = []
         lines.append('Spatial Reference = {0}'.format(projection.__class__.__name__))
