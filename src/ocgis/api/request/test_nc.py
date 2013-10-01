@@ -120,14 +120,14 @@ class TestNcRequestDataset(TestBase):
         self.assertNumpyAll(slced.temporal.bounds,ds.variables['time_bnds'][56:345,:])
         to_test = ds.variables['tas'][56:345,:,:]
         to_test = np.ma.array(to_test.reshape(1,289,1,64,128),mask=False)
-        self.assertNumpyAll(slced.value,to_test)
+        self.assertNumpyAll(slced.variables['tas'].value,to_test)
         
         slced = field[:,2898,:,5,101]
         to_test = ds.variables['tas'][2898,5,101]
         to_test = np.ma.array(to_test.reshape(1,1,1,1,1),mask=False)
         with self.assertRaises(AttributeError):
             slced.variables['tas']._field._value
-        self.assertNumpyAll(slced.value,to_test)
+        self.assertNumpyAll(slced.variables['tas'].value,to_test)
         
         ds.close()
         
@@ -155,7 +155,7 @@ class TestNcRequestDataset(TestBase):
         indices = np.arange(0,var.shape[0])[np.array(select)]
         self.assertNumpyAll(indices,field.temporal._src_idx)
         self.assertNumpyAll(field.temporal.value_datetime,real_temporal[indices])
-        self.assertNumpyAll(field.value.data.squeeze(),ds.variables['tas'][indices,:,:])
+        self.assertNumpyAll(field.variables['tas'].value.data.squeeze(),ds.variables['tas'][indices,:,:])
 
         bounds_temporal = nc.num2date(ds.variables['time_bnds'][indices,:],var.units,var.calendar)
         self.assertNumpyAll(bounds_temporal,field.temporal.bounds_datetime)
@@ -177,7 +177,7 @@ class TestNcRequestDataset(TestBase):
         indices = np.arange(0,var.shape[0])[np.array(select)]
         self.assertNumpyAll(indices,field.temporal._src_idx)
         self.assertNumpyAll(field.temporal.value_datetime,real_temporal[indices])
-        self.assertNumpyAll(field.value.data.squeeze(),ds.variables['tas'][indices,:,:])
+        self.assertNumpyAll(field.variables['tas'].value.data.squeeze(),ds.variables['tas'][indices,:,:])
 
         bounds_temporal = nc.num2date(ds.variables['time_bnds'][indices,:],var.units,var.calendar)
         self.assertNumpyAll(bounds_temporal,field.temporal.bounds_datetime)
@@ -197,11 +197,11 @@ class TestNcRequestDataset(TestBase):
         ca = ca.geom.polygon.value[0,0]
         ca_sub = field.get_intersects(ca)
         self.assertEqual(ca_sub.shape,(1, 3650, 1, 5, 4))
-        self.assertTrue(ca_sub.value.mask.any())
+        self.assertTrue(ca_sub.variables['foo'].value.mask.any())
         
         ca_sub = field.get_intersects(ca.envelope)
         self.assertEqual(ca_sub.shape,(1, 3650, 1, 5, 4))
-        self.assertFalse(ca_sub.value.mask.any())
+        self.assertFalse(ca_sub.variables['foo'].value.mask.any())
         
         rd = NcRequestDataset(variable=ref_test['variable'],uri=uri,alias='foo',time_region={'year':[2007]})
         field = rd.get()
@@ -223,7 +223,7 @@ class TestNcRequestDataset(TestBase):
         field = rd.get()
         sub = field[:,:,:,50,75]
         self.assertEqual(sub.shape,(1,124,1,1,1))
-        self.assertEqual(sub.value.shape,(1,124,1,1,1))
+        self.assertEqual(sub.variables['foo'].value.shape,(1,124,1,1,1))
         
         field = rd.get()
         sub = field[:,:,:,50,75:77]
@@ -235,9 +235,9 @@ class TestNcRequestDataset(TestBase):
         variable = 'sresa1b_bccr-bcm2-0_1_Tavg'
         rd = NcRequestDataset(uri,variable,time_region={'month':[1,10],'year':[2011,2013]})
         field = rd.get()
-        field.value
+        field.variables['sresa1b_bccr-bcm2-0_1_Tavg'].value
         values = field[:,:,:,50,75]
-        to_test = values.value.compressed()
+        to_test = values.variables['sresa1b_bccr-bcm2-0_1_Tavg'].value.compressed()
         
         ds = nc.Dataset('http://cida.usgs.gov/thredds/dodsC/maurer/maurer_brekke_w_meta.ncml','r')
         try:
@@ -281,7 +281,7 @@ class TestNcRequestDataset(TestBase):
         
         ds = nc.Dataset(uri,'r')
         to_test = ds.variables['Tavg']
-        self.assertNumpyAll(to_test[:],field.value.squeeze().data)
+        self.assertNumpyAll(to_test[:],field.variables['Tavg'].value.squeeze().data)
         ds.close()
         
     def test_load_projection_axes_slicing(self):
@@ -294,7 +294,7 @@ class TestNcRequestDataset(TestBase):
         
         ds = nc.Dataset(uri,'r')
         to_test = ds.variables['Tavg']
-        self.assertNumpyAll(to_test[15,:,:,:],sub.value.squeeze().data)
+        self.assertNumpyAll(to_test[15,:,:,:],sub.variables[variable].value.squeeze().data)
         ds.close()
 
 

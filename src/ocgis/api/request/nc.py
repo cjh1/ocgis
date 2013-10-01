@@ -17,7 +17,7 @@ from ocgis.interface.base.dimension.spatial import SpatialGridDimension,\
 from ocgis.interface.base.crs import CFCoordinateReferenceSystem, CFWGS84
 from ocgis.interface.nc.dimension import NcVectorDimension
 from ocgis.interface.nc.field import NcField
-from ocgis.interface.base.variable import Variable
+from ocgis.interface.base.variable import Variable, VariableCollection
 
 
 class NcRequestDataset(object):
@@ -175,9 +175,11 @@ class NcRequestDataset(object):
         
         variable_meta = self._source_metadata['variables'][self.variable]
         variable_units = variable_meta['attrs'].get('units')
-        variable = Variable(self.variable,self.alias,variable_units,meta=variable_meta)
-        ret = NcField(variable=variable,spatial=spatial,temporal=loaded['temporal'],level=loaded['level'],
-                    data=self,realization=loaded['realization'])
+        variable = Variable(self.variable,self.alias,variable_units,meta=variable_meta,
+                            data=self)
+        vc = VariableCollection(variables=[variable])
+        ret = NcField(variables=vc,spatial=spatial,temporal=loaded['temporal'],level=loaded['level'],
+                      realization=loaded['realization'])
         
         ## apply any subset parameters after the field is loaded
         if self.time_range is not None:

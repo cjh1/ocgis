@@ -185,9 +185,3 @@ class TemporalGroupDimension(base.VectorDimension):
         self.date_parts = kwds.pop('date_parts')
                 
         super(TemporalGroupDimension,self).__init__(*args,**kwds)
-
-    def _validate_bounds_(self,value):
-        try:
-            assert(value.shape[0] == self._value.shape[0])
-        except AssertionError:
-            ocgis_lh(exc=ValueError('Value and bounds data types do not match.'))

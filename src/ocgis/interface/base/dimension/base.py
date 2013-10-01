@@ -163,7 +163,7 @@ class VectorDimension(AbstractSourcedVariable,AbstractUidValueDimension):
     def bounds(self,value):
         self._bounds = get_none_or_2d(value)
         if value is not None:
-            self._validate_bounds_(value)
+            self._validate_bounds_()
             
     @property
     def extent(self):
@@ -262,8 +262,11 @@ class VectorDimension(AbstractSourcedVariable,AbstractUidValueDimension):
         else:
             self._value = self._value
     
-    def _validate_bounds_(self,value):
+    def _validate_bounds_(self):
         try:
             assert(self._bounds.dtype == self._value.dtype)
         except AssertionError:
-            ocgis_lh(exc=ValueError('Value and bounds data types do not match.'))
+            try:
+                self._bounds = np.array(self._bounds,dtype=self._value.dtype)
+            except:
+                ocgis_lh(exc=ValueError('Value and bounds data types do not match and types could not be casted.'))

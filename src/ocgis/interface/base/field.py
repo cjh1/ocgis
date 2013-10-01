@@ -50,16 +50,14 @@ class Field(object):
                         
     def __getitem__(self,slc):
         slc = get_formatted_slice(slc,5)
+        ret = copy(self)
+        ret.realization = get_none_or_slice(self.realization,slc[0])
+        ret.temporal = get_none_or_slice(self.temporal,slc[1])
+        ret.level = get_none_or_slice(self.level,slc[2])
+        ret.spatial = get_none_or_slice(self.spatial,(slc[3],slc[4]))
         
-        realization = get_none_or_slice(self.realization,slc[0])
-        temporal = get_none_or_slice(self.temporal,slc[1])
-        level = get_none_or_slice(self.level,slc[2])
-        spatial = get_none_or_slice(self.spatial,(slc[3],slc[4]))
-        
-        variables = self.variables._get_sliced_variables_(slc)
-        
-        ret = Field(variables=variables,realization=realization,temporal=temporal,
-                    level=level,spatial=spatial,meta=self.meta)
+        ret.variables = self.variables._get_sliced_variables_(slc)
+
         return(ret)
     
     @property
@@ -140,20 +138,19 @@ class Field(object):
                 yield(rlz)
     
     def get_time_region(self,time_region):
-        raise(NotImplementedError)
         ret = copy(self)
         ret.temporal,indices = self.temporal.get_time_region(time_region,return_indices=True)
         slc = [slice(None),indices,slice(None),slice(None),slice(None)]
-        ret._value = get_none_or_slice(ret._value,slc)
+        variables = self.variables._get_sliced_variables_(slc)
+        ret.variables = variables
         return(ret)
     
     def _get_spatial_operation_(self,attr,point_or_polygon):
         ref = getattr(self.spatial,attr)
-        new_spatial,slc = ref(point_or_polygon,return_indices=True)
+        ret = copy(self)
+        ret.spatial,slc = ref(point_or_polygon,return_indices=True)
         slc = [slice(None),slice(None),slice(None)] + list(slc)
-        variables = self.variables._get_sliced_variables_(slc)
-        ret = Field(variables=variables,temporal=self.temporal,spatial=new_spatial,
-                    level=self.level,realization=self.realization,meta=self.meta)
+        ret.variables = self.variables._get_sliced_variables_(slc)
 
         ## we need to update the value mask with the geometry mask
         self._set_new_value_mask_(ret,ret.spatial.get_mask())
@@ -251,9 +248,9 @@ class Field(object):
                     ref = v[idx_r,idx_t,idx_l]
                     ref.mask = ref_logical_or(ref.mask,mask)
 #                
-#    def _set_value_from_source_(self):
-#        raise(NotImplementedError)
-#        ## TODO: remember to apply the geometry mask to fresh values!!
+    def _get_value_from_source_(self,*args,**kwds):
+        raise(NotImplementedError)
+        ## TODO: remember to apply the geometry mask to fresh values!!
         
 
 class DerivedField(Field):

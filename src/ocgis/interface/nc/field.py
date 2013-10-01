@@ -6,7 +6,7 @@ from ocgis.util.logging_ocgis import ocgis_lh
 
 class NcField(Field):
     
-    def _set_value_from_source_(self):
+    def _get_value_from_source_(self,data,variable_name):
         ## collect the dimension slices
         axis_slc = {}
         axis_slc['T'] = self.temporal._src_idx
@@ -20,7 +20,7 @@ class NcField(Field):
         ## an index error is raised otherwise.
         axis_slc = {k:v if len(v) > 1 else slice(v[0],v[0]+1) for k,v in axis_slc.iteritems()}
         
-        dim_map = self._data._source_metadata['dim_map']
+        dim_map = data._source_metadata['dim_map']
         slc = [None for v in dim_map.values() if v is not None]
         axes = deepcopy(slc)
         for k,v in dim_map.iteritems():
@@ -33,12 +33,12 @@ class NcField(Field):
         check = [axes == poss for poss in possible]
         assert(any(check))
         
-        ds = self._data._open_()
+        ds = data._open_()
         try:
             try:
-                raw = ds.variables[self.variable.name].__getitem__(slc)
+                raw = ds.variables[variable_name].__getitem__(slc)
             except IndexError:
-                ocgis_lh(logger='nc.field',exc=IndexError('variable: {0}'.format(self.variable.name)))
+                ocgis_lh(logger='nc.field',exc=IndexError('variable: {0}'.format(variable_name)))
             if not isinstance(raw,np.ma.MaskedArray):
                 raw = np.ma.array(raw,mask=False)
             ## reshape the data adding singleton axes where necessary
@@ -57,10 +57,10 @@ class NcField(Field):
                     to_append = 1
                 new_shape.append(to_append)
             raw = raw.reshape(new_shape)
-            ## insert the value into the dictionary
-            self._value = raw
-            ## apply any spatial mask if the geometries have been loaded
-            if self.spatial._geom is not None:
-                self._set_new_value_mask_(self,self.spatial.get_mask())
+            
+            return(raw)
+#            ## apply any spatial mask if the geometries have been loaded
+#            if self.spatial._geom is not None:
+#                self._set_new_value_mask_(self,self.spatial.get_mask())
         finally:
             ds.close()

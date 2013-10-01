@@ -30,8 +30,11 @@ class TestVectorDimension(unittest.TestCase):
             VectorDimension(value=40,bounds=[38,42],dtype=float)
             
     def test_bad_dtypes(self):
+        vd = VectorDimension(value=181.5,bounds=[181,182])
+        self.assertEqual(vd.value.dtype,vd.bounds.dtype)
+        
         with self.assertRaises(ValueError):
-            VectorDimension(value=181.5,bounds=[181,182])
+            VectorDimension(value=181.5,bounds=['a','b'])
 
     def test_one_value(self):
         values = [5,np.array([5])]

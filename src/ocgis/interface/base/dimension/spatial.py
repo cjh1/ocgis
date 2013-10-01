@@ -144,6 +144,7 @@ class SpatialDimension(base.AbstractUidDimension):
         return(fill)
     
     def get_intersects(self,point_or_polygon,return_indices=False):
+        ret = copy(self)
         if type(point_or_polygon) in (Point,MultiPoint):
             raise(NotImplementedError)
         elif type(point_or_polygon) in (Polygon,MultiPolygon):
@@ -154,32 +155,24 @@ class SpatialDimension(base.AbstractUidDimension):
             if self.grid is None:
                 raise(NotImplementedError)
             else:
+                ## reset the geometries
+                ret._geom = None
                 ## subset the grid by its bounding box
-                new_grid,slc = self.grid.get_subset_bbox(miny,minx,maxy,maxx,return_indices=True)
-                ## make the new spatial dimension with the grid then mask any geometries
-                new_spatial = SpatialDimension(grid=new_grid,crs=self.crs,abstraction=self.abstraction,
-                                               name_uid=self.name_uid,uid=new_grid.uid,meta=self.meta,
-                                               name=self.name,properties=self.properties)
+                ret.grid,slc = self.grid.get_subset_bbox(miny,minx,maxy,maxx,return_indices=True)
                 ## attempt to mask the polygons
                 try:
-                    new_polygon = new_spatial.geom.polygon.get_intersects_masked(point_or_polygon)
-                    grid_mask = new_polygon.value.mask
-                    new_point = None
+                    ret._geom._polygon = ret.geom.polygon.get_intersects_masked(point_or_polygon)
+                    grid_mask = ret.geom.polygon.value.mask
                 except ImproperPolygonBoundsError:
-                    new_polygon = None
-                    new_point = new_spatial.geom.point.get_intersects_masked(point_or_polygon)
-                    grid_mask = new_point.value.mask
-                ## insert the new geometry dimensions
-                new_spatial.geom._polygon = new_polygon
-                new_spatial.geom._point = new_point
+                    ret._geom._point = ret.geom.point.get_intersects_masked(point_or_polygon)
+                    grid_mask = ret.geom.point.value.mask
                 ## transfer the geometry mask to the grid mask
-                new_spatial.grid.value.mask[:,:,:] = grid_mask.copy()
-                ret = new_spatial
+                ret.grid.value.mask[:,:,:] = grid_mask.copy()
         else:
             raise(NotImplementedError)
         
         if return_indices:
-            ret = (new_spatial,slc)
+            ret = (ret,slc)
 
         return(ret)
     
@@ -458,7 +451,7 @@ class SpatialGeometryPointDimension(base.AbstractUidValueDimension):
         else:
             raise(NotImplementedError)
         
-#        ret = copy(self)
+        ret = copy(self)
         
         fill = np.ma.array(self.value,mask=True)
         ref_fill_mask = fill.mask
@@ -472,11 +465,7 @@ class SpatialGeometryPointDimension(base.AbstractUidValueDimension):
         if ref_fill_mask.all():
             ocgis_lh(exc=EmptySubsetError(self.name))
         
-#        ret._value = fill
-        
-        ret = self.__class__(grid=self.grid,name_value=self.name_value,uid=self.uid,
-                             name_uid=self.name_uid,meta=self.meta,name=self.name,
-                             properties=self.properties,value=fill)
+        ret._value = fill
         
         return(ret)
     

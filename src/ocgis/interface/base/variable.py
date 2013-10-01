@@ -107,10 +107,13 @@ class Variable(AbstractSourcedVariable):
         return(ret)
     
     def _get_value_(self):
-        raise(NotImplementedError)
+        if self._value is None:
+            self._set_value_from_source_()
+        return(self._value)
     
     def _set_value_from_source_(self):
-        raise(NotImplementedError)
+        self._value = self._field._get_value_from_source_(self._data,self.name)
+        self._field._set_new_value_mask_(self._field,self._field.spatial.get_mask())
     
     
 class VariableCollection(OrderedDict):
