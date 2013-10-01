@@ -1,7 +1,5 @@
 from base import OcgCvArgFunction
 from ocgis.calc.library import SampleSize
-from ocgis.api.collection import CalcCollection, MultivariateCalcCollection, \
-    KeyedOutputCalcCollection
 from collections import OrderedDict
 import numpy as np
 from ocgis import constants

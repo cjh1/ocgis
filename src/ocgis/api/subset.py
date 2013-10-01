@@ -1,9 +1,6 @@
 import itertools
-from multiprocessing import Pool
 from ocgis.calc.engine import OcgCalculationEngine
 from ocgis import env
-from ocgis.interface.shp import ShpDataset
-from ocgis.api.collection import RawCollection
 from ocgis.exc import EmptyData, ExtentError, MaskedDataError
 from ocgis.interface.projection import WGS84
 from ocgis.util.spatial.wrap import Wrapper

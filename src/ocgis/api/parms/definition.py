@@ -1,19 +1,16 @@
 from ocgis.api.parms import base
 from ocgis.exc import DefinitionValidationError
-from ocgis.api.request import RequestDataset, RequestDatasetCollection
+from ocgis.api.request.base import RequestDataset, RequestDatasetCollection
 from shapely.geometry.polygon import Polygon
 from ocgis.calc.base import OcgFunctionTree
 from ocgis.calc import library
 from collections import OrderedDict
 import ocgis
 from os.path import exists
-from ocgis.interface.geometry import GeometryDataset
-from ocgis.interface.shp import ShpDataset
 from shapely.geometry.multipolygon import MultiPolygon
 from types import NoneType
 from shapely.geometry.point import Point
 from ocgis import constants
-from ocgis import env
 
 
 class Abstraction(base.StringOptionParameter):
@@ -247,8 +244,8 @@ class Geom(base.OcgParameter):
     name = 'geom'
     nullable = True
     default = None
-    input_types = [ShpDataset,GeometryDataset,list,tuple,Polygon,MultiPolygon]
-    return_type = [ShpDataset,GeometryDataset]
+    input_types = [list,tuple,Polygon,MultiPolygon]
+    return_type = []
     _shp_key = None
     _bounds = None
     
