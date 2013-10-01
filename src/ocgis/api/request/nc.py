@@ -18,6 +18,7 @@ from ocgis.interface.base.crs import CFCoordinateReferenceSystem, CFWGS84
 from ocgis.interface.nc.dimension import NcVectorDimension
 from ocgis.interface.nc.field import NcField
 from ocgis.interface.base.variable import Variable, VariableCollection
+from ocgis.util.inspect import Inspect
 
 
 class NcRequestDataset(object):

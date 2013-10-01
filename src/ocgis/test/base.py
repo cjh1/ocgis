@@ -11,6 +11,7 @@ import ocgis
 from warnings import warn
 from subprocess import CalledProcessError
 import numpy as np
+from ocgis.api.request.base import RequestDataset
 
 
 class TestBase(unittest.TestCase):

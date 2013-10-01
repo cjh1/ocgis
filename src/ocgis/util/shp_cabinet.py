@@ -7,6 +7,7 @@ import csv
 from osgeo.ogr import CreateGeometryFromWkb
 from shapely.geometry.polygon import Polygon
 from shapely import wkb
+import fiona
 
 
 class ShpCabinet(object):
@@ -50,6 +51,11 @@ class ShpCabinet(object):
                 if fn.endswith('shp'):
                     ret.append(os.path.splitext(fn)[0])
         return(ret)
+    
+    def get_meta(self,key):
+        path = self.get_shp_path(key)
+        with fiona.open(path,'r') as source:
+            return(source.meta)
         
     def get_shp_path(self,key):
         return(self._get_path_(key,ext='shp'))
