@@ -145,6 +145,7 @@ class VariableCollection(OrderedDict):
 class DerivedVariable(Variable):
     
     def __init__(self,**kwds):
-        self.function = kwds.pop('function')
+        self.fdef = kwds.pop('fdef')
+        self.parents = kwds.pop('parents')
         
         super(DerivedVariable,self).__init__(**kwds)
