@@ -2,7 +2,7 @@ import numpy as np
 import abc
 
 
-class OcgFunction(object):
+class AbstractFunction(object):
     __metaclass__ = abc.ABCMeta
     
     @abc.abstractproperty
@@ -41,7 +41,7 @@ class OcgFunction(object):
     def _calculate_(self,**kwds): pass
         
         
-class OcgUnivariateFunction(OcgFunction):
+class AbstractUnivariateFunction(AbstractFunction):
     '''
     field=<required>,alias=None,file_only=False,spatial_weights=None,
      use_aggregated_values=False
@@ -51,17 +51,17 @@ class OcgUnivariateFunction(OcgFunction):
     def __init__(self,**kwds):
         self.field = kwds.pop('field')
         
-        super(OcgUnivariateFunction,self).__init__(**kwds)
+        super(AbstractUnivariateFunction,self).__init__(**kwds)
 
 
-class OcgParameterizedFunction(OcgFunction):
+class AbstractParameterizedFunction(AbstractFunction):
     __metaclass__ = abc.ABCMeta
     
     @abc.abstractproperty
     def parms(self): dict
 
         
-class OcgUnivariateSetFunction(OcgUnivariateFunction):
+class AbstractUnivariateSetFunction(AbstractUnivariateFunction):
     __metaclass__ = abc.ABCMeta
     
     def aggregate_temporal(self):
@@ -71,18 +71,18 @@ class OcgUnivariateSetFunction(OcgUnivariateFunction):
         raise(NotImplementedError('aggregation implicit to calculate method'))
     
 
-class OcgUnivariateScalarFunction(OcgUnivariateFunction):
+class AbstractUnivariateScalarFunction(AbstractUnivariateFunction):
     __metaclass__ = abc.ABCMeta
     
 
-class OcgMultivariateFunction(OcgFunction):
+class AbstractMultivariateFunction(AbstractFunction):
     __metaclass__ = abc.ABCMeta
     
     @abc.abstractproperty
     def variables(self): [str]
     
     
-class OcgKeyedOutputFunction(object):
+class AbstractKeyedOutputFunction(object):
     __metaclass__ = abc.ABCMeta
     
     @abc.abstractproperty
