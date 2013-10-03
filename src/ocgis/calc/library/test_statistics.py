@@ -13,7 +13,7 @@ class Test(AbstractTestField):
         grouping = ['month']
         tgd = field.temporal.get_grouping(grouping)
         mu = Mean(field=field,tgd=tgd,alias='my_mean')
-        dv = list(mu)[0]
+        dvc = mu.execute()
         self.assertEqual(dv.name,'mean')
         self.assertEqual(dv.alias,'my_mean')
         self.assertIsInstance(dv,DerivedVariable)
@@ -27,7 +27,7 @@ class Test(AbstractTestField):
         grouping = ['month']
         tgd = field.temporal.get_grouping(grouping)
         mu = Mean(field=field,tgd=tgd,alias='my_mean')
-        ret = list(mu)
+        ret = mu.execute()
         self.assertEqual(len(ret),2)
         import ipdb;ipdb.set_trace()
 

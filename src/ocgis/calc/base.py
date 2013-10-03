@@ -2,6 +2,7 @@ import numpy as np
 import abc
 import itertools
 from ocgis.interface.base.variable import DerivedVariable, VariableCollection
+from copy import copy
 
 
 class AbstractFunction(object):
@@ -26,9 +27,6 @@ class AbstractFunction(object):
         self.use_aggregated_values = use_aggregated_values
         
     @abc.abstractmethod
-    def __iter__(self): pass
-        
-    @abc.abstractmethod
     def aggregate_spatial(self,**kwds): pass
     
     @abc.abstractmethod
@@ -36,6 +34,9 @@ class AbstractFunction(object):
         
     @abc.abstractmethod
     def calculate(self,**kwds): pass
+    
+    @abc.abstractmethod
+    def execute(self): pass
     
     def get_function_definition(self):
         ret = {'key':self.key,'alias':self.alias,'parms':self.parms}
@@ -91,10 +92,11 @@ class AbstractUnivariateSetFunction(AbstractUnivariateFunction):
     def aggregate_temporal(self):
         raise(NotImplementedError('aggregation implicit to calculate method'))
     
-    def __iter__(self):
+    def execute(self):
         shp_fill = list(self.field.shape)
         shp_fill[1] = len(self.tgd.dgroups)
         fdef = self.get_function_definition()
+        dvc = VariableCollection()
         for variable in self.field.variables.itervalues():
             dtype = self.dtype or variable.value.dtype
             fill = np.ma.array(np.zeros(shp_fill,dtype=dtype))
@@ -105,10 +107,12 @@ class AbstractUnivariateSetFunction(AbstractUnivariateFunction):
                 assert(len(cc.shape) == 2)
                 cc = cc.reshape(1,1,1,cc.shape[0],cc.shape[1])
                 fill[ir,it,il,:,:] = cc
-            yld = DerivedVariable(name=self.key,alias=self.alias,
-                                  units=self.get_output_units(variable),value=fill,
-                                  fdef=fdef,parents=VariableCollection(variables=[variable]))
-            yield(yld)
+            dv = DerivedVariable(name=self.key,alias=self.alias,
+                                 units=self.get_output_units(variable),value=fill,
+                                 fdef=fdef,parents=VariableCollection(variables=[variable]),
+                                 collection_key='{0}_{1}'.format(self.alias,variable.alias))
+            dvc.add_variable(dv)
+        return(dvc)
     
     def _aggregate_temporal_(self):
         raise(NotImplementedError('aggregation implicit to calculate method'))
