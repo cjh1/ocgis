@@ -28,6 +28,9 @@ class TestBase(unittest.TestCase):
     def assertNumpyAll(self,arr1,arr2):
         return(self.assertTrue(np.all(arr1 == arr2)))
     
+    def assertNumpyAllClose(self,arr1,arr2):
+        return(self.assertTrue(np.allclose(arr1,arr2)))
+    
     def assertNumpyNotAll(self,arr1,arr2):
         return(self.assertFalse(np.all(arr1 == arr2)))
     

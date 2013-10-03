@@ -1,12 +1,21 @@
 import unittest
-from ocgis.calc.library.statistics import Mean
+from ocgis.calc.library.statistics import Mean, FrequencyPercentile
 from ocgis.interface.base.test_field import AbstractTestField
 from ocgis.interface.base.variable import DerivedVariable, Variable
-from ocgis.interface.base.field import Field
 import numpy as np
 
 
 class Test(AbstractTestField):
+    
+    def test_FrequencyPercentile(self):
+        field = self.get_field(with_value=True,month_count=2)
+        grouping = ['month']
+        tgd = field.temporal.get_grouping(grouping)
+        fp = FrequencyPercentile(field=field,tgd=tgd,parms={'percentile':99})
+        ret = fp.execute()
+        self.assertNumpyAllClose(ret['freq_perc_tmax'].value[0,1,1,0,:],
+         np.ma.array(data=[0.92864656,0.98615474,0.95269281,0.98542988],
+                     mask=False,fill_value=1e+20))
 
     def test_Mean(self):
         field = self.get_field(with_value=True,month_count=2)
@@ -14,22 +23,24 @@ class Test(AbstractTestField):
         tgd = field.temporal.get_grouping(grouping)
         mu = Mean(field=field,tgd=tgd,alias='my_mean')
         dvc = mu.execute()
+        dv = dvc['my_mean_tmax']
         self.assertEqual(dv.name,'mean')
         self.assertEqual(dv.alias,'my_mean')
         self.assertIsInstance(dv,DerivedVariable)
         self.assertEqual(dv.value.shape,(2,2,2,3,4))
-        self.assertNumpyAll(np.ma.mean(field.variables['tmax'].value[1,tgd.dgroups[1],0,:,:],axis=0),dv.value[1,1,0,:,:])
+        self.assertNumpyAll(np.ma.mean(field.variables['tmax'].value[1,tgd.dgroups[1],0,:,:],axis=0),
+                            dv.value[1,1,0,:,:])
         
     def test_Mean_two_variables(self):
         field = self.get_field(with_value=True,month_count=2)
-        field.variables.add_variable(Variable(value=field.variables['tmax'].value,
+        field.variables.add_variable(Variable(value=field.variables['tmax'].value+5,
                                               name='tmin',alias='tmin'))
         grouping = ['month']
         tgd = field.temporal.get_grouping(grouping)
         mu = Mean(field=field,tgd=tgd,alias='my_mean')
         ret = mu.execute()
         self.assertEqual(len(ret),2)
-        import ipdb;ipdb.set_trace()
+        self.assertAlmostEqual(5.0,abs(ret['my_mean_tmax'].value.mean() - ret['my_mean_tmin'].value.mean()))
 
 
 if __name__ == "__main__":
