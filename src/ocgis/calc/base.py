@@ -31,8 +31,8 @@ class AbstractFunction(object):
     @abc.abstractmethod
     def aggregate_spatial(self,**kwds): pass
     
-    @abc.abstractmethod
-    def aggregate_temporal(self,**kwds): pass
+    def aggregate_temporal(self,values,**kwds):
+        return(np.ma.mean(values,axis=0))
         
     @abc.abstractmethod
     def calculate(self,**kwds): pass
@@ -47,12 +47,6 @@ class AbstractFunction(object):
     def get_output_units(self,variable):
         return(None)
     
-    @abc.abstractmethod
-    def _aggregate_spatial_(self,**kwds): pass
-    
-    @abc.abstractmethod
-    def _aggregate_temporal_(self,**kwds): pass
-    
     def _format_parms_(self,values):
         return(values)
     
@@ -62,13 +56,13 @@ class AbstractFunction(object):
             shp_fill[1] = len(self.tgd.dgroups)
         return(np.ma.array(np.zeros(shp_fill,dtype=dtype)))
     
-    def _set_fill_temporal_(self,fill,value,f=None):
-        if f is None:
-            f = self.calculate
+    def _set_fill_temporal_(self,fill,value,f=None,parms=None):
+        f = f or self.calculate
+        parms = parms or self.parms
         for ir,it,il in itertools.product(*(range(s) for s in fill.shape[0:3])):
             values = value[ir,self.tgd.dgroups[it],il,:,:]
             assert(len(values.shape) == 3)
-            cc = f(values,**self.parms)
+            cc = f(values,**parms)
             assert(len(cc.shape) == 2)
             cc = cc.reshape(1,1,1,cc.shape[0],cc.shape[1])
             fill[ir,it,il,:,:] = cc
@@ -96,8 +90,9 @@ class AbstractUnivariateFunction(AbstractFunction):
                 cc = cc.astype(dtype)
             assert(cc.shape == self.field.shape)
             if self.tgd is not None:
-                cc = self._get_temporal_agg_fill_(dtype)
-                import ipdb;ipdb.set_trace()
+                fill = self._get_temporal_agg_fill_(dtype)
+                self._set_fill_temporal_(fill,cc,f=self.aggregate_temporal,parms={})
+                cc = fill
             dv = DerivedVariable(name=self.key,alias=self.alias,
                                  units=self.get_output_units(variable),value=cc,
                                  fdef=fdef,parents=VariableCollection(variables=[variable]),
@@ -107,15 +102,6 @@ class AbstractUnivariateFunction(AbstractFunction):
         
     def aggregate_spatial(self,**kwds):
         raise(NotImplementedError)
-    
-    def _aggregate_spatial_(self,**kwds):
-        raise(NotImplementedError)
-    
-    def aggregate_temporal(self,**kwds):
-        raise(NotImplementedError)
-    
-    def _aggregate_temporal_(self,values):
-        return(np.ma.mean(values,axis=0))
 
 
 class AbstractParameterizedFunction(AbstractFunction):
@@ -165,9 +151,6 @@ class AbstractUnivariateSetFunction(AbstractUnivariateFunction):
                                  collection_key='{0}_{1}'.format(self.alias,variable.alias))
             dvc.add_variable(dv)
         return(dvc)
-    
-    def _aggregate_temporal_(self):
-        raise(NotImplementedError('aggregation implicit to calculate method'))
     
 
 class AbstractUnivariateScalarFunction(AbstractUnivariateFunction):
