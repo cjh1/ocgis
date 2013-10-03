@@ -2,7 +2,6 @@ import numpy as np
 import abc
 import itertools
 from ocgis.interface.base.variable import DerivedVariable, VariableCollection
-from copy import copy
 from ocgis.util.helpers import get_default_or_apply
 
 
@@ -138,13 +137,6 @@ class AbstractUnivariateSetFunction(AbstractUnivariateFunction):
             dtype = self.dtype or variable.value.dtype
             fill = self._get_temporal_agg_fill_(dtype,shp_fill=shp_fill)
             self._set_fill_temporal_(fill,variable.value)
-#            for ir,it,il in itertools.product(*(range(s) for s in shp_fill[0:3])):
-#                values = variable.value[ir,self.tgd.dgroups[it],il,:,:]
-#                assert(len(values.shape) == 3)
-#                cc = self.calculate(values,**self.parms)
-#                assert(len(cc.shape) == 2)
-#                cc = cc.reshape(1,1,1,cc.shape[0],cc.shape[1])
-#                fill[ir,it,il,:,:] = cc
             dv = DerivedVariable(name=self.key,alias=self.alias,
                                  units=self.get_output_units(variable),value=fill,
                                  fdef=fdef,parents=VariableCollection(variables=[variable]),
@@ -153,8 +145,8 @@ class AbstractUnivariateSetFunction(AbstractUnivariateFunction):
         return(dvc)
     
 
-class AbstractUnivariateScalarFunction(AbstractUnivariateFunction):
-    __metaclass__ = abc.ABCMeta
+#class AbstractUnivariateScalarFunction(AbstractUnivariateFunction):
+#    __metaclass__ = abc.ABCMeta
     
 
 class AbstractMultivariateFunction(AbstractFunction):
