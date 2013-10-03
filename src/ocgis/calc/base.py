@@ -17,18 +17,18 @@ class AbstractFunction(object):
     long_name = ''
     standard_name = ''
     
-    def __init__(self,alias=None,dtype=None,file_only=False,parms=None,
-                 spatial_weights=None,tgd=None,use_aggregated_values=False):
+    def __init__(self,alias=None,dtype=None,field=None,file_only=False,parms=None,
+                 tgd=None,use_aggregated_values=False):
         self.alias = alias or self.key
         self.dtype = dtype or self.dtype
+        self.field = field
         self.file_only = file_only
         self.parms = get_default_or_apply(parms,self._format_parms_,default={})
-        self.spatial_weights = spatial_weights
         self.tgd = tgd
         self.use_aggregated_values = use_aggregated_values
         
-    @abc.abstractmethod
-    def aggregate_spatial(self,**kwds): pass
+    def aggregate_spatial(self,**kwds):
+        raise(NotImplementedError)
     
     def aggregate_temporal(self,values,**kwds):
         return(np.ma.mean(values,axis=0))
@@ -40,7 +40,7 @@ class AbstractFunction(object):
     def execute(self): pass
     
     def get_function_definition(self):
-        ret = {'key':self.key,'alias':self.alias,'parms':{}}
+        ret = {'key':self.key,'alias':self.alias,'parms':self.parms}
         return(ret)
     
     def get_output_units(self,variable):
@@ -73,11 +73,6 @@ class AbstractUnivariateFunction(AbstractFunction):
      use_aggregated_values=False
     '''
     __metaclass__ = abc.ABCMeta
-    
-    def __init__(self,**kwds):
-        self.field = kwds.pop('field',None)
-        
-        super(AbstractUnivariateFunction,self).__init__(**kwds)
         
     def execute(self):
         dvc = VariableCollection()
@@ -153,7 +148,32 @@ class AbstractMultivariateFunction(AbstractFunction):
     __metaclass__ = abc.ABCMeta
     
     @abc.abstractproperty
-    def variables(self): [str]
+    def required_variables(self): [str]
+    
+    def execute(self):
+        dvc = VariableCollection()
+        fdef = self.get_function_definition()
+        parms = {k:self.field.variables[self.parms[k]].value for k in self.required_variables}
+        for k,v in self.parms.iteritems():
+            if k not in self.required_variables:
+                parms.update({k:v})
+        cc = self.calculate(**parms)
+        if self.dtype is not None:
+            cc = cc.astype(self.dtype)
+        assert(cc.shape == self.field.shape)
+        if self.tgd is not None:
+            fill = self._get_temporal_agg_fill_(cc.dtype)
+            self._set_fill_temporal_(fill,cc,f=self.aggregate_temporal,parms={})
+            cc = fill
+        dv = DerivedVariable(name=self.key,alias=self.alias,
+                             units=self.get_output_units(),value=cc,
+                             fdef=fdef,parents=self.field.variables,
+                             collection_key=self.alias)
+        dvc.add_variable(dv)
+        return(dvc)
+    
+    def get_output_units(self):
+        return(None)
     
     
 class AbstractKeyedOutputFunction(object):

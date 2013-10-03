@@ -43,7 +43,7 @@ class AbstractTestField(TestBase):
         return(row)
     
     def get_field(self,with_bounds=True,with_value=False,with_level=True,with_temporal=True,
-                     with_realization=True,month_count=1):
+                     with_realization=True,month_count=1,name='tmax'):
         
         if with_temporal:
             temporal_start = dt(2000,1,1,12)
@@ -98,7 +98,7 @@ class AbstractTestField(TestBase):
         else:
             value = None
         
-        var = Variable('tmax',units='C',debug=True,data=None,value=value)
+        var = Variable(name,units='C',debug=True,data=None,value=value)
         vc = VariableCollection(variables=var)
         field = Field(variables=vc,temporal=temporal,level=level,realization=realization,
                     spatial=spatial)

@@ -1,7 +1,8 @@
 import unittest
 from ocgis.interface.base.test_field import AbstractTestField
 import numpy as np
-from ocgis.calc.library.math import NaturalLogarithm
+from ocgis.calc.library.math import NaturalLogarithm, Divide
+from ocgis.interface.base.variable import Variable
 
 
 class Test(AbstractTestField):
@@ -26,6 +27,26 @@ class Test(AbstractTestField):
         to_test2 = ret['ln_tmax'].value[0,0,0,:,:]
         self.assertNumpyAllClose(to_test,to_test2)
         
+    def test_Divide(self):
+        field = self.get_field(with_value=True,month_count=2)
+        field.variables.add_variable(Variable(value=field.variables['tmax'].value+5,
+                                              name='tmin',alias='tmin'))
+        dv = Divide(field=field,parms={'arr1':'tmax','arr2':'tmin'})
+        ret = dv.execute()
+        self.assertNumpyAllClose(ret['divide'].value,field.variables['tmax'].value/field.variables['tmin'].value)
+        
+    def test_Divide_grouped(self):
+        field = self.get_field(with_value=True,month_count=2)
+        field.variables.add_variable(Variable(value=field.variables['tmax'].value+5,
+                                              name='tmin',alias='tmin'))
+        grouping = ['month']
+        tgd = field.temporal.get_grouping(grouping)
+        dv = Divide(field=field,parms={'arr1':'tmax','arr2':'tmin'},tgd=tgd)
+        ret = dv.execute()
+        self.assertEqual(ret['divide'].value.shape,(2,2,2,3,4))
+        self.assertNumpyAllClose(ret['divide'].value[0,1,1,:,2],np.ma.array([0.0833001563436,0.0940192653632,0.0916398919876],
+                                                                            mask=False,fill_value=1e20))
+    
 
 if __name__ == "__main__":
     #import sys;sys.argv = ['', 'Test.testName']
