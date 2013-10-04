@@ -2,7 +2,6 @@ from ocgis.api.parms import base
 from ocgis.exc import DefinitionValidationError
 from ocgis.api.request.base import RequestDataset, RequestDatasetCollection
 from shapely.geometry.polygon import Polygon
-from ocgis.calc.base import OcgFunctionTree
 from ocgis.calc import library
 from collections import OrderedDict
 import ocgis
@@ -11,7 +10,8 @@ from shapely.geometry.multipolygon import MultiPolygon
 from types import NoneType
 from shapely.geometry.point import Point
 from ocgis import constants
-from ocgis.util.shp_cabinet import ShpCabinet, ShpCabinetIterator
+from ocgis.util.shp_cabinet import ShpCabinetIterator
+from ocgis.calc.library.register import FunctionRegistry
 
 
 class Abstraction(base.StringOptionParameter):
@@ -75,25 +75,26 @@ class Calc(base.IterableParameter,base.OcgParameter):
         return(msg)
     
     def get_url_string(self):
-        if self.value is None:
-            ret = 'none'
-        else:
-            elements = []
-            for element in self.value:
-                strings = []
-                template = '{0}~{1}'
-                if element['ref'] != library.SampleSize:
-                    strings.append(template.format(element['func'],element['name']))
-                    for k,v in element['kwds'].iteritems():
-                        strings.append(template.format(k,v))
-                if len(strings) > 0:
-                    elements.append('!'.join(strings))
-            ret = '|'.join(elements)
-        return(ret)
+        raise(NotImplementedError)
+#        if self.value is None:
+#            ret = 'none'
+#        else:
+#            elements = []
+#            for element in self.value:
+#                strings = []
+#                template = '{0}~{1}'
+#                if element['ref'] != library.SampleSize:
+#                    strings.append(template.format(element['func'],element['name']))
+#                    for k,v in element['kwds'].iteritems():
+#                        strings.append(template.format(k,v))
+#                if len(strings) > 0:
+#                    elements.append('!'.join(strings))
+#            ret = '|'.join(elements)
+#        return(ret)
     
-    def parse_all(self,values):
-        values.append(self._parse_({'func':'n','name':'n'}))
-        return(values)
+#    def parse_all(self,values):
+#        values.append(self._parse_({'func':'n','name':'n'}))
+#        return(values)
     
     def _get_meta_(self):
         if self.value is None:
@@ -105,11 +106,8 @@ class Calc(base.IterableParameter,base.OcgParameter):
         return(ret)
     
     def _parse_(self,value):
-        potentials = OcgFunctionTree.get_potentials()
-        for p in potentials:
-            if p[0] == value['func']:
-                value['ref'] = getattr(library,p[1])
-                break
+        fr = FunctionRegistry()
+        value['ref'] = fr[value['func']]
         if 'kwds' not in value:
             value['kwds'] = OrderedDict()
         else:

@@ -5,7 +5,7 @@ from ocgis import env
 from ocgis.api.parms.base import OcgParameter
 from ocgis.conv.meta import MetaConverter
 from ocgis.util.logging_ocgis import ocgis_lh
-from ocgis.calc.base import KeyedFunctionOutput, OcgCvArgFunction
+from ocgis.calc.base import AbstractMultivariateFunction
 
 
 class OcgOperations(object):
@@ -195,7 +195,7 @@ class OcgOperations(object):
                 _raise_(msg,OutputFormat)
             else:
                 if self.calc is not None and len(self.dataset) > 1:
-                    if sum([issubclass(calc['ref'],OcgCvArgFunction) for calc in self.calc]) != 1:
+                    if sum([issubclass(calc['ref'],AbstractMultivariateFunction) for calc in self.calc]) != 1:
                         msg = 'Data packages (i.e. more than one RequestDataset may not be written to netCDF).'
                         _raise_(msg,OutputFormat)
                 

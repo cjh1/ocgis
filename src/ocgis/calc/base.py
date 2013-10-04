@@ -46,6 +46,10 @@ class AbstractFunction(object):
     def get_output_units(self,variable):
         return(None)
     
+    @classmethod
+    def validate(self,ops):
+        pass
+    
     def _format_parms_(self,values):
         return(values)
     
