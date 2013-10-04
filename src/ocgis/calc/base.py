@@ -140,10 +140,6 @@ class AbstractUnivariateSetFunction(AbstractUnivariateFunction):
         return(dvc)
     
 
-#class AbstractUnivariateScalarFunction(AbstractUnivariateFunction):
-#    __metaclass__ = abc.ABCMeta
-    
-
 class AbstractMultivariateFunction(AbstractFunction):
     __metaclass__ = abc.ABCMeta
     
