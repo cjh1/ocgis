@@ -36,10 +36,11 @@ class Field(object):
     _value_dimension_names = ('realization','temporal','level','row','column')
     
     def __init__(self,variables=None,realization=None,temporal=None,level=None,
-                 spatial=None,meta=None):
+                 spatial=None,meta=None,uid=None):
         
         self.realization = realization
         self.temporal = temporal
+        self.uid = uid
         self.level = level
         self.spatial = spatial
         self.meta = meta or {}
@@ -113,6 +114,7 @@ class Field(object):
         is_masked = np.ma.is_masked
         masked_value = constants.fill_value
         
+        r_gid_name = self.spatial.geom.name_uid
         iters = map(_get_dimension_iterator_1d_,['realization','temporal','level'])
         iters.append(self.spatial.get_geom_iter())
         for variable in self.variables.itervalues():
@@ -120,7 +122,8 @@ class Field(object):
             name_value = variable.name
             name_alias = variable.alias
             vid = variable.uid
-            for [(ridx,rlz),(tidx,t),(lidx,l),(sridx,scidx,geom)] in itertools.product(*iters):
+            did = variable.did
+            for [(ridx,rlz),(tidx,t),(lidx,l),(sridx,scidx,geom,gid)] in itertools.product(*iters):
                 ref_idx = ref_value[ridx,tidx,lidx,sridx,scidx]
                 if is_masked(ref_idx):
                     if add_masked_value:
@@ -129,12 +132,14 @@ class Field(object):
                         continue
                 rlz.update(t)
                 rlz.update(l)
-                rlz['var_name'] = name_value
+                rlz[r_gid_name] = gid
+                rlz['variable'] = name_value
                 rlz['alias'] = name_alias
                 rlz['value'] = ref_idx
                 rlz['geom'] = geom
                 rlz['vid'] = vid
-                
+                rlz['did'] = did
+
                 yield(rlz)
     
     def get_time_region(self,time_region):

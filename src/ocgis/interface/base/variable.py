@@ -34,12 +34,13 @@ class AbstractValueVariable(object):
 class AbstractSourcedVariable(AbstractValueVariable):
     __metaclass__ = abc.ABCMeta
     
-    def __init__(self,data,src_idx=None,value=None,debug=False):
+    def __init__(self,data,src_idx=None,value=None,debug=False,did=None):
         if not debug and value is None and data is None:
             ocgis_lh(exc=ValueError('Sourced variables require a data source if no value is passed.'))
         self._data = data
         self._src_idx = src_idx
         self._debug = debug
+        self.did = did
         
         super(AbstractSourcedVariable,self).__init__(value=value)
         
@@ -73,14 +74,14 @@ class AbstractSourcedVariable(AbstractValueVariable):
 class Variable(AbstractSourcedVariable):
     
     def __init__(self,name=None,alias=None,units=None,meta=None,uid=None,
-                 value=None,data=None,debug=False):
+                 value=None,data=None,debug=False,did=None):
         self.name = name
         self.alias = alias or name
         self.units = units
         self.meta = meta or {}
         self.uid = uid
         
-        super(Variable,self).__init__(value=value,data=data,debug=debug)
+        super(Variable,self).__init__(value=value,data=data,debug=debug,did=did)
         
     def __getitem__(self,slc):
         if self._value is None:

@@ -185,11 +185,13 @@ class SpatialDimension(base.AbstractUidDimension):
         if as_multipolygon and target == 'point':
             as_multipolygon = False
         
+        r_uid = self.uid
         for (row_idx,col_idx),geom in iter_array(value,return_value=True):
             if as_multipolygon:
                 if isinstance(geom,Polygon):
                     geom = MultiPolygon([geom])
-            yield(row_idx,col_idx,geom)
+            uid = r_uid[row_idx,col_idx]
+            yield(row_idx,col_idx,geom,uid)
     
     def get_mask(self):
         if self.grid is None:

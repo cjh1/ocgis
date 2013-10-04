@@ -96,13 +96,13 @@ class TestSpatialDimension(TestSpatialBase):
         tt = list(sdim.get_geom_iter())
         ttt = list(tt[4])
         ttt[2] = ttt[2].bounds
-        self.assertEqual(ttt,[1, 0, (-100.5, 38.5, -99.5, 39.5)])
+        self.assertEqual(ttt,[1, 0, (-100.5, 38.5, -99.5, 39.5),5])
         
         sdim = self.get_sdim(bounds=False)
         tt = list(sdim.get_geom_iter(target='point'))
         ttt = list(tt[4])
         ttt[2] = [ttt[2].x,ttt[2].y]
-        self.assertEqual(ttt,[1, 0, [-100.0, 39.0]])
+        self.assertEqual(ttt,[1, 0, [-100.0, 39.0],5])
         
         sdim = self.get_sdim(bounds=False)
         self.assertEqual(sdim.abstraction,'polygon')

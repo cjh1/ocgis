@@ -1,11 +1,15 @@
 from collections import OrderedDict
+from ocgis.interface.base.crs import CFWGS84
+from ocgis import constants
 
 
 class SpatialCollection(OrderedDict):
     
-    def __init__(self,meta=None,key=None):
+    def __init__(self,meta=None,key=None,crs=None,headers=constants.raw_headers):
         self.meta = meta
         self.key = key
+        self.crs = crs or CFWGS84()
+        self.headers = headers
         
         self.geoms = {}
         self.properties = {}
@@ -20,3 +24,11 @@ class SpatialCollection(OrderedDict):
             self.update({ugid:{}})
         assert(alias not in self[ugid])
         self[ugid].update({alias:field})
+
+    def get_iter(self):
+        r_headers = self.headers
+        for ugid,field in self.iteritems():
+            for row in field.values()[0].get_iter():
+                row['ugid'] = ugid
+                tup = [row[h] for h in r_headers]
+                yield(row['geom'],tup)
