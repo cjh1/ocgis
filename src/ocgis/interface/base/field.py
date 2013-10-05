@@ -141,6 +141,9 @@ class Field(object):
                 rlz['did'] = did
 
                 yield(rlz)
+                
+    def get_shallow_copy(self):
+        return(copy(self))
     
     def get_time_region(self,time_region):
         ret = copy(self)

@@ -4,12 +4,13 @@ from ocgis import constants
 
 
 class SpatialCollection(OrderedDict):
+    _default_headers = constants.raw_headers
     
-    def __init__(self,meta=None,key=None,crs=None,headers=constants.raw_headers):
+    def __init__(self,meta=None,key=None,crs=None,headers=None):
         self.meta = meta
         self.key = key
         self.crs = crs or CFWGS84()
-        self.headers = headers
+        self.headers = headers or self._default_headers
         
         self.geoms = {}
         self.properties = {}
@@ -32,3 +33,7 @@ class SpatialCollection(OrderedDict):
                 row['ugid'] = ugid
                 tup = [row[h] for h in r_headers]
                 yield(row['geom'],tup)
+                
+                
+class CalculationCollection(SpatialCollection):
+    _default_headers = constants.calc_headers
