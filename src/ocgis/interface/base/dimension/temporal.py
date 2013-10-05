@@ -78,6 +78,13 @@ class TemporalDimension(base.VectorDimension):
         return(TemporalGroupDimension(grouping=grouping,date_parts=date_parts,bounds=new_bounds,
                                       dgroups=dgroups,value=repr_dt))
         
+    def get_iter(self,*args,**kwds):
+        r_name_value = self.name_value
+        for ii,yld in super(TemporalDimension,self).get_iter(*args,**kwds):
+            r_value = yld[r_name_value]
+            yld['year'],yld['month'],yld['day'] = r_value.year,r_value.month,r_value.day
+            yield(ii,yld)
+        
     def get_time_region(self,time_region,return_indices=False):
         assert(isinstance(time_region,dict))
         
@@ -177,7 +184,7 @@ class TemporalDimension(base.VectorDimension):
         return(ret)
 
 
-class TemporalGroupDimension(base.VectorDimension):
+class TemporalGroupDimension(TemporalDimension):
     
     def __init__(self,*args,**kwds):
         self.grouping = kwds.pop('grouping')

@@ -142,8 +142,6 @@ class VectorDimension(AbstractSourcedVariable,AbstractUidValueDimension):
         ## superclass.
         self.bounds = bounds
         
-        if self.name_bounds is None:
-            self.name_bounds = '{0}_bnds'.format(self.name)
         if self._axis is None:
             self._axis = 'undefined'
             
@@ -172,6 +170,15 @@ class VectorDimension(AbstractSourcedVariable,AbstractUidValueDimension):
         else:
             target = self.bounds
         return(target.min(),target.max())
+    
+    @property
+    def name_bounds(self):
+        if self._name_bounds is None:
+            self._name_bounds = '{0}_bnds'.format(self.name_value)
+        return(self._name_bounds)
+    @name_bounds.setter
+    def name_bounds(self,value):
+        self._name_bounds = value
     
     @property
     def resolution(self):
@@ -220,15 +227,15 @@ class VectorDimension(AbstractSourcedVariable,AbstractUidValueDimension):
             has_bounds = True
             ref_bounds = self.bounds
         ref_uid = self.uid
-        ref_name = self.name
-        assert_raise(self.name != None,logger='interface.dimension.base',
+        ref_name_value = self.name_value
+        assert_raise(self.name_value != None,logger='interface.dimension.base',
                      exc=ValueError('A "name" attribute is required for iteration.'))
         ref_name_uid = self.name_uid
         ref_name_bounds_lower = '{0}_lower'.format(self.name_bounds)
         ref_name_bounds_upper = '{0}_upper'.format(self.name_bounds)
         
         for ii in range(self.value.shape[0]):
-            yld = {ref_name:ref_value[ii],ref_name_uid:ref_uid[ii]}
+            yld = {ref_name_value:ref_value[ii],ref_name_uid:ref_uid[ii]}
             if has_bounds:
                 yld.update({ref_name_bounds_lower:ref_bounds[ii,0],
                             ref_name_bounds_upper:ref_bounds[ii,1]})

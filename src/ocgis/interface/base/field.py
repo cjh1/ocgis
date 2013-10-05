@@ -264,7 +264,7 @@ class Field(object):
         yld['did'] = variable.did
         yld['variable'] = variable.name
         yld['alias'] = variable.alias
-        yld['vid'] = variable.vid
+        yld['vid'] = variable.uid
 
 
 class DerivedField(Field):
@@ -279,4 +279,3 @@ class DerivedField(Field):
         yld['variable'] = raw_variable.name
         yld['alias'] = raw_variable.alias
         yld['vid'] = raw_variable.uid
-
