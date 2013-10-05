@@ -115,14 +115,15 @@ class Field(object):
         masked_value = constants.fill_value
         
         r_gid_name = self.spatial.geom.name_uid
+        r_update_iter_yield = self._update_iter_yield_
         iters = map(_get_dimension_iterator_1d_,['realization','temporal','level'])
         iters.append(self.spatial.get_geom_iter())
         for variable in self.variables.itervalues():
             ref_value = variable.value
-            name_value = variable.name
-            name_alias = variable.alias
-            vid = variable.uid
-            did = variable.did
+#            name_variable = variable.name
+#            name_alias = variable.alias
+#            vid = variable.uid
+#            did = variable.did
             for [(ridx,rlz),(tidx,t),(lidx,l),(sridx,scidx,geom,gid)] in itertools.product(*iters):
                 ref_idx = ref_value[ridx,tidx,lidx,sridx,scidx]
                 if is_masked(ref_idx):
@@ -132,14 +133,12 @@ class Field(object):
                         continue
                 rlz.update(t)
                 rlz.update(l)
-                rlz[r_gid_name] = gid
-                rlz['variable'] = name_value
-                rlz['alias'] = name_alias
                 rlz['value'] = ref_idx
                 rlz['geom'] = geom
-                rlz['vid'] = vid
-                rlz['did'] = did
-
+                rlz[r_gid_name] = gid
+                
+                r_update_iter_yield(rlz,variable)
+                
                 yield(rlz)
                 
     def get_shallow_copy(self):
@@ -242,6 +241,11 @@ class Field(object):
 #            self._set_value_from_source_()
 #        return(self._value)
 #    
+
+    def _get_value_from_source_(self,*args,**kwds):
+        raise(NotImplementedError)
+        ## TODO: remember to apply the geometry mask to fresh values!!
+
     def _set_new_value_mask_(self,field,mask):
         ret_shp = field.shape
         rng_realization = range(ret_shp[0])
@@ -255,11 +259,24 @@ class Field(object):
                 for idx_r,idx_t,idx_l in itertools.product(rng_realization,rng_temporal,rng_level):
                     ref = v[idx_r,idx_t,idx_l]
                     ref.mask = ref_logical_or(ref.mask,mask)
-#                
-    def _get_value_from_source_(self,*args,**kwds):
-        raise(NotImplementedError)
-        ## TODO: remember to apply the geometry mask to fresh values!!
-        
+                    
+    def _update_iter_yield_(self,yld,variable):
+        yld['did'] = variable.did
+        yld['variable'] = variable.name
+        yld['alias'] = variable.alias
+        yld['vid'] = variable.vid
+
 
 class DerivedField(Field):
-    pass
+    
+    def _update_iter_yield_(self,yld,variable):
+        yld['cid'] = variable.uid
+        yld['calc_key'] = variable.name
+        yld['calc_alias'] = variable.alias
+        
+        raw_variable = variable.parents.values()[0]
+        yld['did'] = raw_variable.did
+        yld['variable'] = raw_variable.name
+        yld['alias'] = raw_variable.alias
+        yld['vid'] = raw_variable.uid
+
