@@ -74,8 +74,8 @@ class Test(AbstractTestField):
             else:
                 self.assertEqual(set([r.value.shape for r in ret.values()]),set([(2, 2, 2, 3, 4)]))
                 
-    def test_np_ma_average(self):
-        pass
+    def test_Divide_use_raw_values(self):
+        raise(NotImplementedError)
 
 
 if __name__ == "__main__":
