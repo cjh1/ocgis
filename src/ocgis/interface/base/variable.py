@@ -117,25 +117,41 @@ class Variable(AbstractSourcedVariable):
         self._field._set_new_value_mask_(self._field,self._field.spatial.get_mask())
     
     
-class VariableCollection(OrderedDict):
+class VariableCollection(object):
     
     def __init__(self,**kwds):
         self._uid_ctr = 1
         variables = kwds.pop('variables',None)
         
-        super(VariableCollection,self).__init__()
-        
+        self._storage = OrderedDict()
+            
         if variables is not None:
             for variable in get_iter(variables,dtype=Variable):
                 self.add_variable(variable)
                 
+    def __getitem__(self,*args,**kwds):
+        return(self._storage.__getitem__(*args,**kwds))
+    
+    def __len__(self):
+        return(len(self._storage))
+                
     def add_variable(self,variable):
         assert(isinstance(variable,Variable))
-        assert(variable.alias not in self)
+        assert(variable.alias not in self._storage)
         if variable.uid is None:
             variable.uid = self._uid_ctr
             self._uid_ctr += 1
-        self.update({variable.alias:variable})
+        self._storage.update({variable.alias:variable})
+        
+    def itervalues(self):
+        for value in self._storage.itervalues():
+            yield(value)
+            
+    def keys(self):
+        return(self._storage.keys())
+            
+    def values(self):
+        return(self._storage.values())
         
     def _get_sliced_variables_(self,slc):
         variables = [v.__getitem__(slc) for v in self.itervalues()]

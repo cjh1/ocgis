@@ -60,11 +60,6 @@ class Test(AbstractTestField):
                 self.assertNotEqual(cfield.shape,cfield._raw.shape)
                 self.assertEqual(set([r.value.shape for r in cfield.variables.values()]),set([(2, 60, 2, 1, 1)]))
             else:
-                for v in field.__dict__.itervalues():
-                    try:
-                        deepcopy(v)
-                    except:
-                        import ipdb;ipdb.set_trace()
                 cfield = deepcopy(field)
                 self.assertEqual(set([r.value.shape for r in cfield.variables.values()]),set([(2, 60, 2, 3, 4)]))
             mu = Mean(field=cfield,tgd=tgd,alias='my_mean',use_raw_values=u)
