@@ -27,11 +27,10 @@ class AbstractFunction(object):
         self.parms = get_default_or_apply(parms,self._format_parms_,default={})
         self.tgd = tgd
         self.use_raw_values = use_raw_values
-        
-        self._requires_spatial_aggregation = False
-        
-    def aggregate_spatial(self,**kwds):
-        raise(NotImplementedError)
+                
+    def aggregate_spatial(self,value):
+        ret = np.ma.average(value,weights=self.field._raw.spatial.weights)
+        return(ret)
     
     def aggregate_temporal(self,values,**kwds):
         return(np.ma.mean(values,axis=0))
@@ -41,8 +40,6 @@ class AbstractFunction(object):
     
     def execute(self):
         self._execute_()
-        if self._requires_spatial_aggregation:
-            import ipdb;ipdb.set_trace()
         return(self.vc)
     
     def get_function_definition(self):
@@ -61,10 +58,6 @@ class AbstractFunction(object):
                 ret = variable.value
             else:
                 ret = self.field._raw.variables[variable.alias].value
-                if ret.shape[-2:] != (1,1):
-                    self._requires_spatial_aggregation = True
-                else:
-                    self._requires_spatial_aggregation = False
         else:
             ret = variable.value
         return(ret)
@@ -102,7 +95,13 @@ class AbstractFunction(object):
             cc = f(values,**parms)
             assert(len(cc.shape) == 2)
             cc = cc.reshape(1,1,1,cc.shape[0],cc.shape[1])
-            fill[ir,it,il,:,:] = cc
+            try:
+                fill[ir,it,il,:,:] = cc
+            except ValueError:
+                if self.use_raw_values:
+                    fill[ir,it,il,:,:] = self.aggregate_spatial(cc)
+                else:
+                    raise
             
         return(fill)
         

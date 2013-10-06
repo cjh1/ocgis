@@ -115,6 +115,10 @@ class TestField(AbstractTestField):
         sub = field[0,0,0,0,0]
         self.assertEqual(sub.shape,(1,1,1,1,1))
         self.assertEqual(sub.variables['tmax'].value.shape,(1,1,1,1,1))
+        
+    def test_deepcopy(self):
+        field = self.get_field(with_value=True)
+        deepcopy(field)
     
     def test_slicing_general(self):
         ibounds = [True,False]

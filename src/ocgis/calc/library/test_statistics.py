@@ -53,7 +53,7 @@ class Test(AbstractTestField):
         
         ur = [True,False]
         agg = [
-#               True,
+               True,
                False
                ]
         
@@ -64,7 +64,7 @@ class Test(AbstractTestField):
                 self.assertEqual(set([r.value.shape for r in cfield.variables.values()]),set([(2, 60, 2, 1, 1)]))
                 self.assertEqual(cfield.shape,(2,60,2,1,1))
             else:
-                cfield = deepcopy(field)
+                cfield = field
                 self.assertEqual(set([r.value.shape for r in cfield.variables.values()]),set([(2, 60, 2, 3, 4)]))
                 self.assertEqual(cfield.shape,(2,60,2,3,4))
             mu = Mean(field=cfield,tgd=tgd,alias='my_mean',use_raw_values=u)
