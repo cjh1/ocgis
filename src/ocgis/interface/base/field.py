@@ -1,33 +1,14 @@
-from ocgis.util.logging_ocgis import ocgis_lh
 from ocgis.util.helpers import get_default_or_apply, get_none_or_slice,\
-    get_formatted_slice, get_reduced_slice, get_iter, assert_raise
+    get_formatted_slice, get_reduced_slice, assert_raise
 import numpy as np
 from copy import copy, deepcopy
-from collections import deque, OrderedDict
+from collections import deque
 import itertools
 from shapely.ops import cascaded_union
 from shapely.geometry.multipoint import MultiPoint
 from shapely.geometry.multipolygon import MultiPolygon
-from ocgis.interface.base.variable import AbstractSourcedVariable, Variable,\
-    VariableCollection
+from ocgis.interface.base.variable import Variable, VariableCollection
 from ocgis import constants
-
-
-#class FieldCollection(OrderedDict):
-#    
-#    def __init__(self,**kwds):
-#        fields = kwds.pop('fields',None)
-#        
-#        super(FieldCollection,self).__init__()
-#        
-#        if fields is not None:
-#            for field in get_iter(fields):
-#                self.add_field(field)
-#                
-#    def add_field(self,field):
-#        assert(isinstance(field,Field))
-#        assert(field.variable.alias not in self)
-#        self.update({field.variable.alias:field})
         
 
 class Field(object):
