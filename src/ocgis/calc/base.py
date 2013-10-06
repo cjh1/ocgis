@@ -28,8 +28,8 @@ class AbstractFunction(object):
         self.tgd = tgd
         self.use_raw_values = use_raw_values
                 
-    def aggregate_spatial(self,value):
-        ret = np.ma.average(value,weights=self.field._raw.spatial.weights)
+    def aggregate_spatial(self,value,weights):
+        ret = np.ma.average(value,weights=weights)
         return(ret)
     
     def aggregate_temporal(self,values,**kwds):
@@ -87,6 +87,9 @@ class AbstractFunction(object):
             shp_fill[1] = len(self.tgd.dgroups)
         fill = np.ma.array(np.zeros(shp_fill,dtype=dtype))
         
+        if self.use_raw_values and self.field._raw is not None:
+            weights = self.field._raw.spatial.weights
+        
         f = f or self.calculate
         parms = parms or self.parms
         for ir,it,il in itertools.product(*(range(s) for s in fill.shape[0:3])):
@@ -99,7 +102,7 @@ class AbstractFunction(object):
                 fill[ir,it,il,:,:] = cc
             except ValueError:
                 if self.use_raw_values:
-                    fill[ir,it,il,:,:] = self.aggregate_spatial(cc)
+                    fill[ir,it,il,:,:] = self.aggregate_spatial(cc,weights)
                 else:
                     raise
             

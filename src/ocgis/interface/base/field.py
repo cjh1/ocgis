@@ -191,9 +191,10 @@ class Field(object):
         ## to avoid reference issues, we need to copy the variables
         new_variables = []
         for variable in ret.variables.itervalues():
+            r_value = variable.value
             fill = np.ma.array(np.zeros(shp),mask=False,dtype=variable.value.dtype)
             for idx_r,idx_t,idx_l in itertools.product(*itrs):
-                fill[idx_r,idx_t,idx_l] = ref_average(variable.value[idx_r,idx_t,idx_l],weights=weights)
+                fill[idx_r,idx_t,idx_l] = ref_average(r_value[idx_r,idx_t,idx_l],weights=weights)
             new_variable = copy(variable)
             new_variable._value = fill
             new_variables.append(new_variable)
