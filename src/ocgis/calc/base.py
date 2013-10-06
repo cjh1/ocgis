@@ -18,7 +18,7 @@ class AbstractFunction(object):
     standard_name = ''
     
     def __init__(self,alias=None,dtype=None,field=None,file_only=False,vc=None,
-                 parms=None,tgd=None,use_aggregated_values=False):
+                 parms=None,tgd=None,use_raw_values=False):
         self.alias = alias or self.key
         self.dtype = dtype or self.dtype
         self.vc = vc or VariableCollection()
@@ -26,7 +26,7 @@ class AbstractFunction(object):
         self.file_only = file_only
         self.parms = get_default_or_apply(parms,self._format_parms_,default={})
         self.tgd = tgd
-        self.use_aggregated_values = use_aggregated_values
+        self.use_raw_values = use_raw_values
         
     def aggregate_spatial(self,**kwds):
         raise(NotImplementedError)
