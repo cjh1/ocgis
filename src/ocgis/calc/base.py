@@ -28,6 +28,8 @@ class AbstractFunction(object):
         self.tgd = tgd
         self.use_raw_values = use_raw_values
         
+        self._requires_spatial_aggregation = False
+        
     def aggregate_spatial(self,**kwds):
         raise(NotImplementedError)
     
@@ -37,8 +39,11 @@ class AbstractFunction(object):
     @abc.abstractmethod
     def calculate(self,**kwds): pass
     
-    @abc.abstractmethod
-    def execute(self): pass
+    def execute(self):
+        self._execute_()
+        if self._requires_spatial_aggregation:
+            import ipdb;ipdb.set_trace()
+        return(self.vc)
     
     def get_function_definition(self):
         ret = {'key':self.key,'alias':self.alias,'parms':self.parms}
@@ -56,6 +61,10 @@ class AbstractFunction(object):
                 ret = variable.value
             else:
                 ret = self.field._raw.variables[variable.alias].value
+                if ret.shape[-2:] != (1,1):
+                    self._requires_spatial_aggregation = True
+                else:
+                    self._requires_spatial_aggregation = False
         else:
             ret = variable.value
         return(ret)
@@ -71,17 +80,20 @@ class AbstractFunction(object):
         dv = DerivedVariable(name=self.key,alias=alias,units=units,value=value,
                              fdef=fdef,parents=VariableCollection(variables=parent_variables))
         self.vc.add_variable(dv)
+        
+    @abc.abstractmethod
+    def _execute_(self): pass
     
     def _format_parms_(self,values):
         return(values)
     
-    def _get_temporal_agg_fill_(self,dtype,shp_fill=None):
+    def _get_temporal_agg_fill_(self,value,f=None,parms=None,shp_fill=None):
+        dtype = self.dtype or value.dtype
         if shp_fill is None:
             shp_fill = list(self.field.shape)
             shp_fill[1] = len(self.tgd.dgroups)
-        return(np.ma.array(np.zeros(shp_fill,dtype=dtype)))
-    
-    def _set_fill_temporal_(self,fill,value,f=None,parms=None):
+        fill = np.ma.array(np.zeros(shp_fill,dtype=dtype))
+        
         f = f or self.calculate
         parms = parms or self.parms
         for ir,it,il in itertools.product(*(range(s) for s in fill.shape[0:3])):
@@ -91,6 +103,8 @@ class AbstractFunction(object):
             assert(len(cc.shape) == 2)
             cc = cc.reshape(1,1,1,cc.shape[0],cc.shape[1])
             fill[ir,it,il,:,:] = cc
+            
+        return(fill)
         
         
 class AbstractUnivariateFunction(AbstractFunction):
@@ -100,22 +114,16 @@ class AbstractUnivariateFunction(AbstractFunction):
     '''
     __metaclass__ = abc.ABCMeta
         
-    def execute(self):
+    def _execute_(self):
         for variable in self.field.variables.itervalues():
-            cc = self.calculate(variable.value,**self.parms)
+            fill = self.calculate(variable.value,**self.parms)
             dtype = self.dtype or variable.value.dtype
-            if dtype != cc.dtype:
-                cc = cc.astype(dtype)
-            assert(cc.shape == self.field.shape)
+            if dtype != fill.dtype:
+                fill = fill.astype(dtype)
+            assert(fill.shape == self.field.shape)
             if self.tgd is not None:
-                fill = self._get_temporal_agg_fill_(dtype)
-                self._set_fill_temporal_(fill,cc,f=self.aggregate_temporal,parms={})
-                cc = fill
-            self._add_to_collection_(value=cc,parent_variables=[variable])
-        return(self.vc)
-        
-    def aggregate_spatial(self,**kwds):
-        raise(NotImplementedError)
+                fill = self._get_temporal_agg_fill_(fill,f=self.aggregate_temporal,parms={})
+            self._add_to_collection_(value=fill,parent_variables=[variable])
 
 
 class AbstractParameterizedFunction(AbstractFunction):
@@ -143,16 +151,13 @@ class AbstractUnivariateSetFunction(AbstractUnivariateFunction):
     def aggregate_temporal(self):
         raise(NotImplementedError('aggregation implicit to calculate method'))
     
-    def execute(self):
+    def _execute_(self):
         shp_fill = list(self.field.shape)
         shp_fill[1] = len(self.tgd.dgroups)
         for variable in self.field.variables.itervalues():
             value = self.get_variable_value(variable)
-            dtype = self.dtype or value.dtype
-            fill = self._get_temporal_agg_fill_(dtype,shp_fill=shp_fill)
-            self._set_fill_temporal_(fill,value)
+            fill = self._get_temporal_agg_fill_(value,shp_fill=shp_fill)
             self._add_to_collection_(value=fill,parent_variables=[variable])
-        return(self.vc)
     
 
 class AbstractMultivariateFunction(AbstractFunction):
@@ -161,23 +166,20 @@ class AbstractMultivariateFunction(AbstractFunction):
     @abc.abstractproperty
     def required_variables(self): [str]
     
-    def execute(self):
+    def _execute_(self):
         parms = {k:self.field.variables[self.parms[k]].value for k in self.required_variables}
         for k,v in self.parms.iteritems():
             if k not in self.required_variables:
                 parms.update({k:v})
-        cc = self.calculate(**parms)
+        fill = self.calculate(**parms)
         if self.dtype is not None:
-            cc = cc.astype(self.dtype)
-        assert(cc.shape == self.field.shape)
+            fill = fill.astype(self.dtype)
+        assert(fill.shape == self.field.shape)
         if self.tgd is not None:
-            fill = self._get_temporal_agg_fill_(cc.dtype)
-            self._set_fill_temporal_(fill,cc,f=self.aggregate_temporal,parms={})
-            cc = fill
+            fill = self._get_temporal_agg_fill_(fill,f=self.aggregate_temporal,parms={})
         units = self.get_output_units()
-        self._add_to_collection_(units=units,value=cc,parent_variables=self.field.variables.values(),
+        self._add_to_collection_(units=units,value=fill,parent_variables=self.field.variables.values(),
                                  alias=self.alias)
-        return(self.vc)
     
     def get_output_units(self):
         return('undefined')

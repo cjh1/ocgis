@@ -4,6 +4,7 @@ from ocgis.interface.base.test_field import AbstractTestField
 from ocgis.interface.base.variable import DerivedVariable, Variable
 import numpy as np
 import itertools
+from copy import deepcopy
 
 
 class Test(AbstractTestField):
@@ -57,14 +58,24 @@ class Test(AbstractTestField):
             if a:
                 cfield = field.get_spatially_aggregated()
                 self.assertNotEqual(cfield.shape,cfield._raw.shape)
+                self.assertEqual(set([r.value.shape for r in cfield.variables.values()]),set([(2, 60, 2, 1, 1)]))
             else:
-                cfield = field
+                for v in field.__dict__.itervalues():
+                    try:
+                        deepcopy(v)
+                    except:
+                        import ipdb;ipdb.set_trace()
+                cfield = deepcopy(field)
+                self.assertEqual(set([r.value.shape for r in cfield.variables.values()]),set([(2, 60, 2, 3, 4)]))
             mu = Mean(field=cfield,tgd=tgd,alias='my_mean',use_raw_values=u)
             ret = mu.execute()
             if a:
                 self.assertEqual(set([r.value.shape for r in ret.values()]),set([(2, 2, 2, 1, 1)]))
             else:
                 self.assertEqual(set([r.value.shape for r in ret.values()]),set([(2, 2, 2, 3, 4)]))
+                
+    def test_np_ma_average(self):
+        pass
 
 
 if __name__ == "__main__":
