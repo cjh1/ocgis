@@ -3,6 +3,7 @@ from ocgis.calc.library.statistics import Mean, FrequencyPercentile
 from ocgis.interface.base.test_field import AbstractTestField
 from ocgis.interface.base.variable import DerivedVariable, Variable
 import numpy as np
+import itertools
 
 
 class Test(AbstractTestField):
@@ -41,6 +42,29 @@ class Test(AbstractTestField):
         ret = mu.execute()
         self.assertEqual(len(ret),2)
         self.assertAlmostEqual(5.0,abs(ret['my_mean_tmax'].value.mean() - ret['my_mean_tmin'].value.mean()))
+        
+    def test_Mean_use_raw_values(self):
+        field = self.get_field(with_value=True,month_count=2)
+        field.variables.add_variable(Variable(value=field.variables['tmax'].value+5,
+                                              name='tmin',alias='tmin'))
+        grouping = ['month']
+        tgd = field.temporal.get_grouping(grouping)
+        
+        ur = [True,False]
+        agg = [True,False]
+        
+        for u,a in itertools.product(ur,agg):
+            if a:
+                cfield = field.get_spatially_aggregated()
+                self.assertNotEqual(cfield.shape,cfield._raw.shape)
+            else:
+                cfield = field
+            mu = Mean(field=cfield,tgd=tgd,alias='my_mean',use_raw_values=u)
+            ret = mu.execute()
+            if a:
+                self.assertEqual(set([r.value.shape for r in ret.values()]),set([(2, 2, 2, 1, 1)]))
+            else:
+                self.assertEqual(set([r.value.shape for r in ret.values()]),set([(2, 2, 2, 3, 4)]))
 
 
 if __name__ == "__main__":

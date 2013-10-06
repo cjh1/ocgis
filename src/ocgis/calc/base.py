@@ -47,6 +47,19 @@ class AbstractFunction(object):
     def get_output_units(self,variable):
         return(None)
     
+    def get_variable_value(self,variable):
+        ## raw values are to be used by the calculation. if this is True, and
+        ## no raw field is associated with the input field, then use the standard
+        ## value.
+        if self.use_raw_values:
+            if self.field._raw is None:
+                ret = variable.value
+            else:
+                ret = self.field._raw.variables[variable.alias].value
+        else:
+            ret = variable.value
+        return(ret)
+    
     @classmethod
     def validate(self,ops):
         pass
@@ -134,9 +147,10 @@ class AbstractUnivariateSetFunction(AbstractUnivariateFunction):
         shp_fill = list(self.field.shape)
         shp_fill[1] = len(self.tgd.dgroups)
         for variable in self.field.variables.itervalues():
-            dtype = self.dtype or variable.value.dtype
+            value = self.get_variable_value(variable)
+            dtype = self.dtype or value.dtype
             fill = self._get_temporal_agg_fill_(dtype,shp_fill=shp_fill)
-            self._set_fill_temporal_(fill,variable.value)
+            self._set_fill_temporal_(fill,value)
             self._add_to_collection_(value=fill,parent_variables=[variable])
         return(self.vc)
     
