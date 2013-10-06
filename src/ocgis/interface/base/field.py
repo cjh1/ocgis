@@ -187,14 +187,20 @@ class Field(object):
         weights = self.spatial.weights
         ref_average = np.ma.average
         
+        ## old values for the variables will be stored in the _raw container, but
+        ## to avoid reference issues, we need to copy the variables
+        new_variables = []
         for variable in ret.variables.itervalues():
             fill = np.ma.array(np.zeros(shp),mask=False,dtype=variable.value.dtype)
             for idx_r,idx_t,idx_l in itertools.product(*itrs):
                 fill[idx_r,idx_t,idx_l] = ref_average(variable.value[idx_r,idx_t,idx_l],weights=weights)
-            variable._value = fill
-            
+            new_variable = copy(variable)
+            new_variable._value = fill
+            new_variables.append(new_variable)
+        ret.variables = VariableCollection(variables=new_variables)
+                            
         ## we want to keep a copy of the raw data around for later calculations.
-        ret._raw = self
+        ret._raw = copy(self)
             
         return(ret)
     

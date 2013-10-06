@@ -52,16 +52,21 @@ class Test(AbstractTestField):
         tgd = field.temporal.get_grouping(grouping)
         
         ur = [True,False]
-        agg = [True,False]
+        agg = [
+#               True,
+               False
+               ]
         
         for u,a in itertools.product(ur,agg):
             if a:
                 cfield = field.get_spatially_aggregated()
                 self.assertNotEqual(cfield.shape,cfield._raw.shape)
                 self.assertEqual(set([r.value.shape for r in cfield.variables.values()]),set([(2, 60, 2, 1, 1)]))
+                self.assertEqual(cfield.shape,(2,60,2,1,1))
             else:
                 cfield = deepcopy(field)
                 self.assertEqual(set([r.value.shape for r in cfield.variables.values()]),set([(2, 60, 2, 3, 4)]))
+                self.assertEqual(cfield.shape,(2,60,2,3,4))
             mu = Mean(field=cfield,tgd=tgd,alias='my_mean',use_raw_values=u)
             ret = mu.execute()
             if a:
