@@ -17,10 +17,11 @@ class AbstractFunction(object):
     long_name = ''
     standard_name = ''
     
-    def __init__(self,alias=None,dtype=None,field=None,file_only=False,parms=None,
-                 tgd=None,use_aggregated_values=False):
+    def __init__(self,alias=None,dtype=None,field=None,file_only=False,vc=None,
+                 parms=None,tgd=None,use_aggregated_values=False):
         self.alias = alias or self.key
         self.dtype = dtype or self.dtype
+        self.vc = vc or VariableCollection()
         self.field = field
         self.file_only = file_only
         self.parms = get_default_or_apply(parms,self._format_parms_,default={})
@@ -79,7 +80,7 @@ class AbstractUnivariateFunction(AbstractFunction):
     __metaclass__ = abc.ABCMeta
         
     def execute(self):
-        dvc = VariableCollection()
+        dvc = self.vc
         fdef = self.get_function_definition()
         for variable in self.field.variables.itervalues():
             cc = self.calculate(variable.value,**self.parms)
@@ -131,7 +132,7 @@ class AbstractUnivariateSetFunction(AbstractUnivariateFunction):
         shp_fill = list(self.field.shape)
         shp_fill[1] = len(self.tgd.dgroups)
         fdef = self.get_function_definition()
-        dvc = VariableCollection()
+        dvc = self.vc
         for variable in self.field.variables.itervalues():
             dtype = self.dtype or variable.value.dtype
             fill = self._get_temporal_agg_fill_(dtype,shp_fill=shp_fill)
@@ -151,7 +152,7 @@ class AbstractMultivariateFunction(AbstractFunction):
     def required_variables(self): [str]
     
     def execute(self):
-        dvc = VariableCollection()
+        dvc = self.vc
         fdef = self.get_function_definition()
         parms = {k:self.field.variables[self.parms[k]].value for k in self.required_variables}
         for k,v in self.parms.iteritems():

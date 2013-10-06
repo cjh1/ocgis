@@ -116,14 +116,14 @@ class Field(object):
         
         r_gid_name = self.spatial.geom.name_uid
         r_update_iter_yield = self._update_iter_yield_
-        iters = map(_get_dimension_iterator_1d_,['realization','temporal','level'])
-        iters.append(self.spatial.get_geom_iter())
         for variable in self.variables.itervalues():
             ref_value = variable.value
 #            name_variable = variable.name
 #            name_alias = variable.alias
 #            vid = variable.uid
 #            did = variable.did
+            iters = map(_get_dimension_iterator_1d_,['realization','temporal','level'])
+            iters.append(self.spatial.get_geom_iter())
             for [(ridx,rlz),(tidx,t),(lidx,l),(sridx,scidx,geom,gid)] in itertools.product(*iters):
                 ref_idx = ref_value[ridx,tidx,lidx,sridx,scidx]
                 if is_masked(ref_idx):
