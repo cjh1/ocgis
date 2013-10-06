@@ -96,10 +96,6 @@ class Variable(AbstractSourcedVariable):
         ret = '{0}(alias="{1}",name="{2}",units="{3}")'.format(self.__class__.__name__,self.alias,self.name,self.units)
         return(ret)
     
-    @property
-    def _unique_key(self):
-        return(self.alias)
-    
     def _format_private_value_(self,value):
         if value is None:
             ret = None
@@ -135,11 +131,11 @@ class VariableCollection(OrderedDict):
                 
     def add_variable(self,variable):
         assert(isinstance(variable,Variable))
-        assert(variable._unique_key not in self)
+        assert(variable.alias not in self)
         if variable.uid is None:
             variable.uid = self._uid_ctr
             self._uid_ctr += 1
-        self.update({variable._unique_key:variable})
+        self.update({variable.alias:variable})
         
     def _get_sliced_variables_(self,slc):
         variables = [v.__getitem__(slc) for v in self.itervalues()]
@@ -152,10 +148,5 @@ class DerivedVariable(Variable):
     def __init__(self,**kwds):
         self.fdef = kwds.pop('fdef')
         self.parents = kwds.pop('parents')
-        self._collection_key = kwds.pop('collection_key')
         
         super(DerivedVariable,self).__init__(**kwds)
-        
-    @property
-    def _unique_key(self):
-        return(self._collection_key)

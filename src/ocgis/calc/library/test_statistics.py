@@ -25,7 +25,7 @@ class Test(AbstractTestField):
         dvc = mu.execute()
         dv = dvc['my_mean_tmax']
         self.assertEqual(dv.name,'mean')
-        self.assertEqual(dv.alias,'my_mean')
+        self.assertEqual(dv.alias,'my_mean_tmax')
         self.assertIsInstance(dv,DerivedVariable)
         self.assertEqual(dv.value.shape,(2,2,2,3,4))
         self.assertNumpyAll(np.ma.mean(field.variables['tmax'].value[1,tgd.dgroups[1],0,:,:],axis=0),

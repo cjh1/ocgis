@@ -51,6 +51,14 @@ class AbstractFunction(object):
     def validate(self,ops):
         pass
     
+    def _add_to_collection_(self,units=None,value=None,parent_variables=None,alias=None):
+        units = units or self.get_output_units(parent_variables[0])
+        alias = alias or '{0}_{1}'.format(self.alias,parent_variables[0].alias)
+        fdef = self.get_function_definition()
+        dv = DerivedVariable(name=self.key,alias=alias,units=units,value=value,
+                             fdef=fdef,parents=VariableCollection(variables=parent_variables))
+        self.vc.add_variable(dv)
+    
     def _format_parms_(self,values):
         return(values)
     
@@ -80,8 +88,6 @@ class AbstractUnivariateFunction(AbstractFunction):
     __metaclass__ = abc.ABCMeta
         
     def execute(self):
-        dvc = self.vc
-        fdef = self.get_function_definition()
         for variable in self.field.variables.itervalues():
             cc = self.calculate(variable.value,**self.parms)
             dtype = self.dtype or variable.value.dtype
@@ -92,12 +98,8 @@ class AbstractUnivariateFunction(AbstractFunction):
                 fill = self._get_temporal_agg_fill_(dtype)
                 self._set_fill_temporal_(fill,cc,f=self.aggregate_temporal,parms={})
                 cc = fill
-            dv = DerivedVariable(name=self.key,alias=self.alias,
-                                 units=self.get_output_units(variable),value=cc,
-                                 fdef=fdef,parents=VariableCollection(variables=[variable]),
-                                 collection_key='{0}_{1}'.format(self.alias,variable.alias))
-            dvc.add_variable(dv)
-        return(dvc)
+            self._add_to_collection_(value=cc,parent_variables=[variable])
+        return(self.vc)
         
     def aggregate_spatial(self,**kwds):
         raise(NotImplementedError)
@@ -131,18 +133,12 @@ class AbstractUnivariateSetFunction(AbstractUnivariateFunction):
     def execute(self):
         shp_fill = list(self.field.shape)
         shp_fill[1] = len(self.tgd.dgroups)
-        fdef = self.get_function_definition()
-        dvc = self.vc
         for variable in self.field.variables.itervalues():
             dtype = self.dtype or variable.value.dtype
             fill = self._get_temporal_agg_fill_(dtype,shp_fill=shp_fill)
             self._set_fill_temporal_(fill,variable.value)
-            dv = DerivedVariable(name=self.key,alias=self.alias,
-                                 units=self.get_output_units(variable),value=fill,
-                                 fdef=fdef,parents=VariableCollection(variables=[variable]),
-                                 collection_key='{0}_{1}'.format(self.alias,variable.alias))
-            dvc.add_variable(dv)
-        return(dvc)
+            self._add_to_collection_(value=fill,parent_variables=[variable])
+        return(self.vc)
     
 
 class AbstractMultivariateFunction(AbstractFunction):
@@ -152,8 +148,6 @@ class AbstractMultivariateFunction(AbstractFunction):
     def required_variables(self): [str]
     
     def execute(self):
-        dvc = self.vc
-        fdef = self.get_function_definition()
         parms = {k:self.field.variables[self.parms[k]].value for k in self.required_variables}
         for k,v in self.parms.iteritems():
             if k not in self.required_variables:
@@ -166,15 +160,13 @@ class AbstractMultivariateFunction(AbstractFunction):
             fill = self._get_temporal_agg_fill_(cc.dtype)
             self._set_fill_temporal_(fill,cc,f=self.aggregate_temporal,parms={})
             cc = fill
-        dv = DerivedVariable(name=self.key,alias=self.alias,
-                             units=self.get_output_units(),value=cc,
-                             fdef=fdef,parents=self.field.variables,
-                             collection_key=self.alias)
-        dvc.add_variable(dv)
-        return(dvc)
+        units = self.get_output_units()
+        self._add_to_collection_(units=units,value=cc,parent_variables=self.field.variables.values(),
+                                 alias=self.alias)
+        return(self.vc)
     
     def get_output_units(self):
-        return(None)
+        return('undefined')
     
     
 class AbstractKeyedOutputFunction(object):
@@ -182,4 +174,3 @@ class AbstractKeyedOutputFunction(object):
     
     @abc.abstractproperty
     def dtype(self): dict
- 
