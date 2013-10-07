@@ -1,6 +1,6 @@
 import unittest
 from ocgis.interface.base.test_field import AbstractTestField
-from ocgis.api.collection import SpatialCollection, CalculationCollection
+from ocgis.api.collection import SpatialCollection
 from ocgis.util.shp_cabinet import ShpCabinet
 from shapely.geometry.multipolygon import MultiPolygon
 import datetime
@@ -47,10 +47,7 @@ class TestSpatialCollection(AbstractTestField):
             self.assertEqual(len(row),2)
             self.assertEqual(len(row[1]),len(constants.raw_headers))
             
-            
-class TestCalculationCollection(AbstractTestField):
-    
-    def test_iteration(self):
+    def test_calculation_iteration(self):
         field = self.get_field(with_value=True,month_count=2)
         field.variables.add_variable(Variable(value=field.variables['tmax'].value+5,
                                               name='tmin',alias='tmin'))
@@ -74,7 +71,7 @@ class TestCalculationCollection(AbstractTestField):
                         
         sc = ShpCabinet()
         meta = sc.get_meta('state_boundaries')
-        sp = CalculationCollection(meta=meta,key='state_boundaries')
+        sp = SpatialCollection(meta=meta,key='state_boundaries',headers=constants.calc_headers)
         for row in sc.iter_geoms('state_boundaries'):
             sp.add_field(row['properties']['UGID'],row['geom'],cfield.variables.keys()[0],
                          cfield,properties=row['properties'])
@@ -85,7 +82,7 @@ class TestCalculationCollection(AbstractTestField):
             self.assertEqual(len(row),2)
             self.assertEqual(len(row[1]),len(constants.calc_headers))
             
-    def test_iteration_two_calculations(self):
+    def test_calculation_iteration_two_calculations(self):
         field = self.get_field(with_value=True,month_count=2)
         field.variables.add_variable(Variable(value=field.variables['tmax'].value+5,
                                               name='tmin',alias='tmin'))
@@ -111,7 +108,7 @@ class TestCalculationCollection(AbstractTestField):
                         
         sc = ShpCabinet()
         meta = sc.get_meta('state_boundaries')
-        sp = CalculationCollection(meta=meta,key='state_boundaries')
+        sp = SpatialCollection(meta=meta,key='state_boundaries',headers=constants.calc_headers)
         for row in sc.iter_geoms('state_boundaries'):
             sp.add_field(row['properties']['UGID'],row['geom'],cfield.variables.keys()[0],
                          cfield,properties=row['properties'])

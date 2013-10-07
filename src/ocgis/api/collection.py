@@ -33,7 +33,3 @@ class SpatialCollection(OrderedDict):
                 row['ugid'] = ugid
                 tup = [row[h] for h in r_headers]
                 yield(row['geom'],tup)
-                
-                
-class CalculationCollection(SpatialCollection):
-    _default_headers = constants.calc_headers
