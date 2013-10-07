@@ -15,7 +15,6 @@ from shapely.ops import cascaded_union
 from ocgis.interface.base.variable import Variable, VariableCollection
 from ocgis.interface.base.dimension.temporal import TemporalDimension
 from copy import deepcopy
-from collections import OrderedDict
 
 
 class AbstractTestField(TestBase):
@@ -186,7 +185,8 @@ class TestField(AbstractTestField):
         rows = list(field.get_iter())
         self.assertEqual(len(rows),2*31*2*3*4)
         rows[100]['geom'] = rows[100]['geom'].bounds
-        self.assertEqual(rows[100],{'realization_bnds_lower': None, 'vid': 1, 'GEOM_uid': 12, 'realization_bnds_upper': None, 'year': 2000, 'level_bnds_upper': 200, 'realization_uid': 1, 'realization': 1, 'geom': (-97.5, 37.5, -96.5, 38.5), 'level_bnds_lower': 100, 'variable': 'tmax', 'time_bnds_upper': datetime.datetime(2000, 2, 1, 0, 0), 'time_bnds_lower': datetime.datetime(2000, 1, 31, 0, 0), 'day': 31, 'level': 150, 'did': None, 'value': 0.94615239545676533, 'alias': 'tmax', 'level_uid': 2, 'month': 1, 'time': datetime.datetime(2000, 1, 31, 12, 0), 'time_uid': 31})
+        self.assertDictEqual(rows[100],{'realization_bnds_lower': None, 'vid': 1, 'GEOM_uid': 5, 'realization_bnds_upper': None, 'year': 2000, 'level_bnds_upper': 100, 'realization_uid': 1, 'realization': 1, 'geom': (-100.5, 38.5, -99.5, 39.5), 'level_bnds_lower': 0, 'variable': 'tmax', 'time_bnds_upper': datetime.datetime(2000, 1, 6, 0, 0), 'time_bnds_lower': datetime.datetime(2000, 1, 5, 0, 0), 'day': 5, 'level': 50, 'did': None, 'value': 0.32664490177209615, 'alias': 'tmax', 'level_uid': 1, 'month': 1, 'time': datetime.datetime(2000, 1, 5, 12, 0), 'time_uid': 5})
+        self.assertEqual(set(field.variables['tmax'].value.flatten().tolist()),set([r['value'] for r in rows]))
         
     def test_get_intersects_domain_polygon(self):
         regular = make_poly((36.61,41.39),(-101.41,-95.47))

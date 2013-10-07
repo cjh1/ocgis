@@ -96,31 +96,27 @@ class Field(object):
         masked_value = constants.fill_value
         
         r_gid_name = self.spatial.geom.name_uid
-        r_update_iter_yield = self._update_iter_yield_
         for variable in self.variables.itervalues():
+            yld = self._get_variable_iter_yield_(variable)
             ref_value = variable.value
-#            name_variable = variable.name
-#            name_alias = variable.alias
-#            vid = variable.uid
-#            did = variable.did
             iters = map(_get_dimension_iterator_1d_,['realization','temporal','level'])
             iters.append(self.spatial.get_geom_iter())
             for [(ridx,rlz),(tidx,t),(lidx,l),(sridx,scidx,geom,gid)] in itertools.product(*iters):
+                to_yld = deepcopy(yld)
                 ref_idx = ref_value[ridx,tidx,lidx,sridx,scidx]
                 if is_masked(ref_idx):
                     if add_masked_value:
                         ref_idx = masked_value
                     else:
                         continue
-                rlz.update(t)
-                rlz.update(l)
-                rlz['value'] = ref_idx
-                rlz['geom'] = geom
-                rlz[r_gid_name] = gid
-                
-                r_update_iter_yield(rlz,variable)
-                
-                yield(rlz)
+                to_yld.update(rlz)
+                to_yld.update(t)
+                to_yld.update(l)
+                to_yld['value'] = ref_idx
+                to_yld['geom'] = geom
+                to_yld[r_gid_name] = gid
+                                
+                yield(to_yld)
                 
     def get_shallow_copy(self):
         return(copy(self))
@@ -248,16 +244,19 @@ class Field(object):
                     ref = v[idx_r,idx_t,idx_l]
                     ref.mask = ref_logical_or(ref.mask,mask)
                     
-    def _update_iter_yield_(self,yld,variable):
+    def _get_variable_iter_yield_(self,variable):
+        yld = {}
         yld['did'] = variable.did
         yld['variable'] = variable.name
         yld['alias'] = variable.alias
         yld['vid'] = variable.uid
+        return(yld)
 
 
 class DerivedField(Field):
     
-    def _update_iter_yield_(self,yld,variable):
+    def _get_variable_iter_yield_(self,variable):
+        yld = {}
         yld['cid'] = variable.uid
         yld['calc_key'] = variable.name
         yld['calc_alias'] = variable.alias
@@ -267,3 +266,4 @@ class DerivedField(Field):
         yld['variable'] = raw_variable.name
         yld['alias'] = raw_variable.alias
         yld['vid'] = raw_variable.uid
+        return(yld)
