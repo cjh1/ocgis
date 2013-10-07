@@ -169,16 +169,28 @@ class AbstractMultivariateFunction(AbstractFunction):
     def required_variables(self): [str]
     
     def _execute_(self):
-        parms = {k:self.field.variables[self.parms[k]].value for k in self.required_variables}
+        parms = {k:self.get_variable_value(self.field.variables[self.parms[k]]) for k in self.required_variables}
         for k,v in self.parms.iteritems():
             if k not in self.required_variables:
                 parms.update({k:v})
         fill = self.calculate(**parms)
         if self.dtype is not None:
             fill = fill.astype(self.dtype)
-        assert(fill.shape == self.field.shape)
+        if not self.use_raw_values:
+            assert(fill.shape == self.field.shape)
+        else:
+            assert(fill.shape[0:3] == self.field.shape[0:3])
         if self.tgd is not None:
             fill = self._get_temporal_agg_fill_(fill,f=self.aggregate_temporal,parms={})
+        else:
+            ## determine if the output data needs to be spatially aggregated
+            if self.use_raw_values and fill.shape != self.field.shape:
+                new_fill = np.ma.array(np.zeros(self.field.shape,dtype=fill.dtype),mask=False,fill_value=fill.fill_value)
+                weights = self.field._raw.spatial.weights
+                r_aggregate_spatial = self.aggregate_spatial
+                for ir,it,il in itertools.product(*[range(i) for i in self.field.shape[0:3]]):
+                    new_fill[ir,it,il,0,0] = r_aggregate_spatial(fill[ir,it,il,:,:],weights=weights)
+                fill = new_fill
         units = self.get_output_units()
         self._add_to_collection_(units=units,value=fill,parent_variables=self.field.variables.values(),
                                  alias=self.alias)

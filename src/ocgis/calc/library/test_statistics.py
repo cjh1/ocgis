@@ -72,9 +72,6 @@ class Test(AbstractTestField):
                 self.assertEqual(set([r.value.shape for r in ret.values()]),set([(2, 2, 2, 1, 1)]))
             else:
                 self.assertEqual(set([r.value.shape for r in ret.values()]),set([(2, 2, 2, 3, 4)]))
-                
-    def test_Divide_use_raw_values(self):
-        raise(NotImplementedError)
 
 
 if __name__ == "__main__":

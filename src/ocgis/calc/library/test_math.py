@@ -3,6 +3,7 @@ from ocgis.interface.base.test_field import AbstractTestField
 import numpy as np
 from ocgis.calc.library.math import NaturalLogarithm, Divide, Threshold
 from ocgis.interface.base.variable import Variable
+import itertools
 
 
 class Test(AbstractTestField):
@@ -48,6 +49,52 @@ class Test(AbstractTestField):
         self.assertNumpyAllClose(ret['divide'].value[0,1,1,:,2],
                                  np.ma.array([0.0833001563436,0.0940192653632,0.0916398919876],
                                              mask=False,fill_value=1e20))
+        
+    def test_Divide_use_raw_values(self):
+        field = self.get_field(with_value=True,month_count=2)
+        field.variables.add_variable(Variable(value=field.variables['tmax'].value+5,
+                                              name='tmin',alias='tmin'))
+        grouping = ['month']
+        
+        ur = [
+              True,
+              False
+              ]
+        agg = [
+               True,
+               False
+               ]
+        with_tgd = [
+                    True,
+                    False
+                    ]
+        
+        for u,a,w in itertools.product(ur,agg,with_tgd):
+            if w:
+                tgd = field.temporal.get_grouping(grouping)
+            else:
+                tgd = None
+            if a:
+                cfield = field.get_spatially_aggregated()
+                self.assertNotEqual(cfield.shape,cfield._raw.shape)
+                self.assertEqual(set([r.value.shape for r in cfield.variables.values()]),set([(2, 60, 2, 1, 1)]))
+                self.assertEqual(cfield.shape,(2,60,2,1,1))
+            else:
+                cfield = field
+                self.assertEqual(set([r.value.shape for r in cfield.variables.values()]),set([(2, 60, 2, 3, 4)]))
+                self.assertEqual(cfield.shape,(2,60,2,3,4))
+            div = Divide(dtype=np.float32,field=cfield,parms={'arr1':'tmax','arr2':'tmin'},tgd=tgd,use_raw_values=u)
+            ret = div.execute()
+            if a:
+                if w:
+                    self.assertEqual(set([r.value.shape for r in ret.values()]),set([(2, 2, 2, 1, 1)]))
+                else:
+                    self.assertEqual(set([r.value.shape for r in ret.values()]),set([(2, 60, 2, 1, 1)]))
+            else:
+                if w:
+                    self.assertEqual(set([r.value.shape for r in ret.values()]),set([(2, 2, 2, 3, 4)]))
+                else:
+                    self.assertEqual(set([r.value.shape for r in ret.values()]),set([(2, 60, 2, 3, 4)]))
     
     def test_Treshold(self):
         field = self.get_field(with_value=True,month_count=2)
