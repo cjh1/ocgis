@@ -107,7 +107,18 @@ class AbstractFunction(object):
                     raise
             
         return(fill)
-        
+    
+    def _get_or_pass_spatial_agg_fill_(self,values):
+        ## determine if the output data needs to be spatially aggregated
+        if self.use_raw_values and values.shape != self.field.shape:
+            ret = np.ma.array(np.zeros(self.field.shape,dtype=values.dtype),mask=False,fill_value=values.fill_value)
+            weights = self.field._raw.spatial.weights
+            r_aggregate_spatial = self.aggregate_spatial
+            for ir,it,il in itertools.product(*[range(i) for i in self.field.shape[0:3]]):
+                ret[ir,it,il,0,0] = r_aggregate_spatial(values[ir,it,il,:,:],weights=weights)
+        else:
+            ret = values
+        return(ret)
         
 class AbstractUnivariateFunction(AbstractFunction):
     '''
@@ -125,6 +136,8 @@ class AbstractUnivariateFunction(AbstractFunction):
             assert(fill.shape == self.field.shape)
             if self.tgd is not None:
                 fill = self._get_temporal_agg_fill_(fill,f=self.aggregate_temporal,parms={})
+            else:
+                fill = self._get_or_pass_spatial_agg_fill_(fill)
             self._add_to_collection_(value=fill,parent_variables=[variable])
 
 
@@ -183,14 +196,7 @@ class AbstractMultivariateFunction(AbstractFunction):
         if self.tgd is not None:
             fill = self._get_temporal_agg_fill_(fill,f=self.aggregate_temporal,parms={})
         else:
-            ## determine if the output data needs to be spatially aggregated
-            if self.use_raw_values and fill.shape != self.field.shape:
-                new_fill = np.ma.array(np.zeros(self.field.shape,dtype=fill.dtype),mask=False,fill_value=fill.fill_value)
-                weights = self.field._raw.spatial.weights
-                r_aggregate_spatial = self.aggregate_spatial
-                for ir,it,il in itertools.product(*[range(i) for i in self.field.shape[0:3]]):
-                    new_fill[ir,it,il,0,0] = r_aggregate_spatial(fill[ir,it,il,:,:],weights=weights)
-                fill = new_fill
+            fill = self._get_or_pass_spatial_agg_fill_(fill)
         units = self.get_output_units()
         self._add_to_collection_(units=units,value=fill,parent_variables=self.field.variables.values(),
                                  alias=self.alias)
