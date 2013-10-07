@@ -7,9 +7,9 @@ import datetime
 from ocgis import constants
 from ocgis.calc.library.statistics import Mean
 from ocgis.interface.base.variable import Variable
-from ocgis.interface.base.field import DerivedField
+from ocgis.interface.base.field import DerivedField, DerivedMultivariateField
 from copy import copy
-from ocgis.calc.library.math import Threshold
+from ocgis.calc.library.math import Threshold, Divide
 
 
 class TestSpatialCollection(AbstractTestField):
@@ -124,6 +124,32 @@ class TestSpatialCollection(AbstractTestField):
             self.assertEqual(len(row[1]),len(constants.calc_headers))
         self.assertEqual(ii+1,2*2*2*3*4*51*4)
         self.assertEqual(len(cids),4)
+        
+    def test_multivariate_iteration(self):
+        field = self.get_field(with_value=True,month_count=1)
+        field.variables.add_variable(Variable(value=field.variables['tmax'].value+5,
+                                              name='tmin',alias='tmin'))
+        field.temporal.name_uid = 'tid'
+        field.level.name_uid = 'lid'
+        field.spatial.geom.name_uid = 'gid'
+        
+        div = Divide(field=field,parms={'arr1':'tmin','arr2':'tmax'},alias='some_division')
+        ret = div.execute()
+        
+        cfield = DerivedMultivariateField(variables=ret,realization=field.realization,temporal=field.temporal,level=field.level,
+                 spatial=field.spatial,meta=field.meta,uid=field.uid)
+                
+        sc = ShpCabinet()
+        meta = sc.get_meta('state_boundaries')
+        sp = SpatialCollection(meta=meta,key='state_boundaries',headers=constants.multi_headers)
+        for row in sc.iter_geoms('state_boundaries'):
+            sp.add_field(row['properties']['UGID'],row['geom'],cfield.variables.keys()[0],
+                         cfield,properties=row['properties'])
+        
+        for ii,row in enumerate(sp.get_iter()):
+            if ii == 0:
+                self.assertEqual(row[1],[None, 1, 1, 1, 1, 'divide', 'some_division', datetime.datetime(2000, 1, 1, 12, 0), 2000, 1, 1, 50, 12.989774984574424])
+        self.assertEqual(ii+1,2*31*2*3*4*51)
 
 
 if __name__ == "__main__":
