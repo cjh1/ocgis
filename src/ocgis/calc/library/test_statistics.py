@@ -4,7 +4,6 @@ from ocgis.interface.base.test_field import AbstractTestField
 from ocgis.interface.base.variable import DerivedVariable, Variable
 import numpy as np
 import itertools
-from copy import deepcopy
 
 
 class Test(AbstractTestField):
