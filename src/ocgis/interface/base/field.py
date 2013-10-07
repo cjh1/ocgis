@@ -200,31 +200,6 @@ class Field(object):
         ret._raw = copy(self)
             
         return(ret)
-    
-#    def _get_variables_none_or_slice_(self,slc):
-#        for v in self.variables.itervalues():
-#            if v._value is not None:
-#                
-#        import ipdb;ipdb.set_trace()
-        
-#    def _format_private_value_(self,value):
-#        if value is None:
-#            ret = value
-#        else:
-#            assert(isinstance(value,np.ndarray))
-#            assert(value.shape == self.shape)
-#            ret = value
-#            if not isinstance(ret,np.ma.MaskedArray):
-#                ret = np.ma.array(ret,mask=False)
-#        return(ret)
-#    
-#    def _get_value_(self):
-#        if self._data is None and self._value is None:
-#            ocgis_lh(exc=ValueError('Values were requested from data source, but no data source is available.'))
-#        else:
-#            self._set_value_from_source_()
-#        return(self._value)
-#    
 
     def _get_value_from_source_(self,*args,**kwds):
         raise(NotImplementedError)
