@@ -184,6 +184,16 @@ class OcgOperations(object):
         def _raise_(msg,obj=OutputFormat):
             e = DefinitionValidationError(OutputFormat,msg)
             ocgis_lh(exc=e,logger='operations')
+            
+        ## confirm projections are equivalent
+        projections = []
+        for rd in self.dataset:
+            ocgis_lh('loading projection','request',alias=rd.alias)
+            crs = rd._get_crs_()
+            projections.append(crs if crs is None else crs.sr.ExportToProj4())
+        if len(set(projections)) == 2 and self.output_format != 'numpy': #@UndefinedVariable
+            if self.output_crs is None:
+                _raise_('Dataset coordinate reference systems must be equivalent if no output CRS is chosen.',obj=OutputCRS)
         
         if self.slice is not None:
             assert(self.geom is None)

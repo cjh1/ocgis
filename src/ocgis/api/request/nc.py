@@ -425,7 +425,13 @@ def get_dimension_map(ds,var,metadata):
             msg = 'Dimension variable not found for axis: "{0}". You may need to use the "dimension_map" parameter.'.format(dim)
             ocgis_lh(logger='request.nc',exc=DimensionNotFound(msg))
         axis = get_axis(dimvar,dims,dim)
-        mp[axis] = {'variable':dimvar._name,'dimension':dim,'pos':var.dimensions.index(dimvar._name)}
+        ## pull metadata information the variable and dimension names
+        mp[axis] = {'variable':dimvar._name,'dimension':dim}
+        try:
+            mp[axis].update({'pos':var.dimensions.index(dimvar._name)})
+        except ValueError:
+            ## variable name may differ from the dimension name
+            mp[axis].update({'pos':var.dimensions.index(dimvar.dimensions[0])})
         
     ## look for bounds variables
     bounds_names = set(constants.name_bounds)
