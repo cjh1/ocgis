@@ -6,6 +6,7 @@ from ocgis.api.parms.base import OcgParameter
 from ocgis.conv.meta import MetaConverter
 from ocgis.util.logging_ocgis import ocgis_lh
 from ocgis.calc.base import AbstractMultivariateFunction
+from ocgis.interface.base.crs import CFWGS84
 
 
 class OcgOperations(object):
@@ -180,6 +181,7 @@ class OcgOperations(object):
         return(object.__getattribute__(self, name))
     
     def _validate_(self):
+        ocgis_lh(logger='operations',msg='validating operations')
         
         def _raise_(msg,obj=OutputFormat):
             e = DefinitionValidationError(OutputFormat,msg)
@@ -188,7 +190,6 @@ class OcgOperations(object):
         ## confirm projections are equivalent
         projections = []
         for rd in self.dataset:
-            ocgis_lh('loading projection','request',alias=rd.alias)
             crs = rd._get_crs_()
             projections.append(crs if crs is None else crs.sr.ExportToProj4())
         if len(set(projections)) == 2 and self.output_format != 'numpy': #@UndefinedVariable
@@ -217,8 +218,8 @@ class OcgOperations(object):
                 msg = 'Data may not be aggregated for netCDF output. The aggregate parameter must be False.'
                 _raise_(msg,OutputFormat)
             
-            if env.WRITE_TO_REFERENCE_PROJECTION is True:
-                msg = 'env.WRITE_TO_REFERENCE_PROJECTION must be False when writing to netCDF.'
+            if self.output_crs is not None or not isinstance(self.output_crs,CFWGS84):
+                msg = 'CFWGS84 is the only acceptable output CRS at this time for netCDF output'
                 _raise_(msg,OutputFormat)
                 
             if self.calc is not None:
