@@ -216,8 +216,10 @@ class TestSimple(TestSimpleBase):
         ## intersects
         geom = make_poly((37.5,39.5),(-104.5,-102.5))
         ret = self.get_ret(kwds={'geom':geom})
-        ref = ret[1]
+        ref = ret[1][self.var]
         gids = set([6,7,10,11])
+        ret_gids = set(ref.spatial.uid.compressed())
+        import ipdb;ipdb.set_trace()
         ret_gids = set(ref.variables[self.var].spatial.vector.uid.compressed())
         intersection = gids.intersection(ret_gids)
         self.assertEqual(len(intersection),4)

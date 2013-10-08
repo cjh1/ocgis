@@ -61,7 +61,11 @@ class WGS84(CoordinateReferenceSystem):
     def __init__(self):
         CoordinateReferenceSystem.__init__(self,epsg=4326)
 
-    def get_is_360(self,spatial):
+    @classmethod
+    def get_is_360(cls,spatial):
+        if not isinstance(spatial.crs,cls):
+            return(False)
+        
         try:
             if spatial.grid.col.bounds is None:
                 check = spatial.grid.col.value

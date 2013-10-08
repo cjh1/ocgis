@@ -11,7 +11,7 @@ from shapely.geometry.point import Point
 from ocgis import constants
 from ocgis.util.shp_cabinet import ShpCabinetIterator
 from ocgis.calc.library.register import FunctionRegistry
-from ocgis.interface.base.crs import CoordinateReferenceSystem
+from ocgis.interface.base.crs import CoordinateReferenceSystem, CFWGS84
 
 
 class Abstraction(base.StringOptionParameter):
@@ -267,7 +267,7 @@ class Geom(base.OcgParameter):
     
     def parse(self,value):
         if type(value) in [Polygon,MultiPolygon,Point]:
-            ret = [{'geom':value,'properties':{'UGID':1}}]
+            ret = [{'geom':value,'properties':{'ugid':1},'crs':CFWGS84()}]
         elif type(value) in [list,tuple]:
             if len(value) == 2:
                 geom = Point(value[0],value[1])
@@ -279,7 +279,7 @@ class Geom(base.OcgParameter):
                                 (maxx,miny)))
             if not geom.is_valid:
                 raise(DefinitionValidationError(self,'Parsed geometry is not valid.'))
-            ret = [{'geom':geom,'properties':{'UGID':1}}]
+            ret = [{'geom':geom,'properties':{'ugid':1},'crs':CFWGS84()}]
             self._bounds = geom.bounds
         elif isinstance(value,ShpCabinetIterator):
             self._shp_key = value.key
@@ -305,7 +305,7 @@ class Geom(base.OcgParameter):
             if not geom.is_valid:
                 raise(DefinitionValidationError(self,'Parsed geometry is not valid.'))
 #            ret = GeometryDataset(1,geom)
-            ret = [{'geom':geom,'properties':{'UGID':1}}]
+            ret = [{'geom':geom,'properties':{'ugid':1}}]
             self._bounds = elements
         except ValueError:
             self._shp_key = value

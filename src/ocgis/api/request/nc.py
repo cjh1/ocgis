@@ -189,6 +189,8 @@ class NcRequestDataset(object):
             ret = ret.get_between('temporal',self.time_range[0],self.time_range[1])
         if self.time_region is not None:
             ret = ret.get_time_region(self.time_region)
+        if self.level_range is not None:
+            raise(NotImplementedError('no level range subsetting yet'))
             
         return(ret)
     
