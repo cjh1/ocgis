@@ -219,12 +219,11 @@ class TestSimple(TestSimpleBase):
         ref = ret[1][self.var]
         gids = set([6,7,10,11])
         ret_gids = set(ref.spatial.uid.compressed())
-        import ipdb;ipdb.set_trace()
-        ret_gids = set(ref.variables[self.var].spatial.vector.uid.compressed())
-        intersection = gids.intersection(ret_gids)
-        self.assertEqual(len(intersection),4)
-        self.assertTrue(np.all(ref.variables[self.var].value[0,0,:,:] == np.array([[1.0,2.0],[3.0,4.0]])))
-        
+        self.assertEqual(ret_gids,gids)
+        to_test = ref.variables[self.var].value[0,0,0,:,:]
+        self.assertEqual(to_test.shape,(2,2))
+        self.assertTrue(np.all(to_test == np.array([[1.0,2.0],[3.0,4.0]])))
+
         ## intersection
         geom = make_poly((38,39),(-104,-103))
         ret = self.get_ret(kwds={'geom':geom,'spatial_operation':'clip'})

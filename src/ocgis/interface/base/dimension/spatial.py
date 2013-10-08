@@ -170,7 +170,7 @@ class SpatialDimension(base.AbstractUidDimension):
                 ret.grid.value.mask[:,:,:] = grid_mask.copy()
         else:
             raise(NotImplementedError)
-        
+                
         if return_indices:
             ret = (ret,slc)
 
@@ -323,8 +323,8 @@ class SpatialGridDimension(base.AbstractUidValueDimension):
         if self.row is None:
             raise(NotImplementedError('no bbox subset w/out rows and columns'))
         else:
-            new_row,row_indices = self.row.get_between(min_row,max_row,return_indices=True)
-            new_col,col_indices = self.col.get_between(min_col,max_col,return_indices=True)
+            new_row,row_indices = self.row.get_between(min_row,max_row,return_indices=True,closed=True)
+            new_col,col_indices = self.col.get_between(min_col,max_col,return_indices=True,closed=True)
             row_slc = get_reduced_slice(row_indices)
             col_slc = get_reduced_slice(col_indices)
             new_uid = self.uid[row_slc,col_slc]
@@ -370,6 +370,7 @@ class SpatialGridDimension(base.AbstractUidValueDimension):
         else:
             shp = self._value.shape[1],self._value.shape[2]
         ret = np.arange(1,(shp[0]*shp[1])+1).reshape(shp)
+        ret = np.ma.array(ret,mask=False,fill_value=constants.fill_value)
         return(ret)
     
     def _get_value_(self):
@@ -495,6 +496,7 @@ class SpatialGeometryPointDimension(base.AbstractUidValueDimension):
             ocgis_lh(exc=EmptySubsetError(self.name))
         
         ret._value = fill
+        ret.uid.mask = fill.mask.copy()
         
         return(ret)
     

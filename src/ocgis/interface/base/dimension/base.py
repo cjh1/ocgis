@@ -99,13 +99,14 @@ class AbstractUidDimension(AbstractDimension):
         return(self._uid)
     @uid.setter
     def uid(self,value):
-        self._uid = self._get_none_or_array_(value)
+        self._uid = self._get_none_or_array_(value,masked=True)
     def _get_uid_(self):
         if self.value is None:
             ret = None
         else:
             n = reduce(mul,self.value.shape)
             ret = np.arange(1,n+1).reshape(self.value.shape)
+            ret = np.ma.array(ret,mask=False,fill_value=constants.fill_value)
         return(ret)
 
 
@@ -196,16 +197,23 @@ class VectorDimension(AbstractSourcedVariable,AbstractUidValueDimension):
     def shape(self):
         return(self.uid.shape)
     
-    def get_between(self,lower,upper,return_indices=False):
+    def get_between(self,lower,upper,return_indices=False,closed=False):
         assert(lower <= upper)
         
         if self.bounds is None:
-            select = np.logical_and(self.value >= lower,self.value <= upper)
+            if closed:
+                select = np.logical_and(self.value > lower,self.value < upper)
+            else:
+                select = np.logical_and(self.value >= lower,self.value <= upper)
         else:
             bounds_min = np.min(self.bounds,axis=1)
             bounds_max = np.max(self.bounds,axis=1)
-            select_lower = np.logical_or(bounds_min >= lower,bounds_max >= lower)
-            select_upper = np.logical_or(bounds_min <= upper,bounds_max <= upper)
+            if closed:
+                select_lower = np.logical_or(bounds_min > lower,bounds_max > lower)
+                select_upper = np.logical_or(bounds_min < upper,bounds_max < upper)
+            else:
+                select_lower = np.logical_or(bounds_min >= lower,bounds_max >= lower)
+                select_upper = np.logical_or(bounds_min <= upper,bounds_max <= upper)
             select = np.logical_and(select_lower,select_upper)
         
         if select.any() == False:
