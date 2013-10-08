@@ -1,6 +1,4 @@
-import tempfile
 import os
-from ocgis.interface.projection import WGS84
 from ocgis.exc import OcgisEnvironmentError
 from ocgis.util.logging_ocgis import ocgis_lh
 

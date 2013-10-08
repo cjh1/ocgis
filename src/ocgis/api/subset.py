@@ -1,10 +1,7 @@
-import itertools
 from ocgis.calc.engine import OcgCalculationEngine
 from ocgis import env
 from ocgis.exc import EmptyData, ExtentError, MaskedDataError
-from ocgis.interface.projection import WGS84
 from ocgis.util.spatial.wrap import Wrapper
-from copy import deepcopy
 from ocgis.util.logging_ocgis import ocgis_lh
 import logging
 from ocgis.api.collection import SpatialCollection
