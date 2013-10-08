@@ -68,7 +68,7 @@ class OcgOperations(object):
                  snippet=False, backend='ocg', prefix=None,
                  output_format='numpy', agg_selection=False, select_ugid=None, 
                  vector_wrap=True, allow_empty=False, dir_output=None, 
-                 slice=None, file_only=False, headers=None):
+                 slice=None, file_only=False, headers=None, output_crs=None):
         
         # # Tells "__setattr__" to not perform global validation until all
         # # values are set initially.
@@ -94,6 +94,7 @@ class OcgOperations(object):
         self.slice = Slice(slice)
         self.file_only = FileOnly(file_only)
         self.headers = Headers(headers)
+        self.output_crs = OutputCRS(output_crs)
         
         ## these values are left in to perhaps be added back in at a later date.
         self.output_grouping = None

@@ -169,12 +169,7 @@ class NcRequestDataset(object):
         if self.s_crs is not None:
             crs = self.s_crs
         else:
-            for potential in itersubclasses(CFCoordinateReferenceSystem):
-                try:
-                    crs = potential.load_from_metadata(self.variable,self._source_metadata)
-                    break
-                except ProjectionDoesNotMatch:
-                    continue
+            crs = self._get_crs_()
         if crs is None:
             ocgis_lh('No "grid_mapping" attribute available assuming WGS84: {0}'.format(self.uri),
                      'request',logging.WARN)
@@ -262,6 +257,16 @@ class NcRequestDataset(object):
             parms.append(as_str)
         msg = msg.format(self.__class__.__name__,','.join(parms))
         return(msg)
+    
+    def _get_crs_(self):
+        crs = None
+        for potential in itersubclasses(CFCoordinateReferenceSystem):
+            try:
+                crs = potential.load_from_metadata(self.variable,self._source_metadata)
+                break
+            except ProjectionDoesNotMatch:
+                continue
+        return(crs)
     
     def _get_uri_(self,uri,ignore_errors=False,followlinks=True):
         out_uris = []

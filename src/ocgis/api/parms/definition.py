@@ -2,7 +2,6 @@ from ocgis.api.parms import base
 from ocgis.exc import DefinitionValidationError
 from ocgis.api.request.base import RequestDataset, RequestDatasetCollection
 from shapely.geometry.polygon import Polygon
-from ocgis.calc import library
 from collections import OrderedDict
 import ocgis
 from os.path import exists
@@ -12,6 +11,7 @@ from shapely.geometry.point import Point
 from ocgis import constants
 from ocgis.util.shp_cabinet import ShpCabinetIterator
 from ocgis.calc.library.register import FunctionRegistry
+from ocgis.interface.base.crs import CoordinateReferenceSystem
 
 
 class Abstraction(base.StringOptionParameter):
@@ -365,7 +365,20 @@ class Headers(base.IterableParameter,base.OcgParameter):
 
     def _get_meta_(self):
         return('The following headers were used for file creation: {0}'.format(self.value))
+
+
+class OutputCRS(base.OcgParameter):
+    input_types = [CoordinateReferenceSystem]
+    name = 'output_crs'
+    nullable = True
+    return_type = [CoordinateReferenceSystem]
+    default = None
     
+    def _get_meta_(self):
+        ret = 'The PROJ.4 definition of the coordinate reference system is: "{0}"'.format(self.value.sr.ExportToProj4())
+        return(ret)
+
+
 class OutputFormat(base.StringOptionParameter):
     name = 'output_format'
     default = 'numpy'

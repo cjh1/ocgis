@@ -97,7 +97,7 @@ class RequestDatasetCollection(object):
         projections = []
         for rd in self:
             ocgis_lh('loading projection','request',alias=rd.alias)
-            projections.append(rd.ds.spatial.projection.sr.ExportToProj4())
+            projections.append(rd._get_crs_().sr.ExportToProj4())
         if len(set(projections)) == 2 and env.ops.output_format != 'numpy': #@UndefinedVariable
             if ocgis.env.WRITE_TO_REFERENCE_PROJECTION is False:
                 ocgis_lh(None,'request',

@@ -20,10 +20,10 @@ class Environment(object):
         self.FILL_VALUE = EnvParm('FILL_VALUE',1e20,formatter=float)
         self.VERBOSE = EnvParm('VERBOSE',False,formatter=self._format_bool_)
         self.OPTIMIZE_FOR_CALC = EnvParm('OPTIMIZE_FOR_CALC',False,formatter=self._format_bool_)
-        self.WRITE_TO_REFERENCE_PROJECTION = EnvParm('WRITE_TO_REFERENCE_PROJECTION',False,formatter=self._format_bool_)
+#        self.WRITE_TO_REFERENCE_PROJECTION = EnvParm('WRITE_TO_REFERENCE_PROJECTION',False,formatter=self._format_bool_)
         self.ENABLE_FILE_LOGGING = EnvParm('ENABLE_FILE_LOGGING',True,formatter=self._format_bool_)
         self.DEBUG = EnvParm('DEBUG',False,formatter=self._format_bool_)
-        self.REFERENCE_PROJECTION = ReferenceProjection()
+#        self.REFERENCE_PROJECTION = ReferenceProjection()
         self.DIR_BIN = EnvParm('DIR_BIN',None)
         
         self.ops = None
