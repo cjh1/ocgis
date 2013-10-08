@@ -120,8 +120,7 @@ class OcgInterpreter(Interpreter):
             else:
                 ## the operations object performs subsetting and calculations
                 ocgis_lh('initializing subset',interpreter_log,level=logging.DEBUG)
-                so = SubsetOperation(self.ops,serial=env.SERIAL,nprocs=env.CORES,
-                                     validate=True)
+                so = SubsetOperation(self.ops,serial=env.SERIAL,nprocs=env.CORES)
                 ## if there is no grouping on the output files, a singe converter is
                 ## is needed
                 if self.ops.output_grouping is None:

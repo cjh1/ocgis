@@ -2,7 +2,6 @@ from ocgis.conv.base import OcgConverter
 import netCDF4 as nc
 from ocgis.interface.projection import WGS84
 from ocgis import constants
-from ocgis.api.collection import CalcCollection, MultivariateCalcCollection
 
     
 class NcConverter(OcgConverter):

@@ -11,16 +11,12 @@ import logging
 
 class SubsetOperation(object):
     
-    def __init__(self,ops,serial=True,nprocs=1,validate=True):
+    def __init__(self,ops,serial=True,nprocs=1):
         self.ops = ops
         self.serial = serial
         self.nprocs = nprocs
         
         subset_log = ocgis_lh.get_logger('subset')
-        
-        if validate:
-            ocgis_lh('validating request datasets',subset_log,level=logging.DEBUG)
-            ops.dataset.validate()
 
         ## create the calculation engine
         if self.ops.calc is None:
