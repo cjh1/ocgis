@@ -14,16 +14,15 @@ class AbstractMetadata(OrderedDict):
     
 class NcMetadata(AbstractMetadata):
     
-    def __init__(self,rootgrp):
+    def __init__(self,rootgrp=None):
         super(NcMetadata,self).__init__()
-        try:
-            self._parse_(rootgrp)
-        ## likely raised by an initialization following a copy.
-        except AttributeError:
-            if isinstance(rootgrp,NcMetadata):
+        
+        if rootgrp is not None:
+            try:
+                self._parse_(rootgrp)
+            ## likely raised by an initialization following a deepcopy
+            except AttributeError:
                 super(NcMetadata,self).__init__(rootgrp)
-            else:
-                raise
         
     def _parse_(self,rootgrp):
         ## get global metadata

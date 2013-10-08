@@ -172,6 +172,8 @@ class Field(object):
             unioned = _get_geometry_union_(ret.spatial.geom.polygon.value)
             ret.spatial.geom.polygon._value = _get_geometry_union_(ret.spatial.geom.polygon.value)
             ret.spatial.geom.polygon.uid = new_spatial_uid
+        ## update the spatial uid
+        ret.spatial.uid = new_spatial_uid
         ## there are no grid objects for aggregated spatial dimensions.
         ret.spatial.grid = None
         ret.spatial._geom_to_grid = False
@@ -198,7 +200,7 @@ class Field(object):
                             
         ## we want to keep a copy of the raw data around for later calculations.
         ret._raw = copy(self)
-            
+                
         return(ret)
 
     def _get_value_from_source_(self,*args,**kwds):

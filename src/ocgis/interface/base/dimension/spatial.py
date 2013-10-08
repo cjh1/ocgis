@@ -115,12 +115,12 @@ class SpatialDimension(base.AbstractUidDimension):
             ref_value[row_idx,col_idx] = geom.intersection(polygon)
             
         ## clipped geometries have no grid or point representations
-        ret._grid = None
+        ret.grid._value = None
         ret._geom_to_grid = False
         ret._geom = deepcopy(ret.geom)
         ret._geom.grid = None
         ret._geom._point = None
-        
+                
         if return_indices:
             ret = (ret,slc)
         
@@ -434,12 +434,12 @@ class SpatialGeometryDimension(base.AbstractUidDimension):
         return(state)
         
     def _get_uid_(self):
-        if self.grid is not None:
-            ret = self.grid.uid
-        elif self._point is not None:
+        if self._point is not None:
             ret = self._point.uid
-        else:
+        elif self._polygon is not None:
             ret = self._polygon.uid
+        else:
+            ret = self.grid.uid
         return(ret)
 
 
