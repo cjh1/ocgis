@@ -123,12 +123,17 @@ class SubsetOperation(object):
                 field = rd.get()
             except EmptySubsetError as e:
                 ocgis_lh(exc=ExtentError(message=str(e)),alias=rd.alias,logger=self._subset_log)
-            ## if we are working with a slice, get the sliced field
-            if self.ops.slice is not None:
-                sfield = field.__getitem__(self.ops.slice)
-            ## otherwise, begin iterating over the geometries.
+#            ## if we are working with a slice, get the sliced field
+#            if self.ops.slice is not None:
+#                sfield = field.__getitem__(self.ops.slice)
+#            ## otherwise, begin iterating over the geometries.
             else:
-                itr = [{}] if self.ops.geom is None else self.ops.geom
+                ## set iterator based on presence of slice
+                if self.ops.slice is not None:
+                    itr = [{}]
+                else:
+                    itr = [{}] if self.ops.geom is None else self.ops.geom
+                ## loop over the iterator
                 for gd in itr:
                     ## initialize the collection object to store the subsetted data.
                     coll = SpatialCollection(crs=field.spatial.crs)
@@ -142,22 +147,27 @@ class SubsetOperation(object):
                         ugid = 1
                     ocgis_lh('processing',self._subset_log,level=logging.DEBUG,alias=alias,ugid=ugid)
                     
-                    if crs is not None and crs != field.spatial.crs:
-                        raise(NotImplementedError('project single geometry'))
-                    ## unwrap the data if it is geographic and 360
-                    if geom is not None and CFWGS84.get_is_360(field.spatial):
-                        ocgis_lh('unwrapping selection geometry',self._subset_log,alias=alias,ugid=ugid)
-                        geom = Wrapper().unwrap(geom)
-                    ## perform the spatial operation
-                    if geom is not None:
-                        if self.ops.spatial_operation == 'intersects':
-                            sfield = field.get_intersects(geom)
-                        elif self.ops.spatial_operation == 'clip':
-                            sfield = field.get_clip(geom)
-                        else:
-                            ocgis_lh(exc=NotImplementedError(self.ops.spatial_operation))
+                    ## if there is a slice, use it to subset the field
+                    if self.ops.slice is not None:
+                        sfield = field.__getitem__(self.ops.slice)
                     else:
-                        sfield = field
+                        ## see if the selection
+                        if crs is not None and crs != field.spatial.crs:
+                            raise(NotImplementedError('project single geometry'))
+                        ## unwrap the data if it is geographic and 360
+                        if geom is not None and CFWGS84.get_is_360(field.spatial):
+                            ocgis_lh('unwrapping selection geometry',self._subset_log,alias=alias,ugid=ugid)
+                            geom = Wrapper().unwrap(geom)
+                        ## perform the spatial operation
+                        if geom is not None:
+                            if self.ops.spatial_operation == 'intersects':
+                                sfield = field.get_intersects(geom)
+                            elif self.ops.spatial_operation == 'clip':
+                                sfield = field.get_clip(geom)
+                            else:
+                                ocgis_lh(exc=NotImplementedError(self.ops.spatial_operation))
+                        else:
+                            sfield = field
                         
                     ## aggregate if requested
                     if self.ops.aggregate:
