@@ -15,7 +15,7 @@ from ocgis.test.base import TestBase
 from unittest.case import SkipTest
 from shapely.geometry.point import Point
 import ocgis
-from ocgis.exc import ExtentError
+from ocgis.exc import ExtentError, DefinitionValidationError
 from shapely.geometry.polygon import Polygon
 
 
@@ -79,7 +79,7 @@ class TestSimple(TestSimpleBase):
     
     def test_point_subset(self):
         ops = self.get_ops(kwds={'geom':[-103.5,38.5,]})
-        self.assertEqual(type(ops.geom.spatial.geom[0]),Point)
+        self.assertEqual(type(ops.geom[0]['geom']),Point)
         ret = ops.execute()
         ref = ret[1].variables['foo']
         self.assertEqual(ref.spatial.grid.shape,(2,2))
@@ -99,19 +99,18 @@ class TestSimple(TestSimpleBase):
     def test_slicing(self):
         ops = self.get_ops(kwds={'slice':[None,None,0,[0,2],[0,2]]})
         ret = ops.execute()
-        ref = ret[1].variables['foo'].value
+        ref = ret.gvu(1,'foo')
         self.assertTrue(np.all(ref.flatten() == 1.0))
-        self.assertEqual(ref.shape,(61,1,2,2))
+        self.assertEqual(ref.shape,(1,61,1,2,2))
         
-        ops = self.get_ops(kwds={'slice':[None,None,[1,3],[1,3]]})
+        ops = self.get_ops(kwds={'slice':[0,None,None,[1,3],[1,3]]})
         ret = ops.execute()
-        ref = ret[1].variables['foo'].value.data
-        self.assertTrue(np.all(np.array([1.,2.,3.,4.] == ref[0,0,:].flatten())))
+        ref = ret.gvu(1,'foo').data
+        self.assertTrue(np.all(np.array([1.,2.,3.,4.] == ref[0,0,0,:].flatten())))
         
-        ## pass only three slices for a leveled dataset
-        ops = self.get_ops(kwds={'slice':[None,[1,3],[1,3]]})
-        with self.assertRaises(IndexError):
-            ops.execute()
+        ## pass only three slices
+        with self.assertRaises(DefinitionValidationError):
+            self.get_ops(kwds={'slice':[None,[1,3],[1,3]]})
         
     def test_file_only(self):
         ret = self.get_ret(kwds={'output_format':'nc','file_only':True,

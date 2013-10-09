@@ -430,7 +430,7 @@ class Slice(base.IterableParameter,base.OcgParameter):
     
     def validate_all(self,values):
         if len(values) != 5:
-            raise(DefinitionValidationError(self,'Slices must have 3 or 4 values.'))
+            raise(DefinitionValidationError(self,'Slices must have 5 values.'))
     
     def _parse_(self,value):
         if value is None:
