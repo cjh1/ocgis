@@ -145,12 +145,12 @@ class TestSimple(TestSimpleBase):
         ret = self.get_ret(kwds={'aggregate':True})
         
         ## test area-weighting
-        ref = ret[1].variables[self.var].value
+        ref = ret.gvu(1,self.var)
         self.assertTrue(np.all(ref.compressed() == np.ma.average(self.base_value)))
         
         ## test geometry reduction
-        ref = ret[1].variables[self.var]
-        self.assertEqual(ref.spatial.vector.shape,(1,1))
+        ref = ret[1][self.var]
+        self.assertEqual(ref.spatial.shape,(1,1))
         
     def test_time_level_subset(self):
         ret = self.get_ret(time_range=[datetime.datetime(2000,3,1),
@@ -258,7 +258,18 @@ class TestSimple(TestSimpleBase):
             self.get_ret(kwds={'geom':geom})
             
         ret = self.get_ret(kwds={'geom':geom,'allow_empty':True})
-        self.assertEqual(len(ret[1].variables),0)
+        self.assertEqual(ret[1]['foo'],None)
+        
+    def test_empty_time_subset(self):
+        ds = self.get_dataset(time_range=[datetime.datetime(2900,1,1),datetime.datetime(3100,1,1)])
+        
+        ops = OcgOperations(dataset=ds)
+        with self.assertRaises(ExtentError):
+            ops.execute()
+            
+        ops = OcgOperations(dataset=ds,allow_empty=True)
+        ret = ops.execute()
+        self.assertEqual(ret[1]['foo'],None)
         
     def test_snippet(self):
         ret = self.get_ret(kwds={'snippet':True})
