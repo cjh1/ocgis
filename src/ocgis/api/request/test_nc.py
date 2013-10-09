@@ -259,7 +259,7 @@ class TestNcRequestDataset(TestBase):
         self.assertEqual(field.spatial.grid.row,None)
         self.assertAlmostEqual(field.spatial.grid.value.mean(),-26.269666952512416)
         field.spatial.crs.unwrap(field.spatial)
-        self.assertAlmostEqual(field.spatial.grid.value.mean(),153.73033342462003)
+        self.assertAlmostEqual(field.spatial.grid.value.mean(),153.73033304748759)
         with self.assertRaises(ImproperPolygonBoundsError):
             field.spatial.geom.polygon
         self.assertAlmostEqual(field.spatial.geom.point.value[0,100].x,278.52630062012787)

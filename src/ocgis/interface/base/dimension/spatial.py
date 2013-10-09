@@ -143,15 +143,15 @@ class SpatialDimension(base.AbstractUidDimension):
             raise(NotImplementedError)
         return(fill)
     
-    def get_intersects(self,point_or_polygon,return_indices=False):
+    def get_intersects(self,polygon,return_indices=False):
         ret = copy(self)
-        if type(point_or_polygon) in (Point,MultiPoint):
+        if type(polygon) in (Point,MultiPoint):
             raise(NotImplementedError)
-        elif type(point_or_polygon) in (Polygon,MultiPolygon):
+        elif type(polygon) in (Polygon,MultiPolygon):
             ## for a polygon subset, first the grid is subsetted by the bounds
             ## of the polygon object. the intersects operations is then performed
             ## on the polygon/point representation as appropriate.
-            minx,miny,maxx,maxy = point_or_polygon.bounds
+            minx,miny,maxx,maxy = polygon.bounds
             if self.grid is None:
                 raise(NotImplementedError)
             else:
@@ -161,10 +161,10 @@ class SpatialDimension(base.AbstractUidDimension):
                 ret.grid,slc = self.grid.get_subset_bbox(miny,minx,maxy,maxx,return_indices=True)
                 ## attempt to mask the polygons
                 try:
-                    ret._geom._polygon = ret.geom.polygon.get_intersects_masked(point_or_polygon)
+                    ret._geom._polygon = ret.geom.polygon.get_intersects_masked(polygon)
                     grid_mask = ret.geom.polygon.value.mask
                 except ImproperPolygonBoundsError:
-                    ret._geom._point = ret.geom.point.get_intersects_masked(point_or_polygon)
+                    ret._geom._point = ret.geom.point.get_intersects_masked(polygon)
                     grid_mask = ret.geom.point.value.mask
                 ## transfer the geometry mask to the grid mask
                 ret.grid.value.mask[:,:,:] = grid_mask.copy()
@@ -319,12 +319,12 @@ class SpatialGridDimension(base.AbstractUidValueDimension):
             ret = len(self.row),len(self.col)
         return(ret)
         
-    def get_subset_bbox(self,min_row,min_col,max_row,max_col,return_indices=False):
+    def get_subset_bbox(self,min_row,min_col,max_row,max_col,return_indices=False,closed=True):
         if self.row is None:
             raise(NotImplementedError('no bbox subset w/out rows and columns'))
         else:
-            new_row,row_indices = self.row.get_between(min_row,max_row,return_indices=True,closed=True)
-            new_col,col_indices = self.col.get_between(min_col,max_col,return_indices=True,closed=True)
+            new_row,row_indices = self.row.get_between(min_row,max_row,return_indices=True,closed=closed)
+            new_col,col_indices = self.col.get_between(min_col,max_col,return_indices=True,closed=closed)
             row_slc = get_reduced_slice(row_indices)
             col_slc = get_reduced_slice(col_indices)
             new_uid = self.uid[row_slc,col_slc]
@@ -334,8 +334,11 @@ class SpatialGridDimension(base.AbstractUidValueDimension):
         else:
             new_value = self._value[:,row_slc,col_slc]
         
-        ret = SpatialGridDimension(value=new_value,uid=new_uid,row=new_row,col=new_col,name_value=self.name_value,
-                                   units=self.units,meta=self.meta,name=self.name,name_uid=self.name_uid)
+        ret = copy(self)
+        ret._value = new_value
+        ret.row = new_row
+        ret.col = new_col
+        ret.uid = new_uid
         
         if return_indices:
             ret = (ret,(row_slc,col_slc))
@@ -460,23 +463,24 @@ class SpatialGeometryPointDimension(base.AbstractUidValueDimension):
         ret = np.ma.array(ret,mask=self.value.mask)
         return(ret)
         
-    def get_intersects_masked(self,point_or_polygon):
+    def get_intersects_masked(self,polygon):
         
-        def _intersects_point_(prepared,target):
-            return(prepared.intersects(target))
+#        def _intersects_point_(prepared,target):
+#            return(prepared.intersects(target))
         
         def _intersects_polygon_(index,target):
             return(index_intersects(target,index))
         
         ## when the selection geometry is a point, we want to return touches as
         ## it may fall on a geometry boundary only.
-        if type(point_or_polygon) in (Point,MultiPoint):
-            ref_intersects = _intersects_point_
-            obj = prep(point_or_polygon)
-        elif type(point_or_polygon) in (Polygon,MultiPolygon):
+        if type(polygon) in (Point,MultiPoint):
+            raise(NotImplementedError)
+#            ref_intersects = _intersects_point_
+#            obj = prep(polygon)
+        elif type(polygon) in (Polygon,MultiPolygon):
             ## construct the spatial index
-            index_grid = build_index_grid(30.0,point_or_polygon)
-            obj = build_index(point_or_polygon,index_grid)
+            index_grid = build_index_grid(30.0,polygon)
+            obj = build_index(polygon,index_grid)
             ref_intersects = _intersects_polygon_
         else:
             raise(NotImplementedError)
@@ -485,7 +489,7 @@ class SpatialGeometryPointDimension(base.AbstractUidValueDimension):
         
         fill = np.ma.array(self.value,mask=True)
         ref_fill_mask = fill.mask
-        prepared = prep(point_or_polygon)
+        prepared = prep(polygon)
 
         for (ii,jj),geom in iter_array(self.value,return_value=True):
             if prepared.intersects(geom):

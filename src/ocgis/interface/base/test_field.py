@@ -201,14 +201,14 @@ class TestField(AbstractTestField):
         ret = field.get_intersects(irregular)
         self.assertEqual(ret.shape,(2,31,2,2,2))
         self.assertNumpyAll(ret.variables['tmax'].value.mask[0,2,1,:,:],np.array([[True,False],[False,False]]))
-        self.assertEqual(ret.spatial.uid[ret.spatial.get_mask()][0],5)
+        self.assertEqual(ret.spatial.uid.data[ret.spatial.get_mask()][0],5)
         
     def test_get_clip_single_cell(self):
         single = wkt.loads('POLYGON((-97.997731 39.339322,-97.709012 39.292322,-97.742584 38.996888,-97.668726 38.641026,-98.158876 38.708170,-98.340165 38.916316,-98.273021 39.218463,-97.997731 39.339322))')
         field = self.get_field(with_value=True)
         ret = field.get_clip(single)
         self.assertEqual(ret.shape,(2,31,2,1,1))
-        self.assertEqual(ret.spatial.grid,None)
+        self.assertEqual(ret.spatial.grid._value.sum(),-59.0)
         self.assertEqual(ret.spatial.geom.point,None)
         self.assertTrue(ret.spatial.geom.polygon.value[0,0].almost_equals(single))
         self.assertEqual(ret.spatial.uid,np.array([[7]]))

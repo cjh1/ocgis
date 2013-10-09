@@ -375,7 +375,10 @@ class OutputCRS(base.OcgParameter):
     default = None
     
     def _get_meta_(self):
-        ret = 'The PROJ.4 definition of the coordinate reference system is: "{0}"'.format(self.value.sr.ExportToProj4())
+        if self.value is None:
+            ret = "No CRS associated with dataset. WGS84 Lat/Lon Geographic (EPSG:4326) assumed."
+        else:
+            ret = 'The PROJ.4 definition of the coordinate reference system is: "{0}"'.format(self.value.sr.ExportToProj4())
         return(ret)
 
 

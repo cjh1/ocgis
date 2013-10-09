@@ -175,11 +175,12 @@ class TestSpatialDimension(TestSpatialBase):
         self.assertEqual(msked.value.mask.sum(),50)
         self.assertTrue(msked.value.compressed()[0].almost_equals(subset_polygon))
         
-        msked = spdim.get_intersects_masked(subset_polygon.centroid)
-        self.assertTrue(msked.value.compressed()[0].almost_equals(subset_polygon))
+        with self.assertRaises(NotImplementedError):
+            msked = spdim.get_intersects_masked(subset_polygon.centroid)
+            self.assertTrue(msked.value.compressed()[0].almost_equals(subset_polygon))
         
         with self.assertRaises(EmptySubsetError):
-            spdim.get_intersects_masked(Point(1000,1000))
+            spdim.get_intersects_masked(Point(1000,1000).buffer(1))
             
     def test_update_crs(self):
         geoms,properties = self.get_2d_state_boundaries()
@@ -345,7 +346,7 @@ class TestSpatialDimension(TestSpatialBase):
     def test_grid_get_subset_bbox(self):
         for b in [True,False]:
             sdim = self.get_sdim(bounds=b)
-            bg = sdim.grid.get_subset_bbox(39,-99,39,-98)
+            bg = sdim.grid.get_subset_bbox(39,-99,39,-98,closed=False)
             self.assertEqual(bg._value,None)
             self.assertEqual(bg.uid.shape,(1,2))
             self.assertNumpyAll(bg.uid,np.array([[6,7]]))

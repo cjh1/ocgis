@@ -8,6 +8,8 @@ from osgeo.ogr import CreateGeometryFromWkb
 from shapely.geometry.polygon import Polygon
 from shapely import wkb
 import fiona
+from ocgis.interface.base.crs import CFCoordinateReferenceSystem,\
+    CoordinateReferenceSystem
 
 
 class ShpCabinetIterator(object):
@@ -105,6 +107,10 @@ class ShpCabinet(object):
         if not os.path.exists(shp_path):
             raise(RuntimeError('requested geometry with identifier "{0}" does not exist in the file system.'.format(key)))
         
+        ## get the source CRS
+        meta = self.get_meta(key)
+        crs = CoordinateReferenceSystem(crs=meta['crs'])
+        
         ## get the geometries
         ds = ogr.Open(shp_path)
         try:
@@ -124,8 +130,7 @@ class ShpCabinet(object):
             
             for feature in features:
                 ## TODO: lowercase all properties, add crs definition to each geometry
-                import ipdb;ipdb.set_trace()
-                yld = {'geom':wkb.loads(feature.geometry().ExportToWkb()),'properties':feature.items()}
+                yld = {'geom':wkb.loads(feature.geometry().ExportToWkb()),'properties':feature.items(),'crs':crs}
                 assert('UGID' in yld['properties'])
                 yield(yld)
         finally:
