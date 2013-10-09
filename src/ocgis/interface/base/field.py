@@ -79,8 +79,8 @@ class Field(object):
     def get_clip(self,polygon):
         return(self._get_spatial_operation_('get_clip',polygon))
     
-    def get_intersects(self,point_or_polygon):
-        return(self._get_spatial_operation_('get_intersects',point_or_polygon))
+    def get_intersects(self,polygon):
+        return(self._get_spatial_operation_('get_intersects',polygon))
     
     def get_iter(self,add_masked_value=True):
         
@@ -129,10 +129,10 @@ class Field(object):
         ret.variables = variables
         return(ret)
     
-    def _get_spatial_operation_(self,attr,point_or_polygon):
+    def _get_spatial_operation_(self,attr,polygon):
         ref = getattr(self.spatial,attr)
         ret = copy(self)
-        ret.spatial,slc = ref(point_or_polygon,return_indices=True)
+        ret.spatial,slc = ref(polygon,return_indices=True)
         slc = [slice(None),slice(None),slice(None)] + list(slc)
         ret.variables = self.variables._get_sliced_variables_(slc)
 
