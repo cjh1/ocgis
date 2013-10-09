@@ -12,7 +12,6 @@ from ocgis.util.inspect import Inspect
 from abc import ABCMeta, abstractproperty
 import netCDF4 as nc
 from ocgis.test.base import TestBase
-import subprocess
 from unittest.case import SkipTest
 from shapely.geometry.point import Point
 import ocgis
@@ -98,7 +97,7 @@ class TestSimple(TestSimpleBase):
         self.assertTrue(ref.spatial.vector.geom[0,0].intersects(ops.geom.spatial.geom[0]))
     
     def test_slicing(self):
-        ops = self.get_ops(kwds={'slice':[None,0,[0,2],[0,2]]})
+        ops = self.get_ops(kwds={'slice':[None,None,0,[0,2],[0,2]]})
         ret = ops.execute()
         ref = ret[1].variables['foo'].value
         self.assertTrue(np.all(ref.flatten() == 1.0))

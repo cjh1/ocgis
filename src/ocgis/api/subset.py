@@ -102,7 +102,10 @@ class SubsetOperation(object):
 #        else:
 #            ocgis_lh('1 geometry to process'.format(len(self.ops.geom)),subset_log)
 #            yield(self,self.ops.geom,subset_log)
-            
+    
+    def _get_processed_subset_(self,sfield):
+        import ipdb;ipdb.set_trace()
+    
     def _iter_collections_(self):
 #        '''
 #        :type so: SubsetOperation
