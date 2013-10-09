@@ -130,16 +130,16 @@ class TestSimple(TestSimpleBase):
         ret = self.get_ret()
         
         ## confirm size of geometry array
-        ref = ret[1].variables[self.var].spatial
-        shps = [ref.vector,ref.grid,ref.vector.uid,ref.grid.uid]
+        ref = ret[1][self.var].spatial
+        shps = [ref.geom,ref.grid,ref.geom.uid,ref.grid.uid]
         for attr in shps:
             self.assertEqual(attr.shape,(4,4))
         
         ## confirm value array
-        ref = ret[1].variables[self.var].value
-        self.assertEqual(ref.shape,(61,2,4,4))
+        ref = ret.gvu(1,self.var)
+        self.assertEqual(ref.shape,(1,61,2,4,4))
         for tidx,lidx in itertools.product(range(0,61),range(0,2)):
-            slice = ref[tidx,lidx,:,:]
+            slice = ref[0,tidx,lidx,:,:]
             idx = self.base_value == slice
             self.assertTrue(np.all(idx))
             
@@ -158,16 +158,16 @@ class TestSimple(TestSimpleBase):
         ret = self.get_ret(time_range=[datetime.datetime(2000,3,1),
                                        datetime.datetime(2000,3,31,23)],
                            level_range=[1,1])
-        ref = ret[1].variables[self.var].value
-        self.assertEqual(ref.shape,(31,1,4,4))
+        ref = ret.gvu(1,self.var)
+        self.assertEqual(ref.shape,(1,31,1,4,4))
     
     def test_time_level_subset_aggregate(self):
         ret = self.get_ret(kwds={'aggregate':True},
                            time_range=[datetime.datetime(2000,3,1),datetime.datetime(2000,3,31)],
                            level_range=[1,1],)
-        ref = ret[1].variables[self.var].value
+        ref = ret.gvu(1,self.var)
         self.assertTrue(np.all(ref.compressed() == np.ma.average(self.base_value)))
-        ref = ret[1].variables[self.var]
+        ref = ret[1][self.var]
         self.assertEqual(ref.level.value.shape,(1,))
         
     def test_time_region_subset(self):
@@ -176,7 +176,7 @@ class TestSimple(TestSimpleBase):
                                       variable=self.var)
         ops = ocgis.OcgOperations(dataset=rd)
         ret = ops.execute()
-        all = ret[1].variables['foo'].temporal.value
+        all = ret[1]['foo'].temporal.value_datetime
         
         def get_ref(month,year):
             rd = ocgis.RequestDataset(uri=os.path.join(env.DIR_OUTPUT,self.fn),
@@ -184,7 +184,15 @@ class TestSimple(TestSimpleBase):
                                       time_region={'month':month,'year':year})
             ops = ocgis.OcgOperations(dataset=rd)
             ret = ops.execute()
-            ref = ret[1].variables['foo'].temporal.value
+            ref = ret[1]['foo'].temporal.value_datetime
+            months = set([i.month for i in ref.flat])
+            years = set([i.year for i in ref.flat])
+            if month is not None:
+                for m in month:
+                    self.assertTrue(m in months)
+            if year is not None:
+                for m in year:
+                    self.assertTrue(m in years)
             return(ref)
         
         ref = get_ref(None,None)
@@ -203,14 +211,14 @@ class TestSimple(TestSimpleBase):
         self.assertTrue(np.all(ref == all))
         
         with self.assertRaises(ExtentError):
-            ref = get_ref([1],None)
+            get_ref([1],None)
             
     def test_spatial_aggregate_arbitrary(self):
 #        ret = self.get_ret(kwds={'output_format':'shp','prefix':'orig'})
         poly = Polygon(((-103.5,39.5),(-102.5,38.5),(-103.5,37.5),(-104.5,38.5)))
         ret2 = self.get_ret(kwds={'output_format':'numpy','geom':poly,
          'prefix':'subset','spatial_operation':'clip','aggregate':True})
-        self.assertEqual(ret2[1].variables['foo'].value.data.mean(),2.5)
+        self.assertEqual(ret2.gvu(1,self.var).data.mean(),2.5)
 
     def test_spatial(self):
         ## intersects
@@ -355,7 +363,7 @@ class TestSimpleMask(TestSimpleBase):
     def test_spatial(self):
         self.return_shp = False
         ret = self.get_ret()
-        ref = ret[1].variables[self.var].value.mask
+        ref = ret[1][self.var].variables[self.var].value.mask
         cmp = np.array([[True,False,False,False],
                         [False,False,False,True],
                         [False,False,False,False],
@@ -365,9 +373,10 @@ class TestSimpleMask(TestSimpleBase):
             
         ## aggregation
         ret = self.get_ret(kwds={'aggregate':True})
-        ref = ret[1].variables[self.var]
+        ref = ret[1][self.var].variables[self.var]
         self.assertAlmostEqual(ref.value.mean(),2.58333333333,5)
-        self.assertEqual(ref.spatial.vector.uid.shape,(1,1))
+        ref = ret[1][self.var]
+        self.assertEqual(ref.spatial.uid.shape,(1,1))
     
     def test_empty_mask(self):
         geom = make_poly((37.762,38.222),(-102.281,-101.754))
@@ -387,26 +396,26 @@ class TestSimple360(TestSimpleBase):
             ret = np.array([g.centroid.x for g in geom.flat])
             return(ret)
         
-#        ret = self.get_ret(kwds={'vector_wrap':False})
-#        longs_unwrap = _get_longs_(ret[1].variables[self.var].spatial.vector.geom)
-#        self.assertTrue(np.all(longs_unwrap > 180))
+        ret = self.get_ret(kwds={'vector_wrap':False})
+        longs_unwrap = _get_longs_(ret[1][self.var].spatial.abstraction_geometry.value)
+        self.assertTrue(np.all(longs_unwrap > 180))
         
         ret = self.get_ret(kwds={'vector_wrap':True})
-        longs_wrap = _get_longs_(ret[1].variables[self.var].spatial.vector.geom)
+        longs_wrap = _get_longs_(ret[1][self.var].spatial.abstraction_geometry.value)
         self.assertTrue(np.all(np.array(longs_wrap) < 180))
         
-#        self.assertTrue(np.all(longs_unwrap-360 == longs_wrap))
+        self.assertTrue(np.all(longs_unwrap-360 == longs_wrap))
         
     def test_spatial(self):
         geom = make_poly((38,39),(-93,-92))
         
         for abstraction in ['polygon','point']:
             ret = self.get_ret(kwds={'geom':geom,'abstraction':abstraction})
-            self.assertEqual(len(ret[1].variables[self.var].spatial.vector.uid.compressed()),4)
+            self.assertEqual(len(ret[1][self.var].spatial.uid.compressed()),4)
             
             self.get_ret(kwds={'vector_wrap':False})
             ret = self.get_ret(kwds={'geom':geom,'vector_wrap':False,'abstraction':abstraction})
-            self.assertEqual(len(ret[1].variables[self.var].spatial.vector.uid.compressed()),4)
+            self.assertEqual(len(ret[1][self.var].spatial.uid.compressed()),4)
 
 
 if __name__ == "__main__":

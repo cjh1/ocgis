@@ -19,8 +19,7 @@ class SpatialCollection(OrderedDict):
         
     def add_field(self,ugid,geom,alias,field,properties=None):
         self.geoms.update({ugid:geom})
-        if properties is not None:
-            self.properties.update({ugid:properties})
+        self.properties.update({ugid:properties})
         if ugid not in self:
             self.update({ugid:{}})
         assert(alias not in self[ugid])
@@ -33,3 +32,11 @@ class SpatialCollection(OrderedDict):
                 row['ugid'] = ugid
                 tup = [row[h] for h in r_headers]
                 yield(row['geom'],tup)
+                
+    def gvu(self,ugid,alias_variable,alias_field=None):
+        ref = self[ugid]
+        if alias_field is None:
+            field = ref.values()[0]
+        else:
+            field = ref[alias_field]
+        return(field.variables[alias_variable].value)

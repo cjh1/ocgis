@@ -101,26 +101,48 @@ class WGS84(CoordinateReferenceSystem):
     def unwrap(self,spatial):
         if not self.get_is_360(spatial):
             unwrap = Wrapper().unwrap
+            if spatial._grid is not None:
+                ref = spatial.grid.value[1,:,:]
+                select = ref < 0.
+                ref[select] = ref[select] + 360.
+                if spatial.grid.col is not None:
+                    ref = spatial.grid.col.value
+                    select = ref < 0.
+                    ref[select] = ref[select] + 360.
+                    if spatial.grid.col.bounds is not None:
+                        ref = spatial.grid.col.bounds
+                        select = ref < 0.
+                        ref[select] = ref[select] + 360.
             to_wrap = [spatial.geom._point,spatial.geom._polygon]
             for tw in to_wrap:
                 if tw is not None:
                     geom = tw.value.data
                     for (ii,jj),to_wrap in iter_array(geom,return_value=True):
                         geom[ii,jj] = unwrap(to_wrap)
-            spatial.grid = None
         else:
             ocgis_lh(exc=SpatialWrappingError('Data already has a 0 to 360 coordinate system.'))
     
     def wrap(self,spatial):
         if self.get_is_360(spatial):
             wrap = Wrapper().wrap
-            to_wrap = [spatial.geom.point,spatial.geom.polygon]
+            if spatial._grid is not None:
+                ref = spatial.grid.value[1,:,:]
+                select = ref > 180.
+                ref[select] = ref[select] - 360.
+                if spatial.grid.col is not None:
+                    ref = spatial.grid.col.value
+                    select = ref > 180.
+                    ref[select] = ref[select] - 360.
+                    if spatial.grid.col.bounds is not None:
+                        ref = spatial.grid.col.bounds
+                        select = ref > 180.
+                        ref[select] = ref[select] - 360.
+            to_wrap = [spatial.geom._point,spatial.geom._polygon]
             for tw in to_wrap:
                 if tw is not None:
                     geom = tw.value.data
                     for (ii,jj),to_wrap in iter_array(geom,return_value=True):
                         geom[ii,jj] = wrap(to_wrap)
-            spatial.grid = None
         else:
             ocgis_lh(exc=SpatialWrappingError('Data does not have a 0 to 360 coordinate system.'))
             

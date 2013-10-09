@@ -190,7 +190,7 @@ class NcRequestDataset(object):
         if self.time_region is not None:
             ret = ret.get_time_region(self.time_region)
         if self.level_range is not None:
-            raise(NotImplementedError('no level range subsetting yet'))
+            ret = ret.get_between('level',min(self.level_range),max(self.level_range))
             
         return(ret)
     
@@ -334,6 +334,7 @@ class NcRequestDataset(object):
         
     def _format_time_region_(self):
         if isinstance(self.time_region,basestring):
+            raise(NotImplementedError)
             ret = {}
             parts = self.time_region.split('|')
             for part in parts:
@@ -360,6 +361,8 @@ class NcRequestDataset(object):
         for key in ret.keys():
             if key not in ['month','year']:
                 raise(DefinitionValidationError('dataset','time regions keys must be month and/or year'))
+        if all([i is None for i in ret.values()]):
+            ret = None
         self.time_region = ret
         
     def _format_level_range_(self):

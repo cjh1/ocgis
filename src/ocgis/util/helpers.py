@@ -127,6 +127,10 @@ def get_date_list(start,stop,days):
         check += delta
     return(ret)
 
+def bbox_poly(minx,miny,maxx, maxy):
+    rtup = (miny,maxy)
+    ctup = (minx,maxx)
+    return(make_poly(rtup,ctup))
 
 def validate_time_subset(time_range,time_region):
     '''
