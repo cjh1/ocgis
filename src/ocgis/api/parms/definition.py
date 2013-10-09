@@ -405,6 +405,21 @@ class Prefix(base.StringParameter):
         return(msg)
     
 
+class SearchRadiusMultiplier(base.OcgParameter):
+    input_types = [float]
+    name = 'search_radius_mult'
+    nullable = False
+    return_type = [float]
+    
+    def _get_meta_(self):
+        msg = 'If point geometries were used for selection, a modifier of {1} times the data resolution was used to spatially select data.'.format(self.value)
+        return(msg)
+    
+    def _validate_(self,value):
+        if value <= 0:
+            raise(DefinitionValidationError(self,msg='must be >= 0'))
+    
+
 class SelectUgid(base.IterableParameter,base.OcgParameter):
     name = 'select_ugid'
     return_type = tuple

@@ -6,6 +6,7 @@ from ocgis.util.logging_ocgis import ocgis_lh
 import logging
 from ocgis.api.collection import SpatialCollection
 from ocgis.interface.base.crs import CFWGS84
+from shapely.geometry.point import Point
 
 
 class SubsetOperation(object):
@@ -103,9 +104,6 @@ class SubsetOperation(object):
 #            ocgis_lh('1 geometry to process'.format(len(self.ops.geom)),subset_log)
 #            yield(self,self.ops.geom,subset_log)
     
-    def _get_processed_subset_(self,sfield):
-        import ipdb;ipdb.set_trace()
-    
     def _iter_collections_(self):
 #        '''
 #        :type so: SubsetOperation
@@ -140,6 +138,12 @@ class SubsetOperation(object):
                     
                     ## reference variables from the geometry dictionary
                     geom = gd.get('geom')
+                    
+                    ## if the geometry is a point, we need to buffer it...
+                    if isinstance(geom,Point):
+                        ocgis_lh(logger=self._subset_log,msg='buffering point geometry',level=logging.DEBUG)
+                        geom = geom.buffer(self.ops.search_radius_mult*field.spatial.grid.resolution)
+                    
                     crs = gd.get('crs')
                     try:
                         ugid = gd['properties']['ugid']
