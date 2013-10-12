@@ -566,6 +566,7 @@ class SpatialGeometryPointDimension(base.AbstractUidValueDimension):
     
 class SpatialGeometryPolygonDimension(SpatialGeometryPointDimension):
     _geom_type = 'MultiPolygon'
+    _axis = 'POLYGON'
     
     def __init__(self,*args,**kwds):
         super(SpatialGeometryPolygonDimension,self).__init__(*args,**kwds)
