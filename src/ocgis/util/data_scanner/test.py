@@ -1,4 +1,3 @@
-from ocgis.util.data_scanner.harvest import build_database
 from ocgis.test.base import TestBase
 from ocgis.util.data_scanner.datasets.base import AbstractHarvestDataset
 from ocgis.interface.base.field import Field
@@ -19,22 +18,18 @@ class CanCM4TestDataset(AbstractHarvestDataset):
 
 class TestAbstractHarvestDataset(TestBase):
     
-    def __init__(self, *args, **kwds):
-        TestBase.__init__(self, *args, **kwds)
-        self._Session = None
-    
-    @property
-    def Session(self):
-        return(build_database(in_memory=True))
-    
     def run_commit(self,obj,Session=None):
-        Session = Session or self.Session()
-        session = self.Session()
+        Session = Session or db.Session
+        session = Session()
         try:
             session.add(obj)
             session.commit()
         finally:
             session.close()
+            
+    def setUp(self):
+        TestBase.setUp(self)
+        db.build_database(in_memory=True)
 
     def test_container(self):
         cd = CanCM4TestDataset()
@@ -53,7 +48,6 @@ class TestAbstractHarvestDataset(TestBase):
             to_test = raw_variable.__dict__.copy()
             to_test.pop('_sa_instance_state')
             to_test.pop('container')
-            import ipdb;ipdb.set_trace()
             self.assertDictEqual(to_test,{'name': 'tas', 'long_name': u'Near-Surface Air Temperature', 'standard_name': u'air_temperature', 'units': u'K'})
             self.run_commit(raw_variable,Session=Session)
             

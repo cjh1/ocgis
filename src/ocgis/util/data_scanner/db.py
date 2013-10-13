@@ -3,10 +3,24 @@ from sqlalchemy.schema import MetaData, Column, ForeignKey, UniqueConstraint, Ch
 from sqlalchemy.ext.declarative.api import declarative_base
 from sqlalchemy.types import String, Integer, DateTime, Float
 from sqlalchemy.orm import relationship
+from sqlalchemy.engine import create_engine
+from sqlalchemy.orm.session import sessionmaker
 
 
 metadata = MetaData()
 Base = declarative_base(metadata=metadata)
+Session = sessionmaker()
+
+
+def build_database(in_memory=False,db_path=None):
+    if in_memory:
+        connstr = 'sqlite://'
+    else:
+        connstr = 'sqlite:///{0}'.format(db_path)
+    engine = create_engine(connstr)
+    metadata.bind = engine
+    metadata.create_all()
+    Session.configure(bind=engine)
 
 
 class DataPackage(Base):
