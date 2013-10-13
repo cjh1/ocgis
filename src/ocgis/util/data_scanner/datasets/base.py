@@ -7,6 +7,8 @@ from ocgis.util.shp_scanner.shp_scanner import get_or_create
 
 class AbstractHarvestDataset(object):
     __metaclass__ = abc.ABCMeta
+    clean_units = None
+    clean_variable = None
     @abc.abstractproperty
     def dataset(self): str
     @abc.abstractproperty
@@ -18,8 +20,13 @@ class AbstractHarvestDataset(object):
     def uri(self): pass
     variables = None
     
-    def __init__(self):
-        self._container = None
+    def __init__(self,session=None):
+        if session is not None:
+            if self.clean_units is not None:
+                self.clean_units = get_or_create(session,db.CleanUnits,name=self.clean_units)
+            if self.clean_variable is not None:
+                self.clean_variable = get_or_create(session,db.CleanVariable,standard_name=self.clean_variable)
+        
         self._field = None
     
     @property
@@ -68,5 +75,7 @@ class AbstractHarvestDataset(object):
             for attr in ['standard_name','long_name','units']:
                 kwds[attr] = meta['variables'][variable]['attrs'].get(attr)
             kwds['container'] = container
+            kwds['clean_units'] = self.clean_units
+            kwds['clean_variable'] = self.clean_variable
             rv = db.RawVariable(**kwds)
             yield(rv)

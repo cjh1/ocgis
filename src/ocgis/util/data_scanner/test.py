@@ -4,6 +4,7 @@ from ocgis.util.data_scanner.datasets.base import AbstractHarvestDataset
 from ocgis.interface.base.field import Field
 import datetime
 from ocgis.util.data_scanner import db
+import os
 
 
 tdata = TestBase.get_tdata()
@@ -12,6 +13,8 @@ class CanCM4TestDataset(AbstractHarvestDataset):
     variables = ['tas']
     dataset = 'CanCM4'
     dataset_category = 'GCMs'
+    clean_units = 'K'
+    clean_variable = 'air_temperature'
 
 
 class TestAbstractHarvestDataset(TestBase):
@@ -50,6 +53,7 @@ class TestAbstractHarvestDataset(TestBase):
             to_test = raw_variable.__dict__.copy()
             to_test.pop('_sa_instance_state')
             to_test.pop('container')
+            import ipdb;ipdb.set_trace()
             self.assertDictEqual(to_test,{'name': 'tas', 'long_name': u'Near-Surface Air Temperature', 'standard_name': u'air_temperature', 'units': u'K'})
             self.run_commit(raw_variable,Session=Session)
             
@@ -64,4 +68,13 @@ class TestAbstractHarvestDataset(TestBase):
             self.assertEqual(container.dataset[0].dataset_category.name,'GCMs')
         finally:
             session.close()
-        
+            
+    def test_to_disk(self):
+        path = os.path.join(self._test_dir,'test.sqlite')
+        Session = build_database(path=path)
+        session = Session()
+        cd = CanCM4TestDataset()
+        try:
+            cd.insert(session)
+        finally:
+            session.close()

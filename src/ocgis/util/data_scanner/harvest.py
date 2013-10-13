@@ -1,4 +1,3 @@
-import os
 import db
 from tempfile import mkstemp
 from sqlalchemy.engine import create_engine
@@ -17,7 +16,7 @@ def build_database(in_memory=False,path=None):
     db.metadata.bind = engine
     db.metadata.create_all()
     return(Session)
-    
+
 def main():
     pass
 

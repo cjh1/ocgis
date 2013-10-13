@@ -85,6 +85,8 @@ class RawVariable(Base):
     long_name = Column(String,nullable=True)
     units = Column(String,nullable=True)
     
+    clean_units = relationship(CleanUnits,backref='raw_variable')
+    clean_variable = relationship(CleanVariable,backref='raw_variable')
     container = relationship('Container',backref='raw_variable')
 
 ## TODO: add association between variable and dataset
