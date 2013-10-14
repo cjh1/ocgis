@@ -3,17 +3,18 @@ from ocgis.util.data_scanner.datasets.base import AbstractHarvestDataset
 import datetime
 from ocgis.util.data_scanner import db
 import os
+from unittest.case import SkipTest
 
 
 tdata = TestBase.get_tdata()
 class CanCM4TestDataset(AbstractHarvestDataset):
     uri = tdata.get_uri('cancm4_tas')
     variables = ['tas']
+    clean_units = ['K']
+    clean_variable_standard_name = ['air_temperature']
+    clean_variable_long_name = ['Near-Surface Air Temperature']
     dataset = 'CanCM4'
     dataset_category = 'GCMs'
-    clean_units = 'K'
-    clean_variable_standard_name = 'air_temperature'
-    clean_variable_long_name = 'Near-Surface Air Temperature'
 
 
 class TestAbstractHarvestDataset(TestBase):
@@ -60,6 +61,7 @@ class TestAbstractHarvestDataset(TestBase):
             session.close()
             
     def test_to_disk(self):
+        raise(SkipTest('dev'))
         path = os.path.join(self._test_dir,'test.sqlite')
         db.build_database(db_path=path)
         session = db.Session()

@@ -24,10 +24,10 @@ class AbstractHarvestDataset(object):
         self.dataset_category = get_or_create(session,db.DatasetCategory,name=self.dataset_category)
         self.dataset = get_or_create(session,db.Dataset,name=self.dataset,dcid=self.dataset_category.dcid)
         if self.clean_units is not None:
-            self.clean_units = get_or_create(session,db.CleanUnits,name=self.clean_units)
+            self.clean_units = [get_or_create(session,db.CleanUnits,name=cu) for cu in self.clean_units]
         if self.clean_variable_standard_name is not None:
-            self.clean_variable = get_or_create(session,db.CleanVariable,
-             standard_name=self.clean_variable_standard_name,long_name=self.clean_variable_long_name)
+            self.clean_variable = [get_or_create(session,db.CleanVariable,
+             standard_name=cvsn,long_name=cvln) for cvsn,cvln in zip(self.clean_variable_standard_name,self.clean_variable_long_name)]
         self.source_metadata = self.get_field().meta
 
     def get_field(self,variable=None):

@@ -133,6 +133,7 @@ class RawVariable(Base,DictConversion):
     container = relationship('Container',backref='raw_variable')
     
     def __init__(self,hd,container,variable_name):
+        idx = hd.variables.index(variable_name)
         self.name = variable_name
         for attr in ['standard_name','long_name','units']:
             setattr(self,attr,hd.source_metadata['variables'][variable_name]['attrs'].get(attr))
@@ -140,9 +141,9 @@ class RawVariable(Base,DictConversion):
         session = Session()
         try:
             if hd.clean_units is not None:
-                self.clean_units = hd.clean_units
+                self.clean_units = hd.clean_units[idx]
             if hd.clean_variable is not None:
-                self.clean_variable = hd.clean_variable
+                self.clean_variable = hd.clean_variable[idx]
         finally:
             session.close()
 
