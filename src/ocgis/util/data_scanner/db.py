@@ -1,12 +1,11 @@
 from sqlalchemy.schema import MetaData, Column, ForeignKey, UniqueConstraint, CheckConstraint,\
     Table
 from sqlalchemy.ext.declarative.api import declarative_base
-from sqlalchemy.types import String, Integer, DateTime, Float
+from sqlalchemy.types import String, Integer, DateTime, Float, Text, Boolean
 from sqlalchemy.orm import relationship
 from sqlalchemy.engine import create_engine
 from sqlalchemy.orm.session import sessionmaker
 from ocgis.util import helpers
-from ocgis.util.shp_scanner.shp_scanner import get_or_create
 
 
 metadata = MetaData()
@@ -37,9 +36,14 @@ class DictConversion(object):
                 simple[k] = v
         return(objects,simple)
 
+
 class DataPackage(Base):
     __tablename__ = 'package'
     dpid = Column(Integer,primary_key=True)
+    name = Column(String,nullable=True)
+    description = Column(Text,nullable=True)
+    
+    raw_variable = relationship('RawVariable',secondary='assoc_dp_rv')
 
 
 class DatasetCategory(Base):
@@ -47,6 +51,7 @@ class DatasetCategory(Base):
     __table_args__ = (UniqueConstraint('name'),)
     dcid = Column(Integer,primary_key=True)
     name = Column(String,nullable=False)
+    description = Column(Text,nullable=True)
 
 
 class Dataset(Base):
@@ -55,6 +60,7 @@ class Dataset(Base):
     did = Column(Integer,primary_key=True)
     dcid = Column(Integer,ForeignKey(DatasetCategory.dcid),nullable=False)
     name = Column(String,nullable=False)
+    description = Column(Text,nullable=True)
     
     dataset_category = relationship(DatasetCategory,backref='dataset')
 
@@ -75,6 +81,7 @@ class Container(Base):
     spatial_res = Column(String,nullable=False)
     spatial_proj4 = Column(String,nullable=False)
     field_shape = Column(String,nullable=False)
+    description = Column(Text,nullable=True)
     
     dataset = relationship(Dataset,backref='container')
     
@@ -94,11 +101,6 @@ class Container(Base):
         
     def touch(self):
         raise(NotImplementedError)
-
-
-adc = Table('assoc_dataset_container',Base.metadata,
-            Column('did',Integer,ForeignKey(Dataset.did)),
-            Column('cid',Integer,ForeignKey(Container.cid)))
 
 
 class CleanUnits(Base):
@@ -127,6 +129,7 @@ class RawVariable(Base,DictConversion):
     standard_name = Column(String,nullable=True)
     long_name = Column(String,nullable=True)
     units = Column(String,nullable=True)
+    description = Column(Text,nullable=True)
     
     clean_units = relationship(CleanUnits,backref='raw_variable')
     clean_variable = relationship(CleanVariable,backref='raw_variable')
@@ -147,4 +150,7 @@ class RawVariable(Base,DictConversion):
         finally:
             session.close()
 
+
+assoc_dp_rv = Table('assoc_dp_rv',Base.metadata,Column('dpid',ForeignKey(DataPackage.dpid)),
+                    Column('rvid',ForeignKey(RawVariable.rvid)))
 ## TODO: add association between variable and dataset
