@@ -82,7 +82,7 @@ class OcgCalculationEngine(object):
             klass = DerivedMultivariateField
         else:
             klass = DerivedField
-            
+                        
         ## group the variables. if grouping is None, calculations are performed
         ## on each element. array computations are taken advantage of.
         if self.grouping is not None:

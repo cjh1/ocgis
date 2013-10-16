@@ -181,8 +181,9 @@ class NcRequestDataset(object):
         variable = Variable(self.variable,self.alias,variable_units,meta=variable_meta,
                             data=self)
         vc = VariableCollection(variables=[variable])
+        
         ret = NcField(variables=vc,spatial=spatial,temporal=loaded['temporal'],level=loaded['level'],
-                      realization=loaded['realization'],meta=self._source_metadata)
+                      realization=loaded['realization'],meta=self._source_metadata,uid=self.did)
         
         ## apply any subset parameters after the field is loaded
         if self.time_range is not None:

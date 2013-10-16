@@ -148,6 +148,9 @@ class SimpleNc(NcFactory):
         bounds_row[:,:] = row_bnds
         value[:,:,:,:] = val
         value.missing_value = MASK['value']
+        value.standard_name = 'foo'
+        value.long_name = 'foo_foo'
+        value.units = 'huge'
         
         rootgrp.close()
 

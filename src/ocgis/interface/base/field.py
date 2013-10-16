@@ -95,7 +95,7 @@ class Field(object):
         is_masked = np.ma.is_masked
         masked_value = constants.fill_value
         
-        r_gid_name = self.spatial.geom.name_uid
+        r_gid_name = self.spatial.name_uid
         for variable in self.variables.itervalues():
             yld = self._get_variable_iter_yield_(variable)
             ref_value = variable.value
@@ -223,7 +223,7 @@ class Field(object):
                     
     def _get_variable_iter_yield_(self,variable):
         yld = {}
-        yld['did'] = variable.did
+        yld['did'] = variable.uid
         yld['variable'] = variable.name
         yld['alias'] = variable.alias
         yld['vid'] = variable.uid
@@ -239,7 +239,7 @@ class DerivedField(Field):
         yld['calc_alias'] = variable.alias
         
         raw_variable = variable.parents.values()[0]
-        yld['did'] = raw_variable.did
+        yld['did'] = raw_variable.uid
         yld['variable'] = raw_variable.name
         yld['alias'] = raw_variable.alias
         yld['vid'] = raw_variable.uid

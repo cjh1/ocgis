@@ -17,6 +17,7 @@ from shapely.geometry.point import Point
 import ocgis
 from ocgis.exc import ExtentError, DefinitionValidationError
 from shapely.geometry.polygon import Polygon
+import csv
 
 
 class TestSimpleBase(TestBase):
@@ -354,6 +355,48 @@ class TestSimple(TestSimpleBase):
         ops = OcgOperations(dataset=self.get_dataset(),output_format='csv',geom=geom)
         ret = ops.execute()
         
+        output_dir = os.path.join(self._test_dir,ops.prefix)
+        contents = set(os.listdir(output_dir))
+        self.assertEqual(contents,set(['ocgis_output_source_metadata.txt', 'ocgis_output_metadata.txt', 'ocgis_output.log', 'ocgis_output_did.csv', 'ocgis_output.csv']))
+        with open(ret,'r') as f:
+            reader = csv.DictReader(f)
+            row = reader.next()
+            self.assertDictEqual(row,{'LID': '1', 'UGID': '1', 'VID': '1', 'ALIAS': 'foo', 'DID': '1', 'YEAR': '2000', 'VALUE': '1.0', 'MONTH': '3', 'VARIABLE': 'foo', 'GID': '6', 'TIME': '2000-03-01 12:00:00', 'TID': '1', 'LEVEL': '50', 'DAY': '1'})
+        
+        did_file = os.path.join(output_dir,ops.prefix+'_did.csv')
+        uri = os.path.join(self._test_dir,self.fn)
+        with open(did_file,'r') as f:
+            reader = csv.DictReader(f)
+            row = reader.next()
+            self.assertDictEqual(row,{'ALIAS': 'foo', 'DID': '1', 'URI': uri, 'UNITS': 'huge', 'STANDARD_NAME': 'foo', 'VARIABLE': 'foo', 'LONG_NAME': 'foo_foo'})
+        
+    def test_csv_calc_conversion(self):
+        calc = [{'func':'mean','name':'my_mean'}]
+        calc_grouping = ['month','year']
+        ops = OcgOperations(dataset=self.get_dataset(),output_format='csv',calc=calc,calc_grouping=calc_grouping)
+        ret = ops.execute()
+        
+        with open(ret,'r') as f:
+            reader = csv.DictReader(f)
+            row = reader.next()
+            self.assertDictEqual(row,{'LID': '1', 'UGID': '1', 'VID': '1', 'CID': '1', 'DID': '1', 'YEAR': '2000', 'TIME': '2000-03-16 00:00:00', 'CALC_ALIAS': 'my_mean_foo', 'VALUE': '1.0', 'MONTH': '3', 'VARIABLE': 'foo', 'ALIAS': 'foo', 'GID': '1', 'CALC_KEY': 'mean', 'TID': '1', 'LEVEL': '50', 'DAY': '16'})
+    
+    def test_csv_calc_multivariate_conversion(self):
+        rd1 = self.get_dataset()
+        rd1['alias'] = 'var1'
+        rd2 = self.get_dataset()
+        rd2['alias'] = 'var2'
+        calc = [{'name':'divide','func':'divide','kwds':{'arr1':'var1','arr2':'var2'}}]
+        
+        calc_grouping = ['month']
+        ops = OcgOperations(dataset=[rd1,rd2],calc=calc,calc_grouping=calc_grouping,prefix='yay',output_format='csv')
+        ret = ops.execute()
+        
+        with open(ret,'r') as f:
+            reader = csv.DictReader(f)
+            row = reader.next()
+            self.assertDictEqual(row,{'LID': '1', 'UGID': '1', 'LEVEL': '50', 'DID': '', 'YEAR': '2000', 'TIME': '2000-03-16 00:00:00', 'CALC_ALIAS': 'divide', 'VALUE': '1.0', 'MONTH': '3', 'GID': '1', 'CALC_KEY': 'divide', 'TID': '1', 'DAY': '16'})
+    
     def test_meta_conversion(self):
         ops = OcgOperations(dataset=self.get_dataset(),output_format='meta')
         ret = self.get_ret(ops)

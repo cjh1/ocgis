@@ -1,5 +1,5 @@
 from ocgis.calc.engine import OcgCalculationEngine
-from ocgis import env
+from ocgis import env, constants
 from ocgis.exc import EmptyData, ExtentError, MaskedDataError, EmptySubsetError
 from ocgis.util.spatial.wrap import Wrapper
 from ocgis.util.logging_ocgis import ocgis_lh
@@ -106,6 +106,15 @@ class SubsetOperation(object):
 #            yield(self,self.ops.geom,subset_log)
 
     def _process_geometries_(self,rds):
+        ## select headers
+        if self.cengine is not None:
+            if self.cengine._check_calculation_members_(self.cengine.funcs,AbstractMultivariateFunction):
+                headers = constants.multi_headers
+            else:
+                headers = constants.calc_headers
+        else:
+            headers = constants.raw_headers
+        
         alias = '_'.join([r.alias for r in rds])
         ocgis_lh('processing...',self._subset_log,alias=alias)
         ## return the field object
@@ -118,7 +127,7 @@ class SubsetOperation(object):
             if self.ops.allow_empty:
                 ocgis_lh(msg='time or level subset empty but empty returns allowed',
                          logger=self._subset_log,level=logging.WARN)
-                coll = SpatialCollection()
+                coll = SpatialCollection(headers=headers)
                 coll.add_field(1,None,rd.alias,None)
                 try:
                     yield(coll)
@@ -134,7 +143,7 @@ class SubsetOperation(object):
         ## loop over the iterator
         for gd in itr:
             ## initialize the collection object to store the subsetted data.
-            coll = SpatialCollection(crs=field.spatial.crs)
+            coll = SpatialCollection(crs=field.spatial.crs,headers=headers)
             
             ## reference variables from the geometry dictionary
             geom = gd.get('geom')

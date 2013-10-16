@@ -76,7 +76,7 @@ class TemporalDimension(base.VectorDimension):
         repr_dt = self._get_grouping_representative_datetime_(grouping,new_bounds,date_parts)
 
         return(TemporalGroupDimension(grouping=grouping,date_parts=date_parts,bounds=new_bounds,
-                                      dgroups=dgroups,value=repr_dt))
+                                      dgroups=dgroups,value=repr_dt,name_value='time',name_uid='tid'))
         
     def get_iter(self,*args,**kwds):
         r_name_value = self.name_value
@@ -182,6 +182,9 @@ class TemporalDimension(base.VectorDimension):
         else:
             ocgis_lh(logger='interface.temporal',exc=NotImplementedError('grouping: {0}'.format(self.grouping)))
         return(ret)
+    
+    def _get_iter_value_bounds_(self):
+        return(self._get_datetime_value_(),self._get_datetime_bounds_())
 
 
 class TemporalGroupDimension(TemporalDimension):

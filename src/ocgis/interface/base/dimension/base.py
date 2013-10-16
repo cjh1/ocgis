@@ -227,17 +227,18 @@ class VectorDimension(AbstractSourcedVariable,AbstractUidValueDimension):
         
         return(ret)
     
-    def get_iter(self):
-        ref_value = self.value
-        if self.bounds is None:
+    def get_iter(self):        
+        ref_value,ref_bounds = self._get_iter_value_bounds_()
+        
+        if ref_bounds is None:
             has_bounds = False
         else:
             has_bounds = True
-            ref_bounds = self.bounds
+            
         ref_uid = self.uid
         ref_name_value = self.name_value
         assert_raise(self.name_value != None,logger='interface.dimension.base',
-                     exc=ValueError('A "name" attribute is required for iteration.'))
+                     exc=ValueError('The "name_value" attribute is required for iteration.'))
         ref_name_uid = self.name_uid
         ref_name_bounds_lower = '{0}_lower'.format(self.name_bounds)
         ref_name_bounds_upper = '{0}_upper'.format(self.name_bounds)
@@ -261,6 +262,9 @@ class VectorDimension(AbstractSourcedVariable,AbstractUidValueDimension):
     
     def _format_src_idx_(self,value):
         return(self._get_none_or_array_(value))
+    
+    def _get_iter_value_bounds_(self):
+        return(self.value,self.bounds)
     
     def _get_uid_(self):
         if self._value is not None:

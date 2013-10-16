@@ -72,7 +72,7 @@ class OcgConverter(object):
                 writer.writerow(headers)
                 for rd in self.ops.dataset:
                     row = [rd.did,rd.variable,rd.alias,rd.uri]
-                    ref_variable = rd.ds.metadata['variables'][rd.variable]['attrs']
+                    ref_variable = rd._source_metadata['variables'][rd.variable]['attrs']
                     row.append(ref_variable.get('standard_name',None))
                     row.append(ref_variable.get('units',None))
                     row.append(ref_variable.get('long_name',None))
