@@ -246,7 +246,6 @@ class SubsetOperation(object):
                 
                 ## if there are calculations, do those now and return a new type of collection
                 if self.cengine is not None:
-                    raise(NotImplementedError)
                     ocgis_lh('performing computations',self._subset_log,alias=alias,ugid=ugid)
                     coll = self.cengine.execute(coll,file_only=self.ops.file_only)
                 

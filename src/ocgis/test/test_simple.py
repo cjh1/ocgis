@@ -288,21 +288,31 @@ class TestSimple(TestSimpleBase):
         
         ## raw
         ret = self.get_ret(kwds={'calc':calc,'calc_grouping':group})
-        ref = ret[1].calc[self.var]
-        for value in ref.itervalues():
-            self.assertEqual(value.shape,(2,2,4,4))
-        n_foo = ref['n']
-        self.assertEqual(n_foo[0,:].mean(),31)
-        self.assertEqual(n_foo[1,:].mean(),30)
+        ref = ret.gvu(1,'my_mean_foo')
+        self.assertEqual(ref.shape,(1,2,2,4,4))
+        with self.assertRaises(KeyError):
+            ret.gvu(1,'n')
 
         ## aggregated
         for calc_raw in [True,False]:
             ret = self.get_ret(kwds={'calc':calc,'calc_grouping':group,
                                      'aggregate':True,'calc_raw':calc_raw})
-            ref = ret[1].calc[self.var]
-            self.assertEqual(ref['n'].shape,(2,2,1,1))
-            self.assertEqual(ref['my_mean'].shape,(2,2,1,1))
-            self.assertEqual(ref['my_mean'].flatten().mean(),2.5)
+            ref = ret.gvu(1,'my_mean_foo')
+            self.assertEqual(ref.shape,(1,2,2,1,1))
+            self.assertEqual(ref.flatten().mean(),2.5)
+            
+    def test_calc_multivariate(self):
+        rd1 = self.get_dataset()
+        rd1['alias'] = 'var1'
+        rd2 = self.get_dataset()
+        rd2['alias'] = 'var2'
+        calc = [{'name':'divide','func':'divide','kwds':{'arr1':'var1','arr2':'var2'}}]
+        
+        calc_grouping = [None,['month']]
+        for cg in calc_grouping:
+            ops = OcgOperations(dataset=[rd1,rd2],calc=calc,calc_grouping=cg)
+            ret = ops.execute()
+            import ipdb;ipdb.set_trace()
             
     def test_inspect(self):
         uri = self.get_dataset()['uri']
