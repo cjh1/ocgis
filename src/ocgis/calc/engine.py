@@ -83,8 +83,6 @@ class OcgCalculationEngine(object):
         else:
             klass = DerivedField
             
-        import ipdb;ipdb.set_trace()
-
         ## group the variables. if grouping is None, calculations are performed
         ## on each element. array computations are taken advantage of.
         if self.grouping is not None:
@@ -101,13 +99,15 @@ class OcgCalculationEngine(object):
         ## iterate over functions
         for ugid,dct in coll.iteritems():
             for alias_field,field in dct.iteritems():
+                new_temporal = self.tgds.get(alias_field)
                 out_vc = VariableCollection()
                 for f in self.funcs:
                     ocgis_lh('calculating: {0}'.format(f),logger='calc.engine')
                     function = f['ref'](alias=f['name'],dtype=None,field=field,file_only=file_only,vc=out_vc,
-                         parms=f['kwds'],tgd=self.tgds[alias_field],use_raw_values=self.use_raw_values)
+                         parms=f['kwds'],tgd=new_temporal,use_raw_values=self.use_raw_values)
                     out_vc = function.execute()
-                new_field = klass(variables=out_vc,temporal=self.tgds[alias_field],spatial=field.spatial,
+                new_temporal = new_temporal or field.temporal
+                new_field = klass(variables=out_vc,temporal=new_temporal,spatial=field.spatial,
                                   level=field.level,realization=field.realization,meta=field.meta,
                                   uid=field.uid)
                 coll[ugid][alias_field] = new_field

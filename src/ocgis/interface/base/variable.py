@@ -143,6 +143,10 @@ class VariableCollection(object):
             self._uid_ctr += 1
         self._storage.update({variable.alias:variable})
         
+    def first(self):
+        for value in self.itervalues():
+            return(value)
+        
     def itervalues(self):
         for value in self._storage.itervalues():
             yield(value)

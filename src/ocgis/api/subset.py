@@ -7,6 +7,7 @@ import logging
 from ocgis.api.collection import SpatialCollection
 from ocgis.interface.base.crs import CFWGS84
 from shapely.geometry.point import Point
+from ocgis.calc.base import AbstractMultivariateFunction
 
 
 class SubsetOperation(object):
@@ -103,6 +104,122 @@ class SubsetOperation(object):
 #        else:
 #            ocgis_lh('1 geometry to process'.format(len(self.ops.geom)),subset_log)
 #            yield(self,self.ops.geom,subset_log)
+
+    def _process_geometries_(self,rds):
+        alias = '_'.join([r.alias for r in rds])
+        ocgis_lh('processing...',self._subset_log,alias=alias)
+        ## return the field object
+        try:
+            field = [rd.get() for rd in rds]
+            if len(field) > 1:
+                field[0].variables.add_variable(field[1].variables.first())
+            field = field[0]
+        except EmptySubsetError as e:
+            if self.ops.allow_empty:
+                ocgis_lh(msg='time or level subset empty but empty returns allowed',
+                         logger=self._subset_log,level=logging.WARN)
+                coll = SpatialCollection()
+                coll.add_field(1,None,rd.alias,None)
+                try:
+                    yield(coll)
+                finally:
+                    return
+            else:
+                ocgis_lh(exc=ExtentError(message=str(e)),alias=rd.alias,logger=self._subset_log)
+        ## set iterator based on presence of slice
+        if self.ops.slice is not None:
+            itr = [{}]
+        else:
+            itr = [{}] if self.ops.geom is None else self.ops.geom
+        ## loop over the iterator
+        for gd in itr:
+            ## initialize the collection object to store the subsetted data.
+            coll = SpatialCollection(crs=field.spatial.crs)
+            
+            ## reference variables from the geometry dictionary
+            geom = gd.get('geom')
+            
+            ## if the geometry is a point, we need to buffer it...
+            if isinstance(geom,Point):
+                ocgis_lh(logger=self._subset_log,msg='buffering point geometry',level=logging.DEBUG)
+                geom = geom.buffer(self.ops.search_radius_mult*field.spatial.grid.resolution)
+            
+            crs = gd.get('crs')
+            try:
+                ugid = gd['properties']['ugid']
+            except KeyError:
+                ugid = 1
+            ocgis_lh('processing',self._subset_log,level=logging.DEBUG,alias=alias,ugid=ugid)
+            
+            ## if there is a slice, use it to subset the field
+            if self.ops.slice is not None:
+                sfield = field.__getitem__(self.ops.slice)
+            else:
+                ## see if the selection
+                if crs is not None and crs != field.spatial.crs:
+                    raise(NotImplementedError('project single geometry'))
+                ## unwrap the data if it is geographic and 360
+                if geom is not None and CFWGS84.get_is_360(field.spatial):
+                    ocgis_lh('unwrapping selection geometry',self._subset_log,alias=alias,ugid=ugid)
+                    geom = Wrapper().unwrap(geom)
+                ## perform the spatial operation
+                if geom is not None:
+                    try:
+                        if self.ops.spatial_operation == 'intersects':
+                            sfield = field.get_intersects(geom)
+                        elif self.ops.spatial_operation == 'clip':
+                            sfield = field.get_clip(geom)
+                        else:
+                            ocgis_lh(exc=NotImplementedError(self.ops.spatial_operation))
+                    except EmptySubsetError as e:
+                        if self.ops.allow_empty:
+                            ocgis_lh(alias=alias,ugid=ugid,msg='empty geometric operation but empty returns allowed',level=logging.WARN)
+                            sfield = None
+                        else:
+                            ocgis_lh(exc=ExtentError(message=str(e)),alias=alias,logger=self._subset_log)
+                else:
+                    sfield = field
+            
+            ## if empty returns are allowed, there be an empty field
+            if sfield is not None:
+                ## aggregate if requested
+                if self.ops.aggregate:
+                    sfield = sfield.get_spatially_aggregated()
+                
+                ## wrap the returned data.
+                if not env.OPTIMIZE_FOR_CALC:
+                    if CFWGS84.get_is_360(sfield.spatial):
+                        if self.ops.output_format != 'nc' and self.ops.vector_wrap:
+                            ocgis_lh('wrapping output geometries',self._subset_log,alias=alias,ugid=ugid)
+                            sfield.spatial.crs.wrap(sfield.spatial)
+                            
+                ## check for all masked values
+                if env.OPTIMIZE_FOR_CALC is False and self.ops.file_only is False:
+                    for variable in sfield.variables.itervalues():
+                        if variable.value.mask.all():
+                            ## masked data may be okay depending on other opeartional
+                            ## conditions.
+                            if self.ops.snippet or self.ops.allow_empty:
+                                if self.ops.snippet:
+                                    ocgis_lh('all masked data encountered but allowed for snippet',
+                                             self._subset_log,alias=alias,ugid=ugid,level=logging.WARN)
+                                if self.ops.allow_empty:
+                                    ocgis_lh('all masked data encountered but empty returns allowed',
+                                             self._subset_log,alias=alias,ugid=ugid,level=logging.WARN)
+                                pass
+                            else:
+                                ## if the geometry is also masked, it is an empty spatial
+                                ## operation.
+                                if sfield.spatial.abstraction_geometry.value.mask.all():
+                                    ocgis_lh(exc=EmptyData,logger=self._subset_log)
+                                ## if none of the other conditions are met, raise the masked data error
+                                else:
+                                    ocgis_lh(logger=self._subset_log,exc=MaskedDataError(),alias=alias,ugid=ugid)
+                
+            coll.add_field(ugid,geom,alias,sfield,properties=gd.get('properties'))
+            
+            yield(coll)
+        
     
     def _iter_collections_(self):
 #        '''
@@ -113,140 +230,22 @@ class SubsetOperation(object):
         
         ocgis_lh('{0} request dataset(s) to process'.format(len(self.ops.dataset)),self._subset_log)
         
-        for rd in self.ops.dataset:
-            alias = rd.alias
-            ocgis_lh('processing...',self._subset_log,alias=alias)
-            ## return the field object
-            try:
-                field = rd.get()
-            except EmptySubsetError as e:
-                if self.ops.allow_empty:
-                    ocgis_lh(msg='time or level subset empty but empty returns allowed',
-                             logger=self._subset_log,level=logging.WARN)
-                    coll = SpatialCollection()
-                    coll.add_field(1,None,rd.alias,None)
-                    yield(coll)
-                    continue
-                else:
-                    ocgis_lh(exc=ExtentError(message=str(e)),alias=rd.alias,logger=self._subset_log)
-#            ## if we are working with a slice, get the sliced field
-#            if self.ops.slice is not None:
-#                sfield = field.__getitem__(self.ops.slice)
-#            ## otherwise, begin iterating over the geometries.
-            ## set iterator based on presence of slice
-            if self.ops.slice is not None:
-                itr = [{}]
+        if self.cengine is None:
+            itr_rd = ([rd] for rd in self.ops.dataset)
+        else:
+            if self.cengine._check_calculation_members_(self.cengine.funcs,AbstractMultivariateFunction):
+                itr_rd = [[r for r in self.ops.dataset]]
             else:
-                itr = [{}] if self.ops.geom is None else self.ops.geom
-            ## loop over the iterator
-            for gd in itr:
-                ## initialize the collection object to store the subsetted data.
-                coll = SpatialCollection(crs=field.spatial.crs)
-                
-                ## reference variables from the geometry dictionary
-                geom = gd.get('geom')
-                
-                ## if the geometry is a point, we need to buffer it...
-                if isinstance(geom,Point):
-                    ocgis_lh(logger=self._subset_log,msg='buffering point geometry',level=logging.DEBUG)
-                    geom = geom.buffer(self.ops.search_radius_mult*field.spatial.grid.resolution)
-                
-                crs = gd.get('crs')
-                try:
-                    ugid = gd['properties']['ugid']
-                except KeyError:
-                    ugid = 1
-                ocgis_lh('processing',self._subset_log,level=logging.DEBUG,alias=alias,ugid=ugid)
-                
-                ## if there is a slice, use it to subset the field
-                if self.ops.slice is not None:
-                    sfield = field.__getitem__(self.ops.slice)
-                else:
-                    ## see if the selection
-                    if crs is not None and crs != field.spatial.crs:
-                        raise(NotImplementedError('project single geometry'))
-                    ## unwrap the data if it is geographic and 360
-                    if geom is not None and CFWGS84.get_is_360(field.spatial):
-                        ocgis_lh('unwrapping selection geometry',self._subset_log,alias=alias,ugid=ugid)
-                        geom = Wrapper().unwrap(geom)
-                    ## perform the spatial operation
-                    if geom is not None:
-                        try:
-                            if self.ops.spatial_operation == 'intersects':
-                                sfield = field.get_intersects(geom)
-                            elif self.ops.spatial_operation == 'clip':
-                                sfield = field.get_clip(geom)
-                            else:
-                                ocgis_lh(exc=NotImplementedError(self.ops.spatial_operation))
-                        except EmptySubsetError as e:
-                            if self.ops.allow_empty:
-                                ocgis_lh(alias=alias,ugid=ugid,msg='empty geometric operation but empty returns allowed',level=logging.WARN)
-                                sfield = None
-                            else:
-                                ocgis_lh(exc=ExtentError(message=str(e)),alias=alias,logger=self._subset_log)
-                    else:
-                        sfield = field
-                
-                ## if empty returns are allowed, there be an empty field
-                if sfield is not None:
-                    ## aggregate if requested
-                    if self.ops.aggregate:
-                        sfield = sfield.get_spatially_aggregated()
-                    
-                    ## wrap the returned data.
-                    if not env.OPTIMIZE_FOR_CALC:
-                        if CFWGS84.get_is_360(sfield.spatial):
-                            if self.ops.output_format != 'nc' and self.ops.vector_wrap:
-                                ocgis_lh('wrapping output geometries',self._subset_log,alias=alias,ugid=ugid)
-                                sfield.spatial.crs.wrap(sfield.spatial)
-                                
-                    ## check for all masked values
-                    if env.OPTIMIZE_FOR_CALC is False and self.ops.file_only is False:
-                        for variable in sfield.variables.itervalues():
-                            if variable.value.mask.all():
-                                ## masked data may be okay depending on other opeartional
-                                ## conditions.
-                                if self.ops.snippet or self.ops.allow_empty:
-                                    if self.ops.snippet:
-                                        ocgis_lh('all masked data encountered but allowed for snippet',
-                                                 self._subset_log,alias=alias,ugid=ugid,level=logging.WARN)
-                                    if self.ops.allow_empty:
-                                        ocgis_lh('all masked data encountered but empty returns allowed',
-                                                 self._subset_log,alias=alias,ugid=ugid,level=logging.WARN)
-                                    pass
-                                else:
-                                    ## if the geometry is also masked, it is an empty spatial
-                                    ## operation.
-                                    if sfield.spatial.abstraction_geometry.value.mask.all():
-                                        ocgis_lh(exc=EmptyData,logger=self._subset_log)
-                                    ## if none of the other conditions are met, raise the masked data error
-                                    else:
-                                        ocgis_lh(logger=self._subset_log,exc=MaskedDataError(),alias=alias,ugid=ugid)
-                
-#                    ## there may be no data returned - this may be real or could be an
-#                    ## error. by default, empty returns are not allowed
-#                    except EmptyData as ed:
-#                        if so.ops.allow_empty:
-#                            if ed.origin == 'time':
-#                                msg = 'the time subset returned empty but empty returns are allowed'
-#                            else:
-#                                msg = 'the geometric operations returned empty but empty returns are allowed'
-#                            ocgis_lh(msg,logger,alias=alias,ugid=ugid)
-#                            continue
-#                        else:
-#                            if ed.origin == 'time':
-#                                msg = 'empty temporal subset operation'
-#                            else:
-#                                msg = 'empty geometric operation'
-#                            ocgis_lh(msg,logger,exc=ExtentError(msg),alias=alias,ugid=ugid)
-#                    
-#                    import ipdb;ipdb.set_trace()
-                    
-                coll.add_field(ugid,geom,alias,sfield,properties=gd.get('properties'))
-                
+                itr_rd = ([rd] for rd in self.ops.dataset)
+        
+        for rds in itr_rd:
+            for coll in self._process_geometries_(rds):
                 ## if there are calculations, do those now and return a new type of collection
                 if self.cengine is not None:
-                    ocgis_lh('performing computations',self._subset_log,alias=alias,ugid=ugid)
+                    ocgis_lh('performing computations',
+                             self._subset_log,
+                             alias=coll.items()[0][1].keys()[0],
+                             ugid=coll.keys()[0])
                     coll = self.cengine.execute(coll,file_only=self.ops.file_only)
                 
                 ## conversion of groups.
@@ -255,6 +254,154 @@ class SubsetOperation(object):
                 else:
                     ocgis_lh('subset yielding',self._subset_log,level=logging.DEBUG)
                     yield(coll)
+
+        
+#        yield('a')
+#        for rd in self.ops.dataset:
+            
+            
+#            
+#            alias = rd.alias
+#            ocgis_lh('processing...',self._subset_log,alias=alias)
+#            ## return the field object
+#            try:
+#                field = rd.get()
+#            except EmptySubsetError as e:
+#                if self.ops.allow_empty:
+#                    ocgis_lh(msg='time or level subset empty but empty returns allowed',
+#                             logger=self._subset_log,level=logging.WARN)
+#                    coll = SpatialCollection()
+#                    coll.add_field(1,None,rd.alias,None)
+#                    yield(coll)
+#                    continue
+#                else:
+#                    ocgis_lh(exc=ExtentError(message=str(e)),alias=rd.alias,logger=self._subset_log)
+##            ## if we are working with a slice, get the sliced field
+##            if self.ops.slice is not None:
+##                sfield = field.__getitem__(self.ops.slice)
+##            ## otherwise, begin iterating over the geometries.
+#            ## set iterator based on presence of slice
+#            if self.ops.slice is not None:
+#                itr = [{}]
+#            else:
+#                itr = [{}] if self.ops.geom is None else self.ops.geom
+#            ## loop over the iterator
+#            for gd in itr:
+#                ## initialize the collection object to store the subsetted data.
+#                coll = SpatialCollection(crs=field.spatial.crs)
+#                
+#                ## reference variables from the geometry dictionary
+#                geom = gd.get('geom')
+#                
+#                ## if the geometry is a point, we need to buffer it...
+#                if isinstance(geom,Point):
+#                    ocgis_lh(logger=self._subset_log,msg='buffering point geometry',level=logging.DEBUG)
+#                    geom = geom.buffer(self.ops.search_radius_mult*field.spatial.grid.resolution)
+#                
+#                crs = gd.get('crs')
+#                try:
+#                    ugid = gd['properties']['ugid']
+#                except KeyError:
+#                    ugid = 1
+#                ocgis_lh('processing',self._subset_log,level=logging.DEBUG,alias=alias,ugid=ugid)
+#                
+#                ## if there is a slice, use it to subset the field
+#                if self.ops.slice is not None:
+#                    sfield = field.__getitem__(self.ops.slice)
+#                else:
+#                    ## see if the selection
+#                    if crs is not None and crs != field.spatial.crs:
+#                        raise(NotImplementedError('project single geometry'))
+#                    ## unwrap the data if it is geographic and 360
+#                    if geom is not None and CFWGS84.get_is_360(field.spatial):
+#                        ocgis_lh('unwrapping selection geometry',self._subset_log,alias=alias,ugid=ugid)
+#                        geom = Wrapper().unwrap(geom)
+#                    ## perform the spatial operation
+#                    if geom is not None:
+#                        try:
+#                            if self.ops.spatial_operation == 'intersects':
+#                                sfield = field.get_intersects(geom)
+#                            elif self.ops.spatial_operation == 'clip':
+#                                sfield = field.get_clip(geom)
+#                            else:
+#                                ocgis_lh(exc=NotImplementedError(self.ops.spatial_operation))
+#                        except EmptySubsetError as e:
+#                            if self.ops.allow_empty:
+#                                ocgis_lh(alias=alias,ugid=ugid,msg='empty geometric operation but empty returns allowed',level=logging.WARN)
+#                                sfield = None
+#                            else:
+#                                ocgis_lh(exc=ExtentError(message=str(e)),alias=alias,logger=self._subset_log)
+#                    else:
+#                        sfield = field
+#                
+#                ## if empty returns are allowed, there be an empty field
+#                if sfield is not None:
+#                    ## aggregate if requested
+#                    if self.ops.aggregate:
+#                        sfield = sfield.get_spatially_aggregated()
+#                    
+#                    ## wrap the returned data.
+#                    if not env.OPTIMIZE_FOR_CALC:
+#                        if CFWGS84.get_is_360(sfield.spatial):
+#                            if self.ops.output_format != 'nc' and self.ops.vector_wrap:
+#                                ocgis_lh('wrapping output geometries',self._subset_log,alias=alias,ugid=ugid)
+#                                sfield.spatial.crs.wrap(sfield.spatial)
+#                                
+#                    ## check for all masked values
+#                    if env.OPTIMIZE_FOR_CALC is False and self.ops.file_only is False:
+#                        for variable in sfield.variables.itervalues():
+#                            if variable.value.mask.all():
+#                                ## masked data may be okay depending on other opeartional
+#                                ## conditions.
+#                                if self.ops.snippet or self.ops.allow_empty:
+#                                    if self.ops.snippet:
+#                                        ocgis_lh('all masked data encountered but allowed for snippet',
+#                                                 self._subset_log,alias=alias,ugid=ugid,level=logging.WARN)
+#                                    if self.ops.allow_empty:
+#                                        ocgis_lh('all masked data encountered but empty returns allowed',
+#                                                 self._subset_log,alias=alias,ugid=ugid,level=logging.WARN)
+#                                    pass
+#                                else:
+#                                    ## if the geometry is also masked, it is an empty spatial
+#                                    ## operation.
+#                                    if sfield.spatial.abstraction_geometry.value.mask.all():
+#                                        ocgis_lh(exc=EmptyData,logger=self._subset_log)
+#                                    ## if none of the other conditions are met, raise the masked data error
+#                                    else:
+#                                        ocgis_lh(logger=self._subset_log,exc=MaskedDataError(),alias=alias,ugid=ugid)
+#                
+##                    ## there may be no data returned - this may be real or could be an
+##                    ## error. by default, empty returns are not allowed
+##                    except EmptyData as ed:
+##                        if so.ops.allow_empty:
+##                            if ed.origin == 'time':
+##                                msg = 'the time subset returned empty but empty returns are allowed'
+##                            else:
+##                                msg = 'the geometric operations returned empty but empty returns are allowed'
+##                            ocgis_lh(msg,logger,alias=alias,ugid=ugid)
+##                            continue
+##                        else:
+##                            if ed.origin == 'time':
+##                                msg = 'empty temporal subset operation'
+##                            else:
+##                                msg = 'empty geometric operation'
+##                            ocgis_lh(msg,logger,exc=ExtentError(msg),alias=alias,ugid=ugid)
+##                    
+##                    import ipdb;ipdb.set_trace()
+#                    
+#                coll.add_field(ugid,geom,alias,sfield,properties=gd.get('properties'))
+#                
+#                ## if there are calculations, do those now and return a new type of collection
+#                if self.cengine is not None:
+#                    ocgis_lh('performing computations',self._subset_log,alias=alias,ugid=ugid)
+#                    coll = self.cengine.execute(coll,file_only=self.ops.file_only)
+#                
+#                ## conversion of groups.
+#                if self.ops.output_grouping is not None:
+#                    raise(NotImplementedError)
+#                else:
+#                    ocgis_lh('subset yielding',self._subset_log,level=logging.DEBUG)
+#                    yield(coll)
 
 
 ################################################################################

@@ -312,7 +312,11 @@ class TestSimple(TestSimpleBase):
         for cg in calc_grouping:
             ops = OcgOperations(dataset=[rd1,rd2],calc=calc,calc_grouping=cg)
             ret = ops.execute()
-            import ipdb;ipdb.set_trace()
+            ref = ret.gvu(1,'divide').shape
+            if cg is None:
+                self.assertEqual(ref,(1, 61, 2, 4, 4))
+            else:
+                self.assertEqual(ref,(1, 2, 2, 4, 4))
             
     def test_inspect(self):
         uri = self.get_dataset()['uri']
