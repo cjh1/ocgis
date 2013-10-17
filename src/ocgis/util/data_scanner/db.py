@@ -33,10 +33,10 @@ def get_or_create(session,Model,**kwargs):
     try:
         obj = session.query(Model).filter_by(**kwargs).one()
     except NoResultFound:
-        commit = kwargs.pop('commit',True)
+        commit = kwargs.pop('commit',False)
         obj = Model(**kwargs)
-        session.add(obj)
         if commit:
+            session.add(obj)
             session.commit()
     return(obj)
     
@@ -87,7 +87,7 @@ class Container(Base):
                       CheckConstraint('spatial_abstraction in ("point","polygon")'),
                       CheckConstraint('time_frequency in ("day","month","year")'))
     cid = Column(Integer,primary_key=True)
-    did = Column(Integer,ForeignKey(Dataset.did),nullable=True)
+    did = Column(Integer,ForeignKey(Dataset.did),nullable=False)
     uri = Column(String,nullable=False)
     time_start = Column(DateTime,nullable=False)
     time_stop = Column(DateTime,nullable=False)
@@ -154,8 +154,8 @@ class RawVariable(Base,DictConversion):
     __tablename__ = 'raw_variable'
     __table_args__ = (UniqueConstraint('name','cid'),)
     rvid = Column(Integer,primary_key=True)
-    cuid = Column(Integer,ForeignKey(CleanUnits.cuid),nullable=True)
-    cvid = Column(Integer,ForeignKey(CleanVariable.cvid),nullable=True)
+    cuid = Column(Integer,ForeignKey(CleanUnits.cuid),nullable=False)
+    cvid = Column(Integer,ForeignKey(CleanVariable.cvid),nullable=False)
     cid = Column(Integer,ForeignKey(Container.cid),nullable=False)
     name = Column(String,nullable=False)
     standard_name = Column(String,nullable=True)
