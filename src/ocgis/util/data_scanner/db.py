@@ -5,6 +5,7 @@ from sqlalchemy.types import String, Integer, DateTime, Float, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.engine import create_engine
 from sqlalchemy.orm.session import sessionmaker
+from sqlalchemy.orm.exc import NoResultFound
 
 
 metadata = MetaData()
@@ -28,18 +29,28 @@ def connect(db_path):
     metadata.bind = engine
     Session.configure(bind=engine)
     
+def get_or_create(session,Model,**kwargs):
+    try:
+        obj = session.query(Model).filter_by(**kwargs).one()
+    except NoResultFound:
+        commit = kwargs.pop('commit',True)
+        obj = Model(**kwargs)
+        session.add(obj)
+        if commit:
+            session.commit()
+    return(obj)
+    
     
 class DictConversion(object):
     
     def as_dict(self):
-        objects = {}
         simple = {}
         for k,v in self.__dict__.iteritems():
             if isinstance(v,Base) or k == '_sa_instance_state':
-                objects[k] = v
+                continue
             else:
                 simple[k] = v
-        return(objects,simple)
+        return(simple)
 
 
 class DataPackage(Base):
@@ -56,7 +67,7 @@ class DatasetCategory(Base):
     __table_args__ = (UniqueConstraint('name'),)
     dcid = Column(Integer,primary_key=True)
     name = Column(String,nullable=False)
-    description = Column(Text,nullable=True)
+    description = Column(Text,nullable=False)
 
 
 class Dataset(Base):
@@ -65,7 +76,7 @@ class Dataset(Base):
     did = Column(Integer,primary_key=True)
     dcid = Column(Integer,ForeignKey(DatasetCategory.dcid),nullable=False)
     name = Column(String,nullable=False)
-    description = Column(Text,nullable=True)
+    description = Column(Text,nullable=False)
     
     dataset_category = relationship(DatasetCategory,backref='dataset')
 
@@ -93,7 +104,7 @@ class Container(Base):
     
     dataset = relationship(Dataset,backref='container')
     
-    def __init__(self,hd,field=None):
+    def __init__(self,session,hd,field=None):
         ## no need to make ocgis a required installation for this unless data
         ## is being loaded from source.
         from ocgis.util import helpers
@@ -111,7 +122,11 @@ class Container(Base):
         self.spatial_res = field.spatial.grid.resolution
         self.spatial_proj4 = field.spatial.crs.sr.ExportToProj4()
         self.field_shape = str(field.shape)
-        self.dataset = hd.dataset
+        
+        dataset_category = get_or_create(session,DatasetCategory,**hd.dataset_category)
+        kwds = hd.dataset.copy()
+        kwds['dataset_category'] = dataset_category
+        self.dataset = get_or_create(session,Dataset,**kwds)
         
     def touch(self):
         raise(NotImplementedError)
@@ -119,15 +134,16 @@ class Container(Base):
 
 class CleanUnits(Base):
     __tablename__ = 'clean_units'
-    __table_args__ = (UniqueConstraint('name'),)
+    __table_args__ = (UniqueConstraint('standard_name'),)
     cuid = Column(Integer,primary_key=True)
     standard_name = Column(String,nullable=False)
     long_name = Column(String,nullable=False)
+    description = Column(Text,nullable=True)
 
 
 class CleanVariable(Base):
     __tablename__ = 'clean_variable'
-    __table_args__ = (UniqueConstraint('standard_name','long_name'),)
+    __table_args__ = (UniqueConstraint('standard_name'),)
     cvid = Column(Integer,primary_key=True)
     standard_name = Column(String,nullable=False)
     long_name = Column(String,nullable=False)
@@ -151,20 +167,15 @@ class RawVariable(Base,DictConversion):
     clean_variable = relationship(CleanVariable,backref='raw_variable')
     container = relationship('Container',backref='raw_variable')
     
-    def __init__(self,hd,container,variable_name):
+    def __init__(self,session,hd,container,variable_name):
         idx = hd.variables.index(variable_name)
+        source_metadata = hd.get_field().meta
         self.name = variable_name
         for attr in ['standard_name','long_name','units']:
-            setattr(self,attr,hd.source_metadata['variables'][variable_name]['attrs'].get(attr))
+            setattr(self,attr,source_metadata['variables'][variable_name]['attrs'].get(attr))
         self.container = container
-        session = Session()
-        try:
-            if hd.clean_units is not None:
-                self.clean_units = hd.clean_units[idx]
-            if hd.clean_variable is not None:
-                self.clean_variable = hd.clean_variable[idx]
-        finally:
-            session.close()
+        self.clean_units = get_or_create(session,CleanUnits,**hd.clean_units[idx])
+        self.clean_variable = get_or_create(session,CleanVariable,**hd.clean_variable[idx])
 
 
 assoc_dp_rv = Table('assoc_dp_rv',Base.metadata,Column('dpid',ForeignKey(DataPackage.dpid)),

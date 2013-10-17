@@ -10,29 +10,25 @@ tdata = TestBase.get_tdata()
 class CanCM4TestDataset(AbstractHarvestDataset):
     uri = tdata.get_uri('cancm4_tas')
     variables = ['tas']
-    clean_units = ['K']
-    clean_variable_standard_name = ['air_temperature']
-    clean_variable_long_name = ['Near-Surface Air Temperature']
-    dataset = 'CanCM4'
-    dataset_category = 'GCMs'
-    description = 'This is a test GCM dataset.'
+    clean_units = [{'standard_name':'K','long_name':'Kelvin'}]
+    clean_variable = [dict(standard_name='air_temperature',long_name='Near-Surface Air Temperature',description='Fill it in!')]
+    dataset_category = dict(name='GCMs',description='Global Circulation Models')
+    dataset = dict(name='CanCM4',description='Canadian Circulation Model 4')
     
     
 class AbstractMaurerDataset(AbstractHarvestDataset):
-    dataset = 'Maurer 2010'
-    dataset_category = 'Observational'
+    dataset = dict(name='Maurer 2010',description='Amazing dataset!')
+    dataset_category = dict(name='Observational',description='Some observational datasets.')
     
     
 class MaurerTas(AbstractMaurerDataset):
     uri = '/home/local/WX/ben.koziol/climate_data/maurer/2010-concatenated/Maurer02new_OBS_tas_daily.1971-2000.nc'
     variables = ['tas']
-    clean_units = ['C']
-    clean_variable_standard_name = ['air_temperature']
-    clean_variable_long_name = ['Near-Surface Air Temperature']
-    description = 'This is a test Maurer observation data.'
+    clean_units = [{'standard_name':'C','long_name':'Celsius'}]
+    clean_variable = [dict(standard_name='air_temperature',long_name='Near-Surface Air Temperature',description='Fill it in!')]
 
 
-class TestAbstractHarvestDataset(TestBase):
+class Test(TestBase):
             
     def setUp(self):
         TestBase.setUp(self)
@@ -42,14 +38,14 @@ class TestAbstractHarvestDataset(TestBase):
         models = [CanCM4TestDataset,MaurerTas]
         session = db.Session()
         try:
-            for m in models: m.insert(session)
+            for m in models: m().insert(session)
         finally:
             session.close()
 
     def test_container(self):
         session = db.Session()
         try:
-            container = db.Container(CanCM4TestDataset(session))
+            container = db.Container(session,CanCM4TestDataset)
             self.assertEqual(container.dataset.name,'CanCM4')
             to_test = container.__dict__.copy()
             to_test.pop('_sa_instance_state')
@@ -65,19 +61,22 @@ class TestAbstractHarvestDataset(TestBase):
     def test_raw_variable(self):
         session = db.Session()
         try:
-            hd = CanCM4TestDataset(session)
-            container = db.Container(hd)
-            raw_variable = db.RawVariable(hd,container,hd.variables[0])
-            objects,simple = raw_variable.as_dict()
-            self.assertDictEqual(simple,{'units': u'K', 'long_name': u'Near-Surface Air Temperature', 'standard_name': u'air_temperature', 'name': 'tas'})
-            self.assertEqual(objects['clean_units'].name,'K')
+            hd = CanCM4TestDataset
+            container = db.Container(session,hd)
+            raw_variable = db.RawVariable(session,hd,container,hd.variables[0])
+            session.add(raw_variable)
+            session.commit()
+            obj = session.query(db.RawVariable).one()
+            simple = obj.as_dict()
+            self.assertDictEqual(simple,{'name': u'tas', 'cid': 1, 'long_name': u'Near-Surface Air Temperature', 'standard_name': u'air_temperature', 'cuid': 1, 'units': u'K', 'rvid': 1, 'cvid': 1, 'description': None})
+            self.assertEqual(obj.clean_units.standard_name,'K')
         finally:
             session.close()
         
     def test_insert(self):
         session = db.Session()
         try:
-            CanCM4TestDataset.insert(session)
+            CanCM4TestDataset().insert(session)
             self.assertEqual(1,session.query(db.Container).count())
             container = session.query(db.Container).one()
             self.assertEqual(container.dataset.name,'CanCM4')
