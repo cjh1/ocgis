@@ -18,8 +18,23 @@ class DataQuery(object):
         '''
         :param select_data_by: One of "variable", "index", or "package".
         :type select_data_by: str
+        :param long_name: A variable's or index's long name representation.
+        :type long_name: str
+        :param dataset_category: The name of the dataset category.
+        :type dataset_category: str
+        :param dataset: The name of the containing dataset.
+        :type dataset: str
         :param time_frequency: One of "day", "month", or "year".
         :type time_frequency: str
+        :param time_range: List with two elements corresponding to lower and upper time selection boundaries.
+        :type time_rage: [datetime.datetime,datetime.datetime]
+        :raises: NoResultFound
+        :returns: A dictionary representation that changes depending on parameterization.
+        
+        1. If the constructed query returns a single object, then a dictionary containing appropriate keywords for `ocgis.RequestDataset` is returned.
+        2. If multiple rows are returned by the query, a dictionary representation of remaining options is returned with keys corresponding to keyword arguments.
+        
+        :rtype: dict
         '''
         
         with db.session_scope() as session:
