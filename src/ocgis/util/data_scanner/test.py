@@ -1,9 +1,11 @@
 from ocgis.test.base import TestBase
 from ocgis.util.data_scanner.datasets.base import AbstractHarvestDataset
 import datetime
-from ocgis.util.data_scanner import db
+import db
+import query
 import os
 from unittest.case import SkipTest
+from ocgis.util.data_scanner.db import get_or_create
 
 
 tdata = TestBase.get_tdata()
@@ -14,6 +16,7 @@ class CanCM4TestDataset(AbstractHarvestDataset):
     clean_variable = [dict(standard_name='air_temperature',long_name='Near-Surface Air Temperature',description='Fill it in!')]
     dataset_category = dict(name='GCMs',description='Global Circulation Models')
     dataset = dict(name='CanCM4',description='Canadian Circulation Model 4')
+    type = 'variable'
     
     
 class AbstractMaurerDataset(AbstractHarvestDataset):
@@ -26,6 +29,15 @@ class MaurerTas(AbstractMaurerDataset):
     variables = ['tas']
     clean_units = [{'standard_name':'C','long_name':'Celsius'}]
     clean_variable = [dict(standard_name='air_temperature',long_name='Near-Surface Air Temperature',description='Fill it in!')]
+    type = 'variable'
+    
+    
+class MaurerTasmax(AbstractMaurerDataset):
+    uri = '/home/local/WX/ben.koziol/climate_data/maurer/2010-concatenated/Maurer02new_OBS_tasmax_daily.1971-2000.nc'
+    variables = ['tasmax']
+    clean_units = [{'standard_name':'C','long_name':'Celsius'}]
+    clean_variable = [dict(standard_name='maximum_air_temperature',long_name='Near-Surface Maximum Air Temperature',description='Fill it in!')]
+    type = 'variable'
 
 
 class Test(TestBase):
@@ -34,13 +46,36 @@ class Test(TestBase):
         TestBase.setUp(self)
         db.build_database(in_memory=True)
         
-    def test_query(self):
-        models = [CanCM4TestDataset,MaurerTas]
-        session = db.Session()
-        try:
-            for m in models: m().insert(session)
-        finally:
-            session.close()
+    def test_query_all(self):
+        models = [CanCM4TestDataset,MaurerTas,MaurerTasmax]
+        with db.session_scope() as session:
+            for m in models: m.insert(session)
+            
+        dq = query.DataQuery()
+        state = dq.get_variable_or_index('variable')
+        target = {'long_name': [u'Near-Surface Air Temperature', u'Near-Surface Maximum Air Temperature'], 'time_frequency': [u'day'], 'dataset_category': [u'GCMs', u'Observational'], 'dataset': [u'CanCM4', u'Maurer 2010']}
+        self.assertDictEqual(state,target)
+
+    def test_query_limiting_all(self):
+        models = [CanCM4TestDataset,MaurerTas,MaurerTasmax]
+        with db.session_scope() as session:
+            for m in models: m.insert(session)
+        dq = query.DataQuery()
+        ret = dq.get_variable_or_index('variable',
+                                       long_name='Near-Surface Air Temperature',
+                                       time_frequency='day',
+                                       dataset_category='Observational',
+                                       dataset='Maurer 2010')
+        self.assertDictEqual(ret,{'variable': u'tas', 'alias': u'tas', 't_calendar': u'standard', 'uri': u'/home/local/WX/ben.koziol/climate_data/maurer/2010-concatenated/Maurer02new_OBS_tas_daily.1971-2000.nc', 't_units': u'days since 1940-01-01 00:00:00'})    
+
+    def test_query_limiting(self):
+        models = [CanCM4TestDataset,MaurerTas,MaurerTasmax]
+        with db.session_scope() as session:
+            for m in models: m.insert(session)
+        dq = query.DataQuery()
+        ret = dq.get_variable_or_index('variable',
+                                       long_name='Near-Surface Air Temperature')
+        self.assertDictEqual(ret,{'long_name': [u'Near-Surface Air Temperature'], 'time_frequency': [u'day'], 'dataset_category': [u'GCMs', u'Observational'], 'dataset': [u'CanCM4', u'Maurer 2010']})
 
     def test_container(self):
         session = db.Session()
@@ -63,12 +98,15 @@ class Test(TestBase):
         try:
             hd = CanCM4TestDataset
             container = db.Container(session,hd)
-            raw_variable = db.RawVariable(session,hd,container,hd.variables[0])
+            clean_units = get_or_create(session,db.CleanUnits,**hd.clean_units[0])
+            clean_variable = get_or_create(session,db.CleanVariable,**hd.clean_variable[0])
+            raw_variable = db.Field(hd,container,hd.variables[0],clean_units,clean_variable)
             session.add(raw_variable)
             session.commit()
-            obj = session.query(db.RawVariable).one()
+            obj = session.query(db.Field).one()
             simple = obj.as_dict()
-            self.assertDictEqual(simple,{'name': u'tas', 'cid': 1, 'long_name': u'Near-Surface Air Temperature', 'standard_name': u'air_temperature', 'cuid': 1, 'units': u'K', 'rvid': 1, 'cvid': 1, 'description': None})
+            target = {'name': u'tas', 'cid': 1, 'cvid': 1, 'long_name': u'Near-Surface Air Temperature', 'standard_name': u'air_temperature', 'fid': 1, 'cuid': 1, 'units': u'K', 'type': u'variable', 'description': None}
+            self.assertDictEqual(simple,target)
             self.assertEqual(obj.clean_units.standard_name,'K')
         finally:
             session.close()

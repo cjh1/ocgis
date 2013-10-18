@@ -6,6 +6,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.engine import create_engine
 from sqlalchemy.orm.session import sessionmaker
 from sqlalchemy.orm.exc import NoResultFound
+from contextlib import contextmanager
 
 
 metadata = MetaData()
@@ -33,13 +34,41 @@ def get_or_create(session,Model,**kwargs):
     try:
         obj = session.query(Model).filter_by(**kwargs).one()
     except NoResultFound:
-        commit = kwargs.pop('commit',False)
+        commit = kwargs.pop('commit',True)
         obj = Model(**kwargs)
         if commit:
             session.add(obj)
             session.commit()
     return(obj)
+
+def get_temporal_frequency(res):
+    mp = {'day':[1,2],
+          'month':[28,31],
+          'year':[359,366]}
+    ret = None
+    for k,v in mp.iteritems():
+        if res >= v[0] and res <= v[1]:
+            ret = k
+            break
+    if ret is None:
+        raise(NotImplementedError(res))
+    return(ret)
+
+@contextmanager
+def session_scope(commit=False):
+    """Provide a transactional scope around a series of operations."""
+    session = Session()
+    try:
+        yield(session)
+        if commit:
+            session.commit()
+    except:
+        session.rollback()
+        raise
+    finally:
+        session.close()
     
+################################################################################
     
 class DictConversion(object):
     
@@ -59,7 +88,7 @@ class DataPackage(Base):
     name = Column(String,nullable=True)
     description = Column(Text,nullable=True)
     
-    raw_variable = relationship('RawVariable',secondary='assoc_dp_rv')
+    raw_variable = relationship('Field',secondary='assoc_dp_rv')
 
 
 class DatasetCategory(Base):
@@ -150,14 +179,16 @@ class CleanVariable(Base):
     description = Column(Text,nullable=False)
 
 
-class RawVariable(Base,DictConversion):
-    __tablename__ = 'raw_variable'
-    __table_args__ = (UniqueConstraint('name','cid'),)
-    rvid = Column(Integer,primary_key=True)
+class Field(Base,DictConversion):
+    __tablename__ = 'field'
+    __table_args__ = (UniqueConstraint('name','cid'),
+                      CheckConstraint('type in ("index","variable")'))
+    fid = Column(Integer,primary_key=True)
     cuid = Column(Integer,ForeignKey(CleanUnits.cuid),nullable=False)
     cvid = Column(Integer,ForeignKey(CleanVariable.cvid),nullable=False)
     cid = Column(Integer,ForeignKey(Container.cid),nullable=False)
     name = Column(String,nullable=False)
+    type = Column(String,nullable=False)
     standard_name = Column(String,nullable=True)
     long_name = Column(String,nullable=True)
     units = Column(String,nullable=True)
@@ -165,32 +196,21 @@ class RawVariable(Base,DictConversion):
     
     clean_units = relationship(CleanUnits,backref='raw_variable')
     clean_variable = relationship(CleanVariable,backref='raw_variable')
-    container = relationship('Container',backref='raw_variable')
+    container = relationship('Container',backref='raw_variable',lazy='joined')
     
-    def __init__(self,session,hd,container,variable_name):
-        idx = hd.variables.index(variable_name)
+    def __init__(self,hd,container,variable_name,clean_units,clean_variable):
         source_metadata = hd.get_field().meta
         self.name = variable_name
         for attr in ['standard_name','long_name','units']:
             setattr(self,attr,source_metadata['variables'][variable_name]['attrs'].get(attr))
         self.container = container
-        self.clean_units = get_or_create(session,CleanUnits,**hd.clean_units[idx])
-        self.clean_variable = get_or_create(session,CleanVariable,**hd.clean_variable[idx])
+        self.type = hd.type
+        self.clean_units = clean_units
+        self.clean_variable = clean_variable
+        
+    def get_alias(self):
+        return(self.name)
 
 
 assoc_dp_rv = Table('assoc_dp_rv',Base.metadata,Column('dpid',ForeignKey(DataPackage.dpid)),
-                    Column('rvid',ForeignKey(RawVariable.rvid)))
-
-
-def get_temporal_frequency(res):
-    mp = {'day':[1,2],
-          'month':[28,31],
-          'year':[359,366]}
-    ret = None
-    for k,v in mp.iteritems():
-        if res >= v[0] and res <= v[1]:
-            ret = k
-            break
-    if ret is None:
-        raise(NotImplementedError(res))
-    return(ret)
+                    Column('fid',ForeignKey(Field.fid)))

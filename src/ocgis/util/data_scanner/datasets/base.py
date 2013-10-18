@@ -17,6 +17,8 @@ class AbstractHarvestDataset(object):
     time_calendar = None
     time_units = None
     @abc.abstractproperty
+    def type(self): '"index" or "raw"'
+    @abc.abstractproperty
     def uri(self): pass
     variables = None
     
@@ -33,7 +35,9 @@ class AbstractHarvestDataset(object):
     @classmethod
     def insert(cls,session):
         container = db.Container(session,cls)
-        for variable_name in cls.variables:
-            rv = db.RawVariable(session,cls,container,variable_name)
+        for idx,variable_name in enumerate(cls.variables):
+            clean_units = db.get_or_create(session,db.CleanUnits,**cls.clean_units[idx])
+            clean_variable = db.get_or_create(session,db.CleanVariable,**cls.clean_variable[idx])
+            rv = db.Field(cls,container,variable_name,clean_units,clean_variable)
             session.add(rv)
         session.commit()
