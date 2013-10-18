@@ -7,6 +7,7 @@ import os
 from unittest.case import SkipTest
 from ocgis.util.data_scanner.db import get_or_create
 from sqlalchemy.orm.exc import NoResultFound
+import ocgis
 
 
 tdata = TestBase.get_tdata()
@@ -68,7 +69,9 @@ class Test(TestBase):
                                        dataset_category='Observational',
                                        dataset='Maurer 2010')
         self.assertDictEqual(ret,{'variable': u'tas', 'alias': u'tas', 't_calendar': u'standard', 'uri': u'/home/local/WX/ben.koziol/climate_data/maurer/2010-concatenated/Maurer02new_OBS_tas_daily.1971-2000.nc', 't_units': u'days since 1940-01-01 00:00:00'})    
-
+        rd = ocgis.RequestDataset(**ret)
+        rd.inspect_as_dct()
+        
     def test_query_limiting(self):
         models = [CanCM4TestDataset,MaurerTas,MaurerTasmax]
         with db.session_scope() as session:
