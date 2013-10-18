@@ -106,6 +106,8 @@ class DataPackage(Base):
     dcid = Column(Integer,ForeignKey('category.dcid'),nullable=False)
     name = Column(String,nullable=False)
     description = Column(Text,nullable=False)
+    time_start = Column(DateTime,nullable=False)
+    time_stop = Column(DateTime,nullable=False)
     
     field = relationship('Field',secondary='assoc_dp_rv')
     dataset_category = relationship('DatasetCategory',backref='data_package')
@@ -116,7 +118,12 @@ class DataPackage(Base):
         shapes = set([str(f.container.field_shape) for f in self.field])
         if len(shapes) > 1:
             raise(ValueError('Data package fields must have the same shape.'))
-
+        
+        time_starts = [f.container.time_start for f in self.field]
+        time_stops = [f.container.time_stop for f in self.field]
+        self.time_start = min(time_starts)
+        self.time_stop = max(time_stops)
+        
 
 class DatasetCategory(Base):
     __tablename__ = 'category'

@@ -21,7 +21,10 @@ class DataQuery(object):
             if package_name is not None:
                 query = query.filter(db.DataPackage.name == package_name)
             if time_range is not None:
-                raise(NotImplementedError)
+                start,stop = time_range
+                and_start = and_(db.DataPackage.time_start <= start,db.DataPackage.time_stop >= start)
+                and_stop = and_(db.DataPackage.time_start <= stop,db.DataPackage.time_stop >= stop)
+                query = query.filter(or_(and_start,and_stop))
                 
             qc = query.count()
             if qc == 1:

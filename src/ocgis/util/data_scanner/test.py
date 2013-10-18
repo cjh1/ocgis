@@ -87,6 +87,12 @@ class Test(TestBase):
             ret = dq.get_package(package_name='Test Package GCMs')
             rds = [ocgis.RequestDataset(**k) for k in ret]
             for rd in rds: rd.inspect_as_dct()
+            
+            ret = dq.get_package(time_range=[datetime.datetime(1980,2,1),datetime.datetime(1985,3,4)])
+            self.assertEqual(ret,{'dataset_category': [u'GCMs', u'Observational'], 'package_name': [u'Test Package', u'Test Package GCMs']})
+            
+            with self.assertRaises(NoResultFound):
+                dq.get_package(time_range=[datetime.datetime(1900,2,1),datetime.datetime(1901,3,4)])
         
     def test_data_package(self):
         models = [CanCM4TestDataset,MaurerTas,MaurerTasmax]
