@@ -108,16 +108,24 @@ class Dataset(Base):
     description = Column(Text,nullable=False)
     
     dataset_category = relationship(DatasetCategory,backref='dataset')
-
+    
+    
+class Uri(Base):
+    __tablename__ = 'uri'
+    __table_args__ = (UniqueConstraint('value'),)
+    uid = Column(Integer,primary_key=True)
+    cid = Column(Integer,ForeignKey('container.cid'),nullable=False)
+    value = Column(String,nullable=False)
+    
+    container = relationship("Container",backref='uri')
+    
 
 class Container(Base):
     __tablename__ = 'container'
-    __table_args__ = (UniqueConstraint('uri'),
-                      CheckConstraint('spatial_abstraction in ("point","polygon")'),
+    __table_args__ = (CheckConstraint('spatial_abstraction in ("point","polygon")'),
                       CheckConstraint('time_frequency in ("day","month","year")'))
     cid = Column(Integer,primary_key=True)
     did = Column(Integer,ForeignKey(Dataset.did),nullable=False)
-    uri = Column(String,nullable=False)
     time_start = Column(DateTime,nullable=False)
     time_stop = Column(DateTime,nullable=False)
     time_res_days = Column(Float,nullable=False)
@@ -196,7 +204,7 @@ class Field(Base,DictConversion):
     
     clean_units = relationship(CleanUnits,backref='raw_variable')
     clean_variable = relationship(CleanVariable,backref='raw_variable')
-    container = relationship('Container',backref='raw_variable',lazy='joined')
+    container = relationship('Container',backref='raw_variable')
     
     def __init__(self,hd,container,variable_name,clean_units,clean_variable):
         source_metadata = hd.get_field().meta
