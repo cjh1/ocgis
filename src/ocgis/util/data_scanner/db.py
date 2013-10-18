@@ -9,6 +9,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from contextlib import contextmanager
 import inspect
 from sqlalchemy.orm.attributes import InstrumentedAttribute
+from sqlalchemy.orm.mapper import validates
 
 
 metadata = MetaData()
@@ -102,10 +103,17 @@ class DictConversion(object):
 class DataPackage(Base):
     __tablename__ = 'package'
     dpid = Column(Integer,primary_key=True)
-    name = Column(String,nullable=True)
-    description = Column(Text,nullable=True)
+    name = Column(String,nullable=False)
+    description = Column(Text,nullable=False)
     
-    raw_variable = relationship('Field',secondary='assoc_dp_rv')
+    field = relationship('Field',secondary='assoc_dp_rv')
+    
+    def __init__(self,**kwds):
+        super(DataPackage,self).__init__(**kwds)
+        
+        shapes = set([str(f.container.field_shape) for f in self.field])
+        if len(shapes) > 1:
+            raise(ValueError('Data package fields must have the same shape.'))
 
 
 class DatasetCategory(Base):

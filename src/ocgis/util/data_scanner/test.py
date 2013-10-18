@@ -58,6 +58,33 @@ class Test(TestBase):
         TestBase.setUp(self)
         db.build_database(in_memory=True)
         
+    def test_data_package(self):
+        models = [CanCM4TestDataset,MaurerTas,MaurerTasmax]
+        with db.session_scope() as session:
+            for m in models: m.insert(session)
+        
+            dataset = session.query(db.Dataset).filter_by(name='Maurer 2010').one()
+            fields = [c.field[0] for c in dataset.container]
+            dp = db.DataPackage(field=fields,name='Test Package',description='For testing! Duh...')
+            session.add(dp)
+            session.commit()
+            kwargs = [f.get_request_dataset_kwargs() for f in dp.field]
+            rds = [ocgis.RequestDataset(**k) for k in kwargs]
+            for rd in rds: rd.inspect_as_dct()
+            
+    def test_data_package_bad(self):
+        models = [CanCM4TestDataset,MaurerTas,MaurerTasmax]
+        with db.session_scope() as session:
+            for m in models: m.insert(session)
+            
+            dataset = session.query(db.Dataset)
+            fields = []
+            for d in dataset:
+                for c in d.container:
+                    fields.append(c.field[0])
+            with self.assertRaises(ValueError):
+                db.DataPackage(field=fields,name='Test Package',description='For testing! Duh...')
+        
     def test_query_all(self):
         models = [CanCM4TestDataset,MaurerTas,MaurerTasmax]
         with db.session_scope() as session:
