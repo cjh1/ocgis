@@ -73,7 +73,7 @@ class DataQuery(object):
             qc = query.count()
             if qc == 1:
                 field = session.query(db.Field).filter(db.Field.fid == query.one().fid).one()
-                ret = {'uri':field.container.uri,'variable':field.name,'alias':field.get_alias(),
+                ret = {'uri':[u.value for u in field.container.uri],'variable':field.name,'alias':field.get_alias(),
                        't_units':field.container.time_units,'t_calendar':field.container.time_calendar}
             elif qc > 1:
                 to_collect = ['long_name','time_frequency','dataset_category','dataset']

@@ -12,7 +12,7 @@ import ocgis
 
 tdata = TestBase.get_tdata()
 class CanCM4TestDataset(AbstractHarvestDataset):
-    uri = tdata.get_uri('cancm4_tas')
+    uri = [tdata.get_uri('cancm4_tas')]
     variables = ['tas']
     clean_units = [{'standard_name':'K','long_name':'Kelvin'}]
     clean_variable = [dict(standard_name='air_temperature',long_name='Near-Surface Air Temperature',description='Fill it in!')]
@@ -27,7 +27,7 @@ class AbstractMaurerDataset(AbstractHarvestDataset):
     
     
 class MaurerTas(AbstractMaurerDataset):
-    uri = '/home/local/WX/ben.koziol/climate_data/maurer/2010-concatenated/Maurer02new_OBS_tas_daily.1971-2000.nc'
+    uri = ['/home/local/WX/ben.koziol/climate_data/maurer/2010-concatenated/Maurer02new_OBS_tas_daily.1971-2000.nc']
     variables = ['tas']
     clean_units = [{'standard_name':'C','long_name':'Celsius'}]
     clean_variable = [dict(standard_name='air_temperature',long_name='Near-Surface Air Temperature',description='Fill it in!')]
@@ -35,10 +35,20 @@ class MaurerTas(AbstractMaurerDataset):
     
     
 class MaurerTasmax(AbstractMaurerDataset):
-    uri = '/home/local/WX/ben.koziol/climate_data/maurer/2010-concatenated/Maurer02new_OBS_tasmax_daily.1971-2000.nc'
+    uri = ['/home/local/WX/ben.koziol/climate_data/maurer/2010-concatenated/Maurer02new_OBS_tasmax_daily.1971-2000.nc']
     variables = ['tasmax']
     clean_units = [{'standard_name':'C','long_name':'Celsius'}]
     clean_variable = [dict(standard_name='maximum_air_temperature',long_name='Near-Surface Maximum Air Temperature',description='Fill it in!')]
+    type = 'variable'
+    
+
+mmf_uri = tdata.get_uri('maurer_2010_tasmin')
+mmf_uri.reverse()
+class MaurerMultiFile(AbstractMaurerDataset):
+    uri = mmf_uri
+    variables = ['tasmin']
+    clean_units = [{'standard_name':'C','long_name':'Celsius'}]
+    clean_variable = [dict(standard_name='minimum_air_temperature',long_name='Near-Surface Minimum Air Temperature',description='Fill it in!')]
     type = 'variable'
 
 
@@ -68,7 +78,7 @@ class Test(TestBase):
                                        time_frequency='day',
                                        dataset_category='Observational',
                                        dataset='Maurer 2010')
-        self.assertDictEqual(ret,{'variable': u'tas', 'alias': u'tas', 't_calendar': u'standard', 'uri': u'/home/local/WX/ben.koziol/climate_data/maurer/2010-concatenated/Maurer02new_OBS_tas_daily.1971-2000.nc', 't_units': u'days since 1940-01-01 00:00:00'})    
+        self.assertDictEqual(ret,{'variable': u'tas', 'alias': u'tas', 't_calendar': u'standard', 'uri': [u'/home/local/WX/ben.koziol/climate_data/maurer/2010-concatenated/Maurer02new_OBS_tas_daily.1971-2000.nc'], 't_units': u'days since 1940-01-01 00:00:00'})    
         rd = ocgis.RequestDataset(**ret)
         rd.inspect_as_dct()
         
@@ -107,17 +117,23 @@ class Test(TestBase):
         session = db.Session()
         try:
             container = db.Container(session,CanCM4TestDataset)
-            self.assertEqual(container.dataset.name,'CanCM4')
-            to_test = container.__dict__.copy()
-            to_test.pop('_sa_instance_state')
-            to_test.pop('dataset')
-            real = {'spatial_res': 2.8125, 'time_start': datetime.datetime(2001, 1, 1, 0, 0), 'spatial_abstraction': 'polygon', 'spatial_proj4': '+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs ', 'time_res_days': 1.0, 'uri': '/usr/local/climate_data/CanCM4/tas_day_CanCM4_decadal2000_r2i1p1_20010101-20101231.nc', 'time_stop': datetime.datetime(2011, 1, 1, 0, 0), 'time_calendar': u'365_day', 'time_frequency': 'day', 'time_units': u'days since 1850-1-1', 'field_shape': '(1, 3650, 1, 64, 128)', 'spatial_envelope': 'POLYGON ((-1.4062500000000000 -90.0000000000000000, -1.4062500000000000 90.0000000000000000, 358.5937500000000000 90.0000000000000000, 358.5937500000000000 -90.0000000000000000, -1.4062500000000000 -90.0000000000000000))'}
-            real['uri'] = self.test_data.get_uri('cancm4_tas')
-            self.assertDictEqual(to_test,real)
             session.add(container)
             session.commit()
+            container = session.query(db.Container).one()
+            self.assertEqual(container.dataset.name,'CanCM4')
+            objects,simple = container.as_dict()
+            self.assertEqual(simple,{'time_calendar': u'365_day', 'time_start': datetime.datetime(2001, 1, 1, 0, 0), 'description': None, 'spatial_abstraction': u'polygon', 'cid': 1, 'did': 1, 'spatial_proj4': u'+proj=longlat +ellps=WGS84 +towgs84=0,0,0,0,0,0,0 +no_defs ', 'time_stop': datetime.datetime(2011, 1, 1, 0, 0), 'time_units': u'days since 1850-1-1', 'spatial_envelope': u'POLYGON ((-1.4062500000000000 -90.0000000000000000, -1.4062500000000000 90.0000000000000000, 358.5937500000000000 90.0000000000000000, 358.5937500000000000 -90.0000000000000000, -1.4062500000000000 -90.0000000000000000))', 'spatial_res': u'2.8125', 'raw_variable': [], 'time_frequency': u'day', 'field_shape': u'(1, 3650, 1, 64, 128)', 'time_res_days': 1.0})
+            self.assertEqual(objects['uri'][0].value,self.test_data.get_uri('cancm4_tas'))
+            self.assertEqual(objects['dataset'].name,'CanCM4')
         finally:
             session.close()
+            
+    def test_container_multifile(self):
+        with db.session_scope() as session:
+            container = db.Container(session,MaurerMultiFile)
+            session.add(container)
+            session.commit()
+            self.assertEqual([u.value for u in container.uri],self.test_data.get_uri('maurer_2010_tasmin'))
         
     def test_raw_variable(self):
         session = db.Session()
@@ -130,7 +146,7 @@ class Test(TestBase):
             session.add(raw_variable)
             session.commit()
             obj = session.query(db.Field).one()
-            simple = obj.as_dict()
+            objects,simple = obj.as_dict()
             target = {'name': u'tas', 'cid': 1, 'cvid': 1, 'long_name': u'Near-Surface Air Temperature', 'standard_name': u'air_temperature', 'fid': 1, 'cuid': 1, 'units': u'K', 'type': u'variable', 'description': None}
             self.assertDictEqual(simple,target)
             self.assertEqual(obj.clean_units.standard_name,'K')

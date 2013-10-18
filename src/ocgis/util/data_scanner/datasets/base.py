@@ -19,7 +19,7 @@ class AbstractHarvestDataset(object):
     @abc.abstractproperty
     def type(self): '"index" or "raw"'
     @abc.abstractproperty
-    def uri(self): pass
+    def uri(self): [str]
     variables = None
     
     @classmethod

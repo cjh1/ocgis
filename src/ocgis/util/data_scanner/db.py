@@ -2,11 +2,13 @@ from sqlalchemy.schema import MetaData, Column, ForeignKey, UniqueConstraint, Ch
     Table
 from sqlalchemy.ext.declarative.api import declarative_base
 from sqlalchemy.types import String, Integer, DateTime, Float, Text
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 from sqlalchemy.engine import create_engine
 from sqlalchemy.orm.session import sessionmaker
 from sqlalchemy.orm.exc import NoResultFound
 from contextlib import contextmanager
+import inspect
+from sqlalchemy.orm.attributes import InstrumentedAttribute
 
 
 metadata = MetaData()
@@ -74,12 +76,27 @@ class DictConversion(object):
     
     def as_dict(self):
         simple = {}
-        for k,v in self.__dict__.iteritems():
-            if isinstance(v,Base) or k == '_sa_instance_state':
-                continue
-            else:
-                simple[k] = v
-        return(simple)
+        objects = {}
+        members = inspect.getmembers(self.__class__)
+        for member in members:
+            if isinstance(member[1],InstrumentedAttribute):
+                filled = False
+                value = getattr(self,member[0])
+                if isinstance(value,Base):
+                    objects[member[0]] = value
+                    filled = True
+                else:
+                    try:
+                        for element in value:
+                            if isinstance(element,Base):
+                                objects[member[0]] = value
+                                filled = True
+                                break
+                    except:
+                        pass
+                if not filled:
+                    simple[member[0]] = value
+        return(objects,simple)
 
 
 class DataPackage(Base):
@@ -117,10 +134,10 @@ class Uri(Base):
     cid = Column(Integer,ForeignKey('container.cid'),nullable=False)
     value = Column(String,nullable=False)
     
-    container = relationship("Container",backref='uri')
+    container = relationship("Container",backref=backref('uri',order_by=value))
     
 
-class Container(Base):
+class Container(Base,DictConversion):
     __tablename__ = 'container'
     __table_args__ = (CheckConstraint('spatial_abstraction in ("point","polygon")'),
                       CheckConstraint('time_frequency in ("day","month","year")'))
@@ -142,13 +159,14 @@ class Container(Base):
     dataset = relationship(Dataset,backref='container')
     
     def __init__(self,session,hd,field=None):
+        assert(isinstance(hd.uri,list))
+        
         ## no need to make ocgis a required installation for this unless data
         ## is being loaded from source.
         from ocgis.util import helpers
         
         
         field = field or hd.get_field()
-        self.uri = hd.uri
         self.time_start,self.time_stop = field.temporal.extent_datetime
         self.time_res_days = field.temporal.resolution
         self.time_frequency = get_temporal_frequency(self.time_res_days)
@@ -165,6 +183,10 @@ class Container(Base):
         kwds['dataset_category'] = dataset_category
         self.dataset = get_or_create(session,Dataset,**kwds)
         
+        session.flush()
+        uris = [get_or_create(session,Uri,value=uri,cid=self.cid) for uri in hd.uri]
+        self.uri = uris
+    
     def touch(self):
         raise(NotImplementedError)
 
