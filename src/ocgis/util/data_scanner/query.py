@@ -1,4 +1,6 @@
 import db
+from sqlalchemy.sql.expression import and_, or_
+from sqlalchemy.orm.exc import NoResultFound
 
 
 class DataQuery(object):
@@ -12,7 +14,7 @@ class DataQuery(object):
         raise(NotImplementedError)
         
     def get_variable_or_index(self,select_data_by,long_name=None,time_frequency=None,
-                              dataset_category=None,dataset=None,time_start=None,time_stop=None):
+                              dataset_category=None,dataset=None,time_range=None):
         '''
         :param select_data_by: One of "variable", "index", or "package".
         :type select_data_by: str
@@ -47,11 +49,18 @@ class DataQuery(object):
             if dataset is not None:
                 query = query.filter(cquery.c.dataset == dataset)
                 
-            if query.count() == 1:
+            if time_range is not None:
+                start,stop = time_range
+                and_start = and_(cquery.c.time_start <= start,cquery.c.time_stop >= start)
+                and_stop = and_(cquery.c.time_start <= stop,cquery.c.time_stop >= stop)
+                query = query.filter(or_(and_start,and_stop))
+            
+            qc = query.count()
+            if qc == 1:
                 field = session.query(db.Field).filter(db.Field.fid == query.one().fid).one()
                 ret = {'uri':field.container.uri,'variable':field.name,'alias':field.get_alias(),
                        't_units':field.container.time_units,'t_calendar':field.container.time_calendar}
-            else:
+            elif qc > 1:
                 to_collect = ['long_name','time_frequency','dataset_category','dataset']
                 ret = {tc:[] for tc in to_collect}
                 for obj in query.all():
@@ -61,12 +70,7 @@ class DataQuery(object):
                     new = list(set(v))
                     new.sort()
                     ret[k] = new
+            else:
+                raise(NoResultFound)
     
         return(ret)
-        
-        
-def set_element_fill(to_fill,key,itr):
-    fill = list(set(itr))
-    fill.sort()
-    to_fill[key] = fill
-            

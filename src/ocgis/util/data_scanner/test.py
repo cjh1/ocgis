@@ -6,6 +6,7 @@ import query
 import os
 from unittest.case import SkipTest
 from ocgis.util.data_scanner.db import get_or_create
+from sqlalchemy.orm.exc import NoResultFound
 
 
 tdata = TestBase.get_tdata()
@@ -76,6 +77,28 @@ class Test(TestBase):
         ret = dq.get_variable_or_index('variable',
                                        long_name='Near-Surface Air Temperature')
         self.assertDictEqual(ret,{'long_name': [u'Near-Surface Air Temperature'], 'time_frequency': [u'day'], 'dataset_category': [u'GCMs', u'Observational'], 'dataset': [u'CanCM4', u'Maurer 2010']})
+
+    def test_query_time_range(self):
+        models = [CanCM4TestDataset,MaurerTas,MaurerTasmax]
+        with db.session_scope() as session:
+            for m in models: m.insert(session)
+        dq = query.DataQuery()
+        ret = dq.get_variable_or_index('variable',
+                                       time_range=[datetime.datetime(1980,2,3),
+                                                   datetime.datetime(1990,3,4)])
+        target = {'long_name': [u'Near-Surface Air Temperature', u'Near-Surface Maximum Air Temperature'], 'time_frequency': [u'day'], 'dataset_category': [u'Observational'], 'dataset': [u'Maurer 2010']}
+        self.assertDictEqual(ret,target)
+        
+    def test_query_empty(self):
+        models = [CanCM4TestDataset,MaurerTas,MaurerTasmax]
+        with db.session_scope() as session:
+            for m in models: m.insert(session)
+        dq = query.DataQuery()
+        
+        with self.assertRaises(NoResultFound):
+            ret = dq.get_variable_or_index('variable',
+                                           time_range=[datetime.datetime(1900,2,3),
+                                                       datetime.datetime(1901,3,4)])
 
     def test_container(self):
         session = db.Session()
