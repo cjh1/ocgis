@@ -103,10 +103,12 @@ class DictConversion(object):
 class DataPackage(Base):
     __tablename__ = 'package'
     dpid = Column(Integer,primary_key=True)
+    dcid = Column(Integer,ForeignKey('category.dcid'),nullable=False)
     name = Column(String,nullable=False)
     description = Column(Text,nullable=False)
     
     field = relationship('Field',secondary='assoc_dp_rv')
+    dataset_category = relationship('DatasetCategory',backref='data_package')
     
     def __init__(self,**kwds):
         super(DataPackage,self).__init__(**kwds)

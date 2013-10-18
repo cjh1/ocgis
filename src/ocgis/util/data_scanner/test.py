@@ -64,8 +64,9 @@ class Test(TestBase):
             for m in models: m.insert(session)
         
             dataset = session.query(db.Dataset).filter_by(name='Maurer 2010').one()
+            category = session.query(db.DatasetCategory).filter_by(name='Observational').one()
             fields = [c.field[0] for c in dataset.container]
-            dp = db.DataPackage(field=fields,name='Test Package',description='For testing! Duh...')
+            dp = db.DataPackage(field=fields,name='Test Package',description='For testing! Duh...',dataset_category=category)
             session.add(dp)
             session.commit()
             kwargs = [f.get_request_dataset_kwargs() for f in dp.field]
