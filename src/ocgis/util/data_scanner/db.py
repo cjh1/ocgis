@@ -224,9 +224,9 @@ class Field(Base,DictConversion):
     units = Column(String,nullable=True)
     description = Column(Text,nullable=True)
     
-    clean_units = relationship(CleanUnits,backref='raw_variable')
-    clean_variable = relationship(CleanVariable,backref='raw_variable')
-    container = relationship('Container',backref='raw_variable')
+    clean_units = relationship(CleanUnits,backref='field')
+    clean_variable = relationship(CleanVariable,backref='field')
+    container = relationship('Container',backref='field')
     
     def __init__(self,hd,container,variable_name,clean_units,clean_variable):
         source_metadata = hd.get_field().meta
@@ -240,6 +240,11 @@ class Field(Base,DictConversion):
         
     def get_alias(self):
         return(self.name)
+    
+    def get_request_dataset_kwargs(self):
+        ret = {'uri':[u.value for u in self.container.uri],'variable':self.name,'alias':self.get_alias(),
+               't_units':self.container.time_units,'t_calendar':self.container.time_calendar}
+        return(ret)
 
 
 assoc_dp_rv = Table('assoc_dp_rv',Base.metadata,Column('dpid',ForeignKey(DataPackage.dpid)),
