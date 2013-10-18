@@ -58,6 +58,36 @@ class Test(TestBase):
         TestBase.setUp(self)
         db.build_database(in_memory=True)
         
+    def test_query_data_package(self):
+        models = [CanCM4TestDataset,MaurerTas,MaurerTasmax]
+        with db.session_scope() as session:
+            for m in models: m.insert(session)
+        
+            dataset = session.query(db.Dataset).filter_by(name='Maurer 2010').one()
+            category = session.query(db.DatasetCategory).filter_by(name='Observational').one()
+            fields = [c.field[0] for c in dataset.container]
+            dp = db.DataPackage(field=fields,name='Test Package',description='For testing! Duh...',dataset_category=category)
+            session.add(dp)
+            
+            dataset = session.query(db.Dataset).filter_by(name='Maurer 2010').one()
+            category = session.query(db.DatasetCategory).filter_by(name='GCMs').one()
+            fields = [c.field[0] for c in dataset.container]
+            dp = db.DataPackage(field=fields,name='Test Package GCMs',description='For testing! Duh...',dataset_category=category)
+            session.add(dp)
+            
+            session.commit()
+            
+            dq = query.DataQuery()
+            ret = dq.get_package()
+            self.assertEqual(ret,{'dataset_category': [u'GCMs', u'Observational'], 'package_name': [u'Test Package', u'Test Package GCMs']})
+            
+            with self.assertRaises(NoResultFound):
+                dq.get_package(package_name='foo')
+            
+            ret = dq.get_package(package_name='Test Package GCMs')
+            rds = [ocgis.RequestDataset(**k) for k in ret]
+            for rd in rds: rd.inspect_as_dct()
+        
     def test_data_package(self):
         models = [CanCM4TestDataset,MaurerTas,MaurerTasmax]
         with db.session_scope() as session:
@@ -68,7 +98,9 @@ class Test(TestBase):
             fields = [c.field[0] for c in dataset.container]
             dp = db.DataPackage(field=fields,name='Test Package',description='For testing! Duh...',dataset_category=category)
             session.add(dp)
+            
             session.commit()
+            
             kwargs = [f.get_request_dataset_kwargs() for f in dp.field]
             rds = [ocgis.RequestDataset(**k) for k in kwargs]
             for rd in rds: rd.inspect_as_dct()

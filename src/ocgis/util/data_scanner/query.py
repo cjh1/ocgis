@@ -10,8 +10,31 @@ class DataQuery(object):
             db.connect(db_path)
         self.db_path = db_path
         
-    def get_package(self):
-        raise(NotImplementedError)
+    def get_package(self,dataset_category=None,package_name=None,time_range=None):
+        
+        with db.session_scope() as session:
+            
+            query = session.query(db.DataPackage).join(db.DatasetCategory)
+            
+            if dataset_category is not None:
+                query = query.filter(db.DatasetCategory.name == dataset_category)
+            if package_name is not None:
+                query = query.filter(db.DataPackage.name == package_name)
+            if time_range is not None:
+                raise(NotImplementedError)
+                
+            qc = query.count()
+            if qc == 1:
+                obj = query.one()
+                ret = [f.get_request_dataset_kwargs() for f in obj.field]
+            elif qc > 1:
+                ret = {'dataset_category':[obj.dataset_category.name for obj in query],
+                       'package_name':[obj.name for obj in query]}
+                for v in ret.itervalues(): v.sort()
+            else:
+                raise(NoResultFound)
+                
+        return(ret)
         
     def get_variable_or_index(self,select_data_by,long_name=None,time_frequency=None,
                               dataset_category=None,dataset=None,time_range=None):
