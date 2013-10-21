@@ -42,7 +42,7 @@ class DataQuery(object):
     def get_variable_or_index(self,select_data_by,long_name=None,time_frequency=None,
                               dataset_category=None,dataset=None,time_range=None):
         '''
-        :param select_data_by: One of "variable", "index", or "package".
+        :param select_data_by: One of "variable" or "index".
         :type select_data_by: str
         :param long_name: A variable's or index's long name representation.
         :type long_name: str
