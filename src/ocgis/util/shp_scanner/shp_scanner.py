@@ -8,13 +8,16 @@ import json
 import labels
 from ocgis.util.shp_scanner import db
 import webbrowser
+from sqlalchemy.exc import IntegrityError
 
 
 KEYS = {
         'state_boundaries':['US State Boundaries',labels.StateBoundaries],
-#        'us_counties':['US Counties',labels.UsCounties],
+        'us_counties':['US Counties',labels.UsCounties],
         'world_countries':['World Countries',labels.WorldCountries],
-#        'climate_divisions':['NOAA Climate Divisions',labels.ClimateDivisions],
+        'climate_divisions':['NOAA Climate Divisions',labels.ClimateDivisions],
+        'eco_level_III_us':['Ecoregions (Level 3)',labels.UsLevel3Ecoregions],
+        'WBDHU8_June2013':['HUC 8 Boundaries',labels.Huc8Boundaries]
         }
 METADATA_ATTRS = ['download_url','metadata_url','download_date','description','history']
 OUT_JSON_PATH = '/tmp/ocgis_geometries.json'
@@ -87,18 +90,21 @@ def write_json(path):
         session.close()
     
 def get_metadata(key):
-    cfg_path = ShpCabinet().get_cfg_path(key)
-    config = SafeConfigParser()
-    config.read(cfg_path)
-    if config.has_section('metadata'):
-        ret = {}
-        for k in METADATA_ATTRS:
-            try:
-                v = config.get('metadata',k)
-            except NoOptionError:
-                v = None
-            ret.update({k:v})
-    else:
+    try:
+        cfg_path = ShpCabinet().get_cfg_path(key)
+        config = SafeConfigParser()
+        config.read(cfg_path)
+        if config.has_section('metadata'):
+            ret = {}
+            for k in METADATA_ATTRS:
+                try:
+                    v = config.get('metadata',k)
+                except NoOptionError:
+                    v = None
+                ret.update({k:v})
+        else:
+            ret = dict.fromkeys(METADATA_ATTRS)
+    except ValueError:
         ret = dict.fromkeys(METADATA_ATTRS)
     return(ret)
         

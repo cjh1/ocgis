@@ -31,7 +31,7 @@ class Category(Base):
     
 class Subcategory(Base):
     __tablename__ = 'subcategory'
-    __table_args__ = (UniqueConstraint('label'),)
+    __table_args__ = (UniqueConstraint('cid','label'),)
     sid = Column(Integer,primary_key=True)
     cid = Column(Integer,ForeignKey(Category.cid))
     label = Column(String,nullable=False)
