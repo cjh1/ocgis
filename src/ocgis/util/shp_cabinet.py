@@ -130,7 +130,8 @@ class ShpCabinet(object):
             
             for feature in features:
                 ## TODO: lowercase all properties, add crs definition to each geometry
-                yld = {'geom':wkb.loads(feature.geometry().ExportToWkb()),'properties':feature.items(),'crs':crs}
+                yld = {'geom':wkb.loads(feature.geometry().ExportToWkb()),'properties':feature.items(),'crs':crs,
+                       'meta':meta}
                 assert('UGID' in yld['properties'])
                 yield(yld)
         finally:

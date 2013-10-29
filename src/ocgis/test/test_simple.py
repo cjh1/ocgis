@@ -18,6 +18,8 @@ import ocgis
 from ocgis.exc import ExtentError, DefinitionValidationError
 from shapely.geometry.polygon import Polygon
 import csv
+import fiona
+from collections import OrderedDict
 
 
 class TestSimpleBase(TestBase):
@@ -370,6 +372,14 @@ class TestSimple(TestSimpleBase):
             row = reader.next()
             self.assertDictEqual(row,{'ALIAS': 'foo', 'DID': '1', 'URI': uri, 'UNITS': 'huge', 'STANDARD_NAME': 'foo', 'VARIABLE': 'foo', 'LONG_NAME': 'foo_foo'})
         
+        with open(ret,'r') as f:
+            reader = csv.DictReader(f)
+            rows = list(reader)
+        
+        ops = OcgOperations(dataset=self.get_dataset(),output_format='numpy',geom=geom)
+        npy = ops.execute()
+        self.assertEqual(len(rows),reduce(lambda x,y: x*y,npy.gvu(1,'foo').shape))
+        
     def test_csv_calc_conversion(self):
         calc = [{'func':'mean','name':'my_mean'}]
         calc_grouping = ['month','year']
@@ -400,25 +410,34 @@ class TestSimple(TestSimpleBase):
     def test_meta_conversion(self):
         ops = OcgOperations(dataset=self.get_dataset(),output_format='meta')
         ret = self.get_ret(ops)
-            
-    def test_keyed_conversion(self):
-        raise(SkipTest)
-        calc = [
-                None,
-                [{'func':'mean','name':'my_mean'}]
-                ]
-        group = ['month','year']
-        for c in calc:
-            ops = OcgOperations(dataset=self.get_dataset(),
-                                output_format='keyed',
-                                calc=c,
-                                calc_grouping=group)
-            ret = self.get_ret(ops)
         
-    def test_shpidx_conversion(self):
-        raise(SkipTest)
-        ops = OcgOperations(dataset=self.get_dataset(),output_format='shpidx')
-        ret = self.get_ret(ops)
+    def test_csv_plus_conversion(self):
+        ops = OcgOperations(dataset=self.get_dataset(),output_format='csv+')
+        ret = ops.execute()
+        
+        geom = make_poly((38,39),(-104,-103))
+        ops = OcgOperations(dataset=self.get_dataset(),output_format='csv+',geom=geom,
+                            prefix='with_ugid')
+        ret = ops.execute()
+        
+        path = os.path.join(self._test_dir,'with_ugid')
+        contents = os.listdir(path)
+        self.assertEqual(set(contents),set(['with_ugid_metadata.txt', 'with_ugid.log', 'with_ugid.csv', 'with_ugid_source_metadata.txt', 'shp', 'with_ugid_did.csv']))
+        
+        shp_path = os.path.join(path,'shp')
+        contents = os.listdir(shp_path)
+        self.assertEqual(set(contents),set(['with_ugid_gid.dbf', 'with_ugid_gid.prj', 'with_ugid_ugid.shx', 'with_ugid_gid.shp', 'with_ugid_ugid.prj', 'with_ugid_ugid.cpg', 'with_ugid_ugid.shp', 'with_ugid_gid.cpg', 'with_ugid_gid.shx', 'with_ugid_ugid.dbf']))
+        
+        gid_path = os.path.join(shp_path,'with_ugid_gid.shp')
+        with fiona.open(gid_path) as f:
+            to_test = list(f)
+        self.assertEqual(to_test,[{'geometry': {'type': 'Polygon', 'coordinates': [[(-104.5, 37.5), (-104.5, 38.5), (-103.5, 38.5), (-103.5, 37.5), (-104.5, 37.5)]]}, 'type': 'Feature', 'id': '0', 'properties': OrderedDict([(u'DID', 1), (u'UGID', 1), (u'GID', 6)])}, {'geometry': {'type': 'Polygon', 'coordinates': [[(-103.5, 37.5), (-103.5, 38.5), (-102.5, 38.5), (-102.5, 37.5), (-103.5, 37.5)]]}, 'type': 'Feature', 'id': '1', 'properties': OrderedDict([(u'DID', 1), (u'UGID', 1), (u'GID', 7)])}, {'geometry': {'type': 'Polygon', 'coordinates': [[(-104.5, 38.5), (-104.5, 39.5), (-103.5, 39.5), (-103.5, 38.5), (-104.5, 38.5)]]}, 'type': 'Feature', 'id': '2', 'properties': OrderedDict([(u'DID', 1), (u'UGID', 1), (u'GID', 10)])}, {'geometry': {'type': 'Polygon', 'coordinates': [[(-103.5, 38.5), (-103.5, 39.5), (-102.5, 39.5), (-102.5, 38.5), (-103.5, 38.5)]]}, 'type': 'Feature', 'id': '3', 'properties': OrderedDict([(u'DID', 1), (u'UGID', 1), (u'GID', 11)])}])
+        
+        ugid_path = os.path.join(shp_path,'with_ugid_ugid.shp')
+        with fiona.open(ugid_path) as f:
+            to_test = list(f)
+            self.assertEqual(f.meta,{'crs': {u'no_defs': True, u'ellps': u'WGS84', u'proj': u'longlat'}, 'driver': u'ESRI Shapefile', 'schema': {'geometry': 'Polygon', 'properties': OrderedDict([(u'UGID', 'int:10')])}})
+        self.assertEqual(to_test,[{'geometry': {'type': 'Polygon', 'coordinates': [[(-104.0, 38.0), (-104.0, 39.0), (-103.0, 39.0), (-103.0, 38.0), (-104.0, 38.0)]]}, 'type': 'Feature', 'id': '0', 'properties': OrderedDict([(u'UGID', 1)])}])
 
 
 class TestSimpleMask(TestSimpleBase):

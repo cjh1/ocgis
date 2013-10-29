@@ -143,7 +143,7 @@ class SubsetOperation(object):
         ## loop over the iterator
         for gd in itr:
             ## initialize the collection object to store the subsetted data.
-            coll = SpatialCollection(crs=field.spatial.crs,headers=headers)
+            coll = SpatialCollection(crs=field.spatial.crs,headers=headers,meta=gd.get('meta'))
             
             ## reference variables from the geometry dictionary
             geom = gd.get('geom')

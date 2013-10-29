@@ -519,6 +519,7 @@ class SpatialGeometryPointDimension(base.AbstractUidValueDimension):
                   'properties':{'UGID':'int'}}
         ref_prep = self._write_fiona_prep_geom_
         ref_uid = self.uid
+        
         with fiona.open(path,'w',driver=driver,crs=crs,schema=schema) as f:
             for (ii,jj),geom in iter_array(self.value,return_value=True):
                 geom = ref_prep(geom)

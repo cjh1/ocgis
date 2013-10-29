@@ -13,9 +13,15 @@ class SpatialCollection(OrderedDict):
         self.headers = headers or self._default_headers
         
         self.geoms = {}
-        self.properties = {}
+        self.properties = OrderedDict()
         
         super(SpatialCollection,self).__init__()
+        
+    @property
+    def _archetype_field(self):
+        ukey = self.keys()[0]
+        fkey = self[ukey].keys()[0]
+        return(self[ukey][fkey])
         
     def add_field(self,ugid,geom,alias,field,properties=None):
         self.geoms.update({ugid:geom})
