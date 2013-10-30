@@ -39,6 +39,16 @@ class SpatialCollection(OrderedDict):
                 tup = [row[h] for h in r_headers]
                 yield(row['geom'],tup)
                 
+    def get_iter_dict(self,use_upper_keys=False):
+        ugid_key = 'UGID' if use_upper_keys else 'ugid'
+        geom_key = 'GEOM' if use_upper_keys else 'geom'
+        for ugid,field in self.iteritems():
+            for row in field.values()[0].get_iter(use_upper_keys=use_upper_keys):
+                row[ugid_key] = ugid
+                geom = row.pop(geom_key)
+                import ipdb;ipdb.set_trace()
+                yield(geom,row)
+                
     def gvu(self,ugid,alias_variable,alias_field=None):
         ref = self[ugid]
         if alias_field is None:

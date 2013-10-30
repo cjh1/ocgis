@@ -7,12 +7,19 @@ from shapely.geometry.multipolygon import MultiPolygon
 from ocgis import constants, env
 import fiona
 from collections import OrderedDict
+from shapely.geometry.geo import mapping
 
     
 class ShpConverter(OcgConverter):
     _ext = 'shp'
     _add_ugeom = True
     _add_ugeom_nest = False
+    
+    def _build_(self,*args,**kwds):
+        pass
+    
+    def _finalize_(self,fiona_object):
+        fiona_object.close()
     
     def _get_fileobject_(self,coll):
         
@@ -24,31 +31,36 @@ class ShpConverter(OcgConverter):
                     np.int32:'int',
                     np.float64:'float',
                     np.float32:'float',
+                    np.float16:'float',
                     np.int16:'int',
-                    unicode:'str'}
+                    str:'str'
+                   }
         
         def _get_field_type_(the_type):
             ret = None
-            for v in fiona.FIELD_TYPES_MAP.itervalues():
+            for k,v in fiona.FIELD_TYPES_MAP.iteritems():
                 if the_type == v:
-                    ret = v
+                    ret = k
+                    break
             if ret is None:
                 ret = _mapping[the_type]
             return(ret)
         
-#        fiona_path = os.path.join(self._get_or_create_shp_folder_(),self.prefix+'_gid.shp')
         archetype_field = coll._archetype_field
         fiona_crs = archetype_field.spatial.crs.value
         headers = [h.upper() for h in coll.headers]
         arch_row = coll.get_iter().next()
-        fiona_properties = {k:_get_field_type_(type(v)) for k,v in zip(headers,arch_row[1])}
-        import ipdb;ipdb.set_trace()
-#        fiona_properties = {h:}
-        import ipdb;ipdb.set_trace()
+        fiona_properties = OrderedDict([[k,_get_field_type_(type(v))] for k,v in zip(headers,arch_row[1])])
         fiona_schema = {'geometry':archetype_field.spatial.abstraction_geometry._geom_type,
-                        'properties':OrderedDict([['DID','int'],['UGID','int'],['GID','int']])}
-        fiona_object = fiona.open(fiona_path,'w',driver='ESRI Shapefile',crs=fiona_crs,schema=fiona_schema)
-        import ipdb;ipdb.set_trace()
+                        'properties':fiona_properties}
+        fiona_object = fiona.open(self.path,'w',driver='ESRI Shapefile',crs=fiona_crs,schema=fiona_schema)
+        
+        return(fiona_object)
+    
+    def _write_coll_(self,fiona_object,coll):
+        for geom,properties in coll.get_iter_dict(use_upper_keys=True):
+            to_write = {'geometry':mapping(geom),'properties':properties}
+            fiona_object.write(to_write)
     
 #    def __init__(self,*args,**kwds):
 #        self.layer = kwds.pop('layer','lyr')

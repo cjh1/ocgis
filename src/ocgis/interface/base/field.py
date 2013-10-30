@@ -82,7 +82,7 @@ class Field(object):
     def get_intersects(self,polygon):
         return(self._get_spatial_operation_('get_intersects',polygon))
     
-    def get_iter(self,add_masked_value=True):
+    def get_iter(self,add_masked_value=True,use_upper_keys=False):
         
         def _get_dimension_iterator_1d_(target):
             attr = getattr(self,target)
@@ -115,6 +115,9 @@ class Field(object):
                 to_yld['value'] = ref_idx
                 to_yld['geom'] = geom
                 to_yld[r_gid_name] = gid
+                
+                if use_upper_keys:
+                    to_yld = {k.upper():v for k,v in to_yld.iteritems()}
                                 
                 yield(to_yld)
                 

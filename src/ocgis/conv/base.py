@@ -53,7 +53,7 @@ class OcgConverter(object):
             self.path = os.path.join(self.outdir,prefix+'.'+self._ext)
         ocgis_lh('converter initialized',level=logging.DEBUG,logger=self._log)
         
-    def _build_(self,f,coll): raise(NotImplementedError)
+    def _build_(self,*args,**kwds): raise(NotImplementedError)
     
     def _get_fileobject_(self,*args,**kwds): raise(NotImplementedError)
     
@@ -62,7 +62,7 @@ class OcgConverter(object):
     
     def _write_coll_(self,f,coll): raise(NotImplementedError)
     
-    def _finalize_(self,f): raise(NotImplementedError)
+    def _finalize_(self,*args,**kwds): raise(NotImplementedError)
     
     def _get_or_create_shp_folder_(self):
         path = os.path.join(self.outdir,'shp')
