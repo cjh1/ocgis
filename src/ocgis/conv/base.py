@@ -55,7 +55,7 @@ class OcgConverter(object):
         
     def _build_(self,f,coll): raise(NotImplementedError)
     
-    def _get_fileobject_(self): raise(NotImplementedError)
+    def _get_fileobject_(self,*args,**kwds): raise(NotImplementedError)
     
     def _get_return_(self):
         return(self.path)
