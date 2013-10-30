@@ -39,13 +39,17 @@ class SpatialCollection(OrderedDict):
                 tup = [row[h] for h in r_headers]
                 yield(row['geom'],tup)
                 
-    def get_iter_dict(self,use_upper_keys=False):
+    def get_iter_dict(self,use_upper_keys=False,conversion_map=None):
         r_headers = self.headers
+        use_conversion = False if conversion_map is None else True
         for ugid,field in self.iteritems():
             for row in field.values()[0].get_iter():
                 row['ugid'] = ugid
                 geom = row.pop('geom')
                 yld_row = {k:row[k] for k in r_headers}
+                if use_conversion:
+                    for k,v in conversion_map.iteritems():
+                        yld_row[k] = v(yld_row[k])
                 if use_upper_keys:
                     yld_row = {k.upper():v for k,v in yld_row.iteritems()}
                 yield(geom,yld_row)

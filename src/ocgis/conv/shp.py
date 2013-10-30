@@ -1,64 +1,75 @@
 from ocgis.conv.base import OcgConverter
 import datetime
-from osgeo import ogr
 import numpy as np
 from types import NoneType
-from shapely.geometry.multipolygon import MultiPolygon
-from ocgis import constants, env
 import fiona
 from collections import OrderedDict
 from shapely.geometry.geo import mapping
+from fiona.rfc3339 import FionaTimeType, FionaDateType
 
     
 class ShpConverter(OcgConverter):
     _ext = 'shp'
     _add_ugeom = True
     _add_ugeom_nest = False
+    _fiona_conversion = {np.int32:int,
+                         np.int16:int,
+                         np.int64:int,
+                         np.float64:float,
+                         np.float32:float,
+                         np.float16:float,
+                         datetime.datetime:FionaTimeType,
+                         datetime.date:FionaDateType}
+    _fiona_type_mapping = {datetime.date:'date',
+                           datetime.datetime:'datetime',
+                           np.int64:'float',
+                           NoneType:None,
+                           np.int32:'int',
+                           np.float64:'float',
+                           np.float32:'float',
+                           np.float16:'float',
+                           np.int16:'int',
+                           str:'str'}
     
     def _build_(self,*args,**kwds):
         pass
     
-    def _finalize_(self,fiona_object):
-        fiona_object.close()
+    def _finalize_(self,f):
+        f['fiona_object'].close()
     
     def _get_fileobject_(self,coll):
         
-        _mapping = {
-                    datetime.date:'date',
-                    datetime.datetime:'datetime',
-                    np.int64:'float',
-                    NoneType:None,
-                    np.int32:'int',
-                    np.float64:'float',
-                    np.float32:'float',
-                    np.float16:'float',
-                    np.int16:'int',
-                    str:'str'
-                   }
+        fiona_conversion = {}
         
-        def _get_field_type_(the_type):
+        def _get_field_type_(key,the_type):
             ret = None
             for k,v in fiona.FIELD_TYPES_MAP.iteritems():
                 if the_type == v:
                     ret = k
                     break
             if ret is None:
-                ret = _mapping[the_type]
+                ret = self._fiona_type_mapping[the_type]
+            if the_type in self._fiona_conversion:
+                fiona_conversion.update({key.lower():self._fiona_conversion[the_type]})
             return(ret)
         
         archetype_field = coll._archetype_field
         fiona_crs = archetype_field.spatial.crs.value
         headers = [h.upper() for h in coll.headers]
         arch_row = coll.get_iter().next()
-        fiona_properties = OrderedDict([[k,_get_field_type_(type(v))] for k,v in zip(headers,arch_row[1])])
+            
+        fiona_properties = OrderedDict([[k,_get_field_type_(k,type(v))] for k,v in zip(headers,arch_row[1])])
         fiona_schema = {'geometry':archetype_field.spatial.abstraction_geometry._geom_type,
                         'properties':fiona_properties}
         fiona_object = fiona.open(self.path,'w',driver='ESRI Shapefile',crs=fiona_crs,schema=fiona_schema)
         
-        return(fiona_object)
+        ret = {'fiona_object':fiona_object,'fiona_conversion':fiona_conversion}
+        
+        return(ret)
     
-    def _write_coll_(self,fiona_object,coll):
-        for geom,properties in coll.get_iter_dict(use_upper_keys=True):
+    def _write_coll_(self,f,coll):
+        fiona_object = f['fiona_object']
+        for geom,properties in coll.get_iter_dict(use_upper_keys=True,conversion_map=f['fiona_conversion']):
             to_write = {'geometry':mapping(geom),'properties':properties}
             fiona_object.write(to_write)
     

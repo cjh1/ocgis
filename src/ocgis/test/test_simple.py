@@ -347,6 +347,16 @@ class TestSimple(TestSimpleBase):
                                 calc=c)
             ret = self.get_ret(ops)
             
+            if c is None:
+                with fiona.open(ret) as f:
+                    self.assertDictEqual(f.meta,{'crs': {u'no_defs': True, u'ellps': u'WGS84', u'proj': u'longlat'}, 'driver': u'ESRI Shapefile', 'schema': {'geometry': 'Polygon', 'properties': OrderedDict([(u'DID', 'int:10'), (u'VID', 'int:10'), (u'UGID', 'int:10'), (u'TID', 'int:10'), (u'LID', 'int:10'), (u'GID', 'float'), (u'VARIABLE', 'str'), (u'ALIAS', 'str'), (u'TIME', 'date'), (u'YEAR', 'int:10'), (u'MONTH', 'int:10'), (u'DAY', 'int:10'), (u'LEVEL', 'int:10'), (u'VALUE', 'float')])}})
+                    self.assertEqual(len(f),1952)
+                    self.assertDictEqual(list(f)[340],{'geometry': {'type': 'Polygon', 'coordinates': [[(-105.5, 37.5), (-105.5, 38.5), (-104.5, 38.5), (-104.5, 37.5), (-105.5, 37.5)]]}, 'type': 'Feature', 'id': '340', 'properties': OrderedDict([(u'DID', 1), (u'VID', 1), (u'UGID', 1), (u'TID', 11), (u'LID', 2), (u'GID', 5.0), (u'VARIABLE', u'foo'), (u'ALIAS', u'foo'), (u'TIME', '2000-03-11'), (u'YEAR', 2000), (u'MONTH', 3), (u'DAY', 11), (u'LEVEL', 150), (u'VALUE', 1.0)])})
+            else:
+                with fiona.open(ret) as f:
+                    self.assertDictEqual(f.meta,{'crs': {u'no_defs': True, u'ellps': u'WGS84', u'proj': u'longlat'}, 'driver': u'ESRI Shapefile', 'schema': {'geometry': 'Polygon', 'properties': OrderedDict([(u'DID', 'int:10'), (u'VID', 'int:10'), (u'CID', 'int:10'), (u'UGID', 'int:10'), (u'TID', 'int:10'), (u'LID', 'int:10'), (u'GID', 'float'), (u'VARIABLE', 'str'), (u'ALIAS', 'str'), (u'CALC_KEY', 'str'), (u'CALC_ALIAS', 'str'), (u'TIME', 'date'), (u'YEAR', 'int:10'), (u'MONTH', 'int:10'), (u'DAY', 'int:10'), (u'LEVEL', 'int:10'), (u'VALUE', 'float')])}})
+                    self.assertEqual(len(f),64)
+            
     def test_csv_conversion(self):
         ocgis.env.OVERWRITE = True
         ops = OcgOperations(dataset=self.get_dataset(),output_format='csv')
