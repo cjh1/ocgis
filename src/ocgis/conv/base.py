@@ -12,6 +12,7 @@ from shapely.geometry.polygon import Polygon
 from shapely.geometry.point import Point
 import fiona
 from shapely.geometry.geo import mapping
+from csv import DictWriter
 
 
 class OcgConverter(object):
@@ -71,8 +72,7 @@ class OcgConverter(object):
         return(path)
     
     def write(self):
-        ## call subclass write method
-        ocgis_lh('starting subclass write method',self._log,logging.DEBUG)
+        ocgis_lh('starting write method',self._log,logging.DEBUG)
         
         f = self._get_fileobject_(iter(self.colls).next())
         try:
@@ -85,14 +85,17 @@ class OcgConverter(object):
                 if build:
                     self._build_(f,coll)
                     if write_geom:
-                        ugid_prefix = self.prefix+'_ugid.shp'
+                        ugid_shp_name = self.prefix + '_ugid.shp'
+                        ugid_csv_name = self.prefix + '_ugid.csv'
+                        
                         if self._add_ugeom_nest:
-                            fiona_path = os.path.join(self._get_or_create_shp_folder_(),ugid_prefix)
+                            fiona_path = os.path.join(self._get_or_create_shp_folder_(),ugid_shp_name)
+                            csv_path = os.path.join(self._get_or_create_shp_folder_(),ugid_csv_name)
                         else:
-                            fiona_path = os.path.join(self.path,ugid_prefix)
-                        fiona_crs = coll.crs.value
-                        fiona_meta = coll.meta
-                        if fiona_meta is None:
+                            fiona_path = os.path.join(self.outdir,ugid_shp_name)
+                            csv_path = os.path.join(self.outdir,ugid_csv_name)
+                            
+                        if coll.meta is None:
                             fiona_properties = {'UGID':'int'}
                             r_geom = coll.geoms.values()[0]
                             if type(r_geom) in [Polygon,MultiPolygon]:
@@ -103,24 +106,39 @@ class OcgConverter(object):
                                 ocgis_lh(exc=NotImplementedError(type(r_geom)),logger='conv.base')
                             fiona_schema = {'geometry':geom_type,
                                             'properties':fiona_properties}
+                            fiona_meta = {'crs':coll.crs.value,'schema':fiona_schema,'driver':'ESRI Shapefile'}
                         else:
-                            raise(NotImplementedError)
-                        fiona_object = fiona.open(fiona_path,'w',driver='ESRI Shapefile',crs=fiona_crs,schema=fiona_schema)
+                            fiona_meta = coll.meta
+                            
+                        fiona_object = fiona.open(fiona_path,'w',**fiona_meta)
+                        csv_file = open(csv_path,'w')
+                        
+                        from ocgis.conv.csv_ import OcgDialect
+                        csv_object = DictWriter(csv_file,fiona_meta['schema']['properties'].keys(),dialect=OcgDialect)
+                        csv_object.writeheader()
+                        
                     build = False
                 self._write_coll_(f,coll)
                 if write_geom:
+                    ## write the overview geometries to disk
                     r_geom = coll.geoms.values()[0]
                     if isinstance(r_geom,Polygon):
                         r_geom = MultiPolygon([r_geom])
                     to_write = {'geometry':mapping(r_geom),
                                 'properties':{k.upper():v for k,v in coll.properties.values()[0].iteritems()}}
                     fiona_object.write(to_write)
+                    
+                    ## write the geometry attributes to the corresponding shapefile
+                    for row in coll.properties.itervalues():
+                        csv_object.writerow(row)
+                    
         finally:
             try:
                 self._finalize_(f)
             finally:
                 if write_geom:
                     fiona_object.close()
+                    csv_file.close()
             
         ## added OCGIS metadata output if requested.
         if self.add_meta:

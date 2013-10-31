@@ -155,9 +155,16 @@ class SubsetOperation(object):
             
             crs = gd.get('crs')
             try:
-                ugid = gd['properties']['ugid']
+                ugid = gd['properties']['UGID']
             except KeyError:
-                ugid = 1
+                ## try to get lowercase ugid in case the shapefile is not perfectly
+                ## formed. however, if there is no geometry accept the error and
+                ## use the default geometry identifier.
+                if len(gd) == 0:
+                    ugid = 1
+                else:
+                    ugid = gd['properties']['ugid']
+                    
             ocgis_lh('processing',self._subset_log,level=logging.DEBUG,alias=alias,ugid=ugid)
             
             ## if there is a slice, use it to subset the field

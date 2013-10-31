@@ -44,10 +44,14 @@ class CoordinateReferenceSystem(object):
             ocgis_lh(logger='crs',exc=ValueError('Empty CRS: The conversion to PROJ4 may have failed. The CRS value is: {0}'.format(crs)))
     
     def __eq__(self,other):
-        return(self.value == other.value)
+        if self.sr.IsSame(other.sr) == 1:
+            ret = True
+        else:
+            ret = False
+        return(ret)
     
     def __ne__(self,other):
-        return(not self.value == other.value)
+        return(not self.__eq__(other))
     
     @property
     def sr(self):
