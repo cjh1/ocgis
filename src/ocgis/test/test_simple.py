@@ -401,7 +401,7 @@ class TestSimple(TestSimpleBase):
         
         with fiona.open(ret) as f:
             rows = list(f)
-            self.assertDictEqual(f.meta,{'crs': {u'no_defs': True, u'ellps': u'WGS84', u'proj': u'longlat'}, 'driver': u'ESRI Shapefile', 'schema': {'geometry': 'Polygon', 'properties': OrderedDict([(u'DID', 'int:10'), (u'VID', 'int:10'), (u'UGID', 'int:10'), (u'TID', 'int:10'), (u'LID', 'int:10'), (u'GID', 'float'), (u'VARIABLE', 'str'), (u'ALIAS', 'str'), (u'TIME', 'date'), (u'YEAR', 'int:10'), (u'MONTH', 'int:10'), (u'DAY', 'int:10'), (u'LEVEL', 'int:10'), (u'VALUE', 'float')])}})
+            self.assertDictEqual(f.meta,{'crs': {u'no_defs': True, u'ellps': u'WGS84', u'proj': u'longlat'}, 'driver': u'ESRI Shapefile', 'schema': {'geometry': 'Polygon', 'properties': OrderedDict([(u'DID', 'int:10'), (u'VID', 'int:10'), (u'UGID', 'int:10'), (u'TID', 'int:10'), (u'LID', 'int:10'), (u'GID', 'int:10'), (u'VARIABLE', 'str'), (u'ALIAS', 'str'), (u'TIME', 'date'), (u'YEAR', 'int:10'), (u'MONTH', 'int:10'), (u'DAY', 'int:10'), (u'LEVEL', 'int:10'), (u'VALUE', 'float')])}})
         self.assertEqual(len(rows),610)
         ugids = set([r['properties']['UGID'] for r in rows])
         self.assertEqual(ugids,set([1,2]))
@@ -420,8 +420,14 @@ class TestSimple(TestSimpleBase):
                             spatial_operation='clip')
         ret = ops.execute()
         
-        import ipdb;ipdb.set_trace()
-        
+        with fiona.open(ret) as f:
+            self.assertEqual(f.meta['schema']['properties']['GID'],'int:10')
+            rows = list(f)
+        for row in rows:
+            self.assertEqual(row['properties']['UGID'],row['properties']['GID'])
+        self.assertEqual(set([row['properties']['GID'] for row in rows]),set([1,2]))
+        self.assertEqual(len(rows),244)
+        self.assertEqual(set(os.listdir(os.path.join(self._test_dir,ops.prefix))),set(['aggregation_clip_ugid.shp', 'aggregation_clip.cpg', 'aggregation_clip_ugid.csv', 'aggregation_clip_metadata.txt', 'aggregation_clip_did.csv', 'aggregation_clip.log', 'aggregation_clip.dbf', 'aggregation_clip.shx', 'aggregation_clip_ugid.prj', 'aggregation_clip_ugid.cpg', 'aggregation_clip_ugid.shx', 'aggregation_clip.shp', 'aggregation_clip_ugid.dbf', 'aggregation_clip.prj', 'aggregation_clip_source_metadata.txt']))
             
     def test_csv_conversion(self):
         ocgis.env.OVERWRITE = True

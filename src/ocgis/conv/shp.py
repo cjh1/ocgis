@@ -22,7 +22,7 @@ class ShpConverter(OcgConverter):
                          datetime.date:FionaDateType}
     _fiona_type_mapping = {datetime.date:'date',
                            datetime.datetime:'datetime',
-                           np.int64:'float',
+                           np.int64:'int',
                            NoneType:None,
                            np.int32:'int',
                            np.float64:'float',

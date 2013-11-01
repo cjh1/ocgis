@@ -200,7 +200,7 @@ class SubsetOperation(object):
             if sfield is not None:
                 ## aggregate if requested
                 if self.ops.aggregate:
-                    sfield = sfield.get_spatially_aggregated()
+                    sfield = sfield.get_spatially_aggregated(new_spatial_uid=ugid)
                 
                 ## wrap the returned data.
                 if not env.OPTIMIZE_FOR_CALC:
