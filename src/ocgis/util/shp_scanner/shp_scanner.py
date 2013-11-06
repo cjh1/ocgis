@@ -14,7 +14,7 @@ from sqlalchemy.exc import IntegrityError
 KEYS = {
         'state_boundaries':['US State Boundaries',labels.StateBoundaries],
         'us_counties':['US Counties',labels.UsCounties],
-        'world_countries':['World Countries',labels.WorldCountries],
+#        'world_countries':['World Countries',labels.WorldCountries],
         'climate_divisions':['NOAA Climate Divisions',labels.ClimateDivisions],
         'eco_level_III_us':['Ecoregions (Level 3)',labels.UsLevel3Ecoregions],
         'WBDHU8_June2013':['HUC 8 Boundaries',labels.Huc8Boundaries]
