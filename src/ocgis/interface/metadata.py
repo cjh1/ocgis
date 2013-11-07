@@ -31,6 +31,9 @@ class NcMetadata(AbstractMetadata):
             dataset.update({attr:getattr(rootgrp,attr)})
         self.update({'dataset':dataset})
         
+        ## get file format
+        self.update({'file_format':rootgrp.file_format})
+        
         ## get variables
         variables = OrderedDict()
         for key,value in rootgrp.variables.iteritems():

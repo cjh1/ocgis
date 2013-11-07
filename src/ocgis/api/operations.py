@@ -220,7 +220,7 @@ class OcgOperations(object):
                 msg = 'Data may not be aggregated for netCDF output. The aggregate parameter must be False.'
                 _raise_(msg,OutputFormat)
             
-            if self.output_crs is not None or not isinstance(self.output_crs,CFWGS84):
+            if self.output_crs is not None and not isinstance(self.output_crs,CFWGS84):
                 msg = 'CFWGS84 is the only acceptable output CRS at this time for netCDF output'
                 _raise_(msg,OutputFormat)
                 
