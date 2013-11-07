@@ -130,7 +130,7 @@ class OcgConverter(object):
                     
                     ## write the geometry attributes to the corresponding shapefile
                     for row in coll.properties.itervalues():
-                        csv_object.writerow(row)
+                        csv_object.writerow({k.upper():v for k,v in row.iteritems()})
                     
         finally:
             try:
