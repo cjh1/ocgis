@@ -1,4 +1,5 @@
-from ocgis.interface.base.dimension.temporal import TemporalDimension
+from ocgis.interface.base.dimension.temporal import TemporalDimension,\
+    TemporalGroupDimension
 from ocgis.interface.nc.dimension import NcVectorDimension
 import numpy as np
 import netCDF4 as nc
@@ -11,12 +12,13 @@ class NcTemporalDimension(NcVectorDimension,TemporalDimension):
     
     def __init__(self,*args,**kwds):
         self.calendar = kwds.pop('calendar')
-        self._value_datetime = None
-        self._bounds_datetime = None
+        self._value_datetime = kwds.pop('value_datetime',None)
+        self._bounds_datetime = kwds.pop('bounds_datetime',None)
         
         NcVectorDimension.__init__(self,*args,**kwds)
         
         assert(self.units != None)
+        assert(self.calendar != None)
         
     @property
     def bounds_datetime(self):
@@ -68,3 +70,26 @@ class NcTemporalDimension(NcVectorDimension,TemporalDimension):
     
     def _get_datetime_value_(self):
         return(self.value_datetime)
+    
+    def _get_temporal_group_dimension_(self,*args,**kwds):
+        kwds['calendar'] = self.calendar
+        kwds['units'] = self.units
+        value = kwds.pop('value')
+        bounds = kwds.pop('bounds')
+        kwds['value'] = self.get_nc_time(value)
+        kwds['bounds'] = self.get_nc_time(bounds)
+        kwds['value_datetime'] = value
+        kwds['bounds_datetime'] = bounds
+        return(NcTemporalGroupDimension(*args,**kwds))
+    
+    
+class NcTemporalGroupDimension(NcTemporalDimension):
+    
+    def __init__(self,*args,**kwds):
+        self.grouping = kwds.pop('grouping')
+        self.dgroups = kwds.pop('dgroups')
+        self.date_parts = kwds.pop('date_parts')
+                
+        NcTemporalDimension.__init__(self,*args,**kwds)
+        
+        

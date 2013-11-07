@@ -361,6 +361,13 @@ class TestSimple(TestSimpleBase):
         
         self.assertNcEqual(rd['uri'],ret)
         
+    def test_nc_conversion_calc(self):
+        calc_grouping = ['month']
+        calc = [{'func':'mean','name':'my_mean'}]
+        kwds = dict(calc_grouping=calc_grouping,calc=calc,output_format='nc')
+        ret = self.get_ret(kwds=kwds)
+        import ipdb;ipdb.set_trace()
+        
         ## TODO: test calculation writing
         
         ## TODO: test multivariate calculation writing

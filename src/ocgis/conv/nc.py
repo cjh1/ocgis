@@ -2,9 +2,9 @@ from ocgis.conv.base import OcgConverter
 import netCDF4 as nc
 from ocgis import constants
 from ocgis.util.logging_ocgis import ocgis_lh
-from ocgis.interface.base.dimension.temporal import TemporalGroupDimension
 import numpy as np
 from ocgis.interface.base.crs import CFWGS84
+from ocgis.interface.nc.temporal import NcTemporalGroupDimension
 
     
 class NcConverter(OcgConverter):
@@ -72,20 +72,15 @@ class NcConverter(OcgConverter):
         ## set data + attributes ###############################################
         
         ## time variable
-        if isinstance(temporal,TemporalGroupDimension):
-            raise(NotImplementedError)
-            time_nc_value = temporal.get_nc_time(temporal.group.representative_datetime)
-        else:
-            time_nc_value = arch.temporal.value
+        time_nc_value = arch.temporal.value
 
         ## if bounds are available for the time vector transform those as well
-        if isinstance(temporal,TemporalGroupDimension):
-            raise(NotImplementedError)
+        if isinstance(temporal,NcTemporalGroupDimension):
             if dim_bnds is None:
                 dim_bnds = ds.createDimension(bounds_name,2)
             times_bounds = ds.createVariable('climatology_'+bounds_name,time_nc_value.dtype,
                                              (dim_temporal._name,bounds_name))
-            times_bounds[:] = temporal.get_nc_time(temporal.group.bounds)
+            times_bounds[:] = temporal.bounds
         elif temporal.bounds is not None:
             if dim_bnds is None:
                 dim_bnds = ds.createDimension(bounds_name,2)
@@ -100,7 +95,7 @@ class NcConverter(OcgConverter):
             setattr(times,key,value)
         
         ## add climatology bounds
-        if isinstance(temporal,TemporalGroupDimension):
+        if isinstance(temporal,NcTemporalGroupDimension):
             setattr(times,'climatology','climatology_'+bounds_name)
             
         ## level variable

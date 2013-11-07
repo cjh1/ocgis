@@ -75,8 +75,10 @@ class TemporalDimension(base.VectorDimension):
         date_parts = np.atleast_1d(new_value)
         repr_dt = self._get_grouping_representative_datetime_(grouping,new_bounds,date_parts)
 
-        return(TemporalGroupDimension(grouping=grouping,date_parts=date_parts,bounds=new_bounds,
-                                      dgroups=dgroups,value=repr_dt,name_value='time',name_uid='tid'))
+        return(self._get_temporal_group_dimension_(
+                    grouping=grouping,date_parts=date_parts,bounds=new_bounds,
+                    dgroups=dgroups,value=repr_dt,name_value='time',name_uid='tid',
+                    name=self.name,meta=self.meta,units=self.units))
         
     def get_iter(self,*args,**kwds):
         r_name_value = self.name_value
@@ -185,6 +187,9 @@ class TemporalDimension(base.VectorDimension):
     
     def _get_iter_value_bounds_(self):
         return(self._get_datetime_value_(),self._get_datetime_bounds_())
+    
+    def _get_temporal_group_dimension_(self,*args,**kwds):
+        return(TemporalGroupDimension(*args,**kwds))
 
 
 class TemporalGroupDimension(TemporalDimension):
@@ -194,4 +199,4 @@ class TemporalGroupDimension(TemporalDimension):
         self.dgroups = kwds.pop('dgroups')
         self.date_parts = kwds.pop('date_parts')
                 
-        super(TemporalGroupDimension,self).__init__(*args,**kwds)
+        TemporalDimension.__init__(self,*args,**kwds)
