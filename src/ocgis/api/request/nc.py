@@ -152,12 +152,14 @@ class NcRequestDataset(object):
                 fill = None
             else:
                 ref_variable = self._source_metadata['variables'].get(ref_axis['variable'])
+                ref_variable['axis'] = ref_axis
                 length = self._source_metadata['dimensions'][ref_axis['dimension']]['len']
                 src_idx = np.arange(0,length)
                 kwds = dict(name_uid=v['name_uid'],name_value=v['name_value'],src_idx=src_idx,
-                            data=self,meta=ref_variable,axis=axis_value)
+                            data=self,meta=ref_variable,axis=axis_value,name=ref_variable.get('name'))
                 if v['adds'] is not None:
                     kwds.update(v['adds'](ref_variable['attrs']))
+                kwds.update({'name':ref_variable.get('name')})
                 fill = v['cls'](**kwds)
             loaded[k] = fill
             

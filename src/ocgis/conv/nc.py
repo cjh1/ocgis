@@ -2,6 +2,9 @@ from ocgis.conv.base import OcgConverter
 import netCDF4 as nc
 from ocgis import constants
 from ocgis.util.logging_ocgis import ocgis_lh
+from ocgis.interface.base.dimension.temporal import TemporalGroupDimension
+import numpy as np
+from ocgis.interface.base.crs import CFWGS84
 
     
 class NcConverter(OcgConverter):
@@ -33,19 +36,6 @@ class NcConverter(OcgConverter):
             return(list(file_format)[0])
     
     def _write_coll_(self,ds,coll):
-#        ## get the collection
-#        for ii,coll in enumerate(self):
-#            if ii > 0:
-#                raise(ValueError('only one collection should be returned for NC conversion'))
-#        arch = coll._archetype
-#        
-#        ## dataset object to write to
-#        try:
-#            ds = nc.Dataset(self.path,'w',format=arch.request_dataset.ds._ds.file_format)
-#        except ValueError:
-#            ## this may be a MFDataset in which case we need to pull the format differently
-#            ## as the type is a list.
-#            ds = nc.Dataset(self.path,'w',format=arch.request_dataset.ds._ds.file_format[0])
         
         ## get the target field from the collection
         arch = coll._archetype_field
@@ -72,24 +62,25 @@ class NcConverter(OcgConverter):
         dim_temporal = ds.createDimension(temporal.name)
 
         ## spatial dimensions
-        dim_row = ds.createDimension(grid.row.name,grid.row.shape[0])
-        dim_col = ds.createDimension(grid.col.name,grid.col.shape[0])
-        assert(grid.row.name == 'lat')
-        if arch.spatial.grid.is_bounded:
-            dim_bnds = ds.createDimension(bounds_name,2)
-        else:
+        dim_row = ds.createDimension(grid.row.meta['dimensions'][0],grid.row.shape[0])
+        dim_col = ds.createDimension(grid.col.meta['dimensions'][0],grid.col.shape[0])
+        if grid.row.bounds is None:
             dim_bnds = None
+        else:
+            dim_bnds = ds.createDimension(bounds_name,2)
         
         ## set data + attributes ###############################################
         
         ## time variable
-        if temporal.group is not None:
+        if isinstance(temporal,TemporalGroupDimension):
+            raise(NotImplementedError)
             time_nc_value = temporal.get_nc_time(temporal.group.representative_datetime)
         else:
             time_nc_value = arch.temporal.value
 
         ## if bounds are available for the time vector transform those as well
-        if temporal.group is not None:
+        if isinstance(temporal,TemporalGroupDimension):
+            raise(NotImplementedError)
             if dim_bnds is None:
                 dim_bnds = ds.createDimension(bounds_name,2)
             times_bounds = ds.createVariable('climatology_'+bounds_name,time_nc_value.dtype,
@@ -109,7 +100,7 @@ class NcConverter(OcgConverter):
             setattr(times,key,value)
         
         ## add climatology bounds
-        if temporal.group is not None:
+        if isinstance(temporal,TemporalGroupDimension):
             setattr(times,'climatology','climatology_'+bounds_name)
             
         ## level variable
@@ -150,42 +141,23 @@ class NcConverter(OcgConverter):
             return(ret)
         ## set the spatial data
         _make_spatial_variable_(ds,grid.row.name,grid.row.value,(dim_row,),meta)
-        _make_spatial_variable_(ds,grid.column.name,grid.column.value,(dim_col,),meta)
-        if grid.is_bounded:
-            _make_spatial_variable_(ds,grid.row.name_bounds,grid.row.bounds,(dim_row,dim_bnds),meta)
-            _make_spatial_variable_(ds,grid.column.name_bounds,grid.column.bounds,(dim_col,dim_bnds),meta)
+        _make_spatial_variable_(ds,grid.col.name,grid.col.value,(dim_col,),meta)
+        if grid.row.bounds is not None:
+            _make_spatial_variable_(ds,grid.row.meta['axis']['bounds'],grid.row.bounds,(dim_row,dim_bnds),meta)
+            _make_spatial_variable_(ds,grid.col.meta['axis']['bounds'],grid.col.bounds,(dim_col,dim_bnds),meta)
         
         ## set the variable(s) #################################################
         
         ## loop through variables
-        if type(coll) == CalcCollection:
-            for calc_name,calc_value in coll.calc[coll.variables.keys()[0]].iteritems():
-                value = ds.createVariable(calc_name,calc_value.dtype,
-                           value_dims,fill_value=calc_value.fill_value)
-                if not file_only:
-                    value[:] = calc_value
-                for key,val in meta['calculations'][calc_name]['attrs'].iteritems():
-                    setattr(value,key,val)
-        elif type(coll) == MultivariateCalcCollection:
-            for calc_name,calc_value in coll.calc.iteritems():
-                value = ds.createVariable(calc_name,calc_value.dtype,
-                           value_dims,fill_value=calc_value.fill_value)
-                for key,val in meta['calculations'][calc_name]['attrs'].iteritems():
-                    setattr(value,key,val)
-        else:
-            if file_only: raise(NotImplementedError)
-            for var_name,var_value in coll.variables.iteritems():
-                ## create the value variable.
-                value = ds.createVariable(var_name,var_value.value.dtype,
-                               value_dims,fill_value=constants.fill_value)
-                if not file_only:
-                    value[:] = var_value.value
-                for key,val in meta['variables'][var_name]['attrs'].iteritems():
-                    setattr(value,key,val)
+        for variable in arch.variables.itervalues():
+            value = ds.createVariable(variable.alias,variable.value.dtype,value_dims,
+                                      fill_value=variable.value.fill_value)
+            if not self.ops.file_only:
+                value[:] = np.squeeze(variable.value)
+            value.setncatts(variable.meta['attrs'])
                     
         ## add projection variable if applicable ###############################
         
-        if not isinstance(arch.spatial.projection,WGS84):
+        if not isinstance(arch.spatial.crs,CFWGS84):
+            raise(NotImplementedError)
             arch.spatial.projection.write_to_rootgrp(ds,meta)
-        
-        ds.close()

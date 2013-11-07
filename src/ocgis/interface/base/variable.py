@@ -147,6 +147,10 @@ class VariableCollection(object):
         for value in self.itervalues():
             return(value)
         
+    def iteritems(self):
+        for k,v in self._storage.iteritems():
+            yield(k,v)
+        
     def itervalues(self):
         for value in self._storage.itervalues():
             yield(value)

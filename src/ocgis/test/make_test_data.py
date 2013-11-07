@@ -134,7 +134,7 @@ class SimpleNc(NcFactory):
         rows = rootgrp.createVariable('latitude','f8',('lat',))
         bounds_col = rootgrp.createVariable(SPACE['col_bnds'],'f8',('lon','bound'))
         bounds_row = rootgrp.createVariable(SPACE['row_bnds'],'f8',('lat','bound'))
-        value = rootgrp.createVariable(VAR,'f8',('time','level','lat','lon'))
+        value = rootgrp.createVariable(VAR,'f8',('time','level','lat','lon'),fill_value=1e20)
         ## fill variables
         times.units = TIME['units']
         times.calendar = TIME['calendar']

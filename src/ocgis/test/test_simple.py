@@ -332,10 +332,44 @@ class TestSimple(TestSimpleBase):
             ret = ip.__repr__()
             self.assertTrue(len(ret) > 100)
             
+    def assertNcEqual(self,uri_src,uri_dest):
+        src = nc.Dataset(uri_src)
+        dest = nc.Dataset(uri_dest)
+        
+        try:
+            for dimname,dim in src.dimensions.iteritems():
+                self.assertEqual(len(dim),len(dest.dimensions[dimname]))
+            self.assertEqual(set(src.dimensions.keys()),set(dest.dimensions.keys()))
+            
+            for varname,var in src.variables.iteritems():
+                dvar = dest.variables[varname]
+                self.assertNumpyAll(var[:],dvar[:])
+                self.assertEqual(var[:].dtype,dvar[:].dtype)
+                self.assertDictEqual(var.__dict__,dvar.__dict__)
+                self.assertEqual(var.dimensions,dvar.dimensions)
+            self.assertEqual(set(src.variables.keys()),set(dest.variables.keys()))
+            
+            self.assertDictEqual(src.__dict__,dest.__dict__)
+        finally:
+            src.close()
+            dest.close()
+            
     def test_nc_conversion(self):
-        ops = OcgOperations(dataset=self.get_dataset(),output_format='nc')
+        rd = self.get_dataset()
+        ops = OcgOperations(dataset=rd,output_format='nc')
         ret = self.get_ret(ops)
-        ip = Inspect(ret,'foo')
+        
+        self.assertNcEqual(rd['uri'],ret)
+        
+        ## TODO: test calculation writing
+        
+        ## TODO: test multivariate calculation writing
+        
+        ## TODO: test writing w/ and w/out levels
+        
+        ## TODO: test writing w/ a projection
+        
+        ## TODO: test that multiple request datasets are not written
         
     def test_shp_conversion(self):
         ocgis.env.OVERWRITE = True
