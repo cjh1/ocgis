@@ -417,14 +417,29 @@ class TestSimple(TestSimpleBase):
         
         ds = nc.Dataset(no_level_again)
         try:
-            import ipdb;ipdb.set_trace()
             ref = ds.variables['foo'][:]
             self.assertEqual(ref.shape[1],1)
         finally:
             ds.close()
-                
-        ## TODO: test multivariate calculation writing
-                        
+            
+    def test_nc_conversion_multivariate_calculation(self):
+        rd1 = self.get_dataset()
+        rd2 = self.get_dataset()
+        rd2['alias'] = 'foo2'
+        calc = [{'func':'divide','name':'my_divide','kwds':{'arr1':'foo','arr2':'foo2'}}]
+        calc_grouping = ['month']
+        ops = OcgOperations(dataset=[rd1,rd2],calc=calc,calc_grouping=calc_grouping,
+                           output_format='nc')
+        ret = ops.execute()
+        
+        ds = nc.Dataset(ret)
+        try:
+            ref = ds.variables['my_divide'][:]
+            self.assertEqual(ref.shape,(2,2,4,4))
+            self.assertEqual(np.unique(ref)[0],1.)
+        finally:
+            ds.close()
+                                                
         ## TODO: test writing w/ a projection
                 
     def test_shp_conversion(self):
