@@ -70,8 +70,11 @@ class AbstractFunction(object):
         units = units or self.get_output_units(parent_variables[0])
         alias = alias or '{0}_{1}'.format(self.alias,parent_variables[0].alias)
         fdef = self.get_function_definition()
+        meta = {'attrs':{'standard_name':self.standard_name,
+                         'long_name':self.long_name}}
         dv = DerivedVariable(name=self.key,alias=alias,units=units,value=value,
-                             fdef=fdef,parents=VariableCollection(variables=parent_variables))
+                             fdef=fdef,parents=VariableCollection(variables=parent_variables),
+                             meta=meta)
         self.vc.add_variable(dv)
         
     @abc.abstractmethod

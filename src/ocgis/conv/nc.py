@@ -150,6 +150,9 @@ class NcConverter(OcgConverter):
             if not self.ops.file_only:
                 value[:] = np.squeeze(variable.value)
             value.setncatts(variable.meta['attrs'])
+            ## and the units, converting to string as passing a NoneType will raise
+            ## an exception.
+            value.units = '' if variable.units is None else variable.units
                     
         ## add projection variable if applicable ###############################
         

@@ -22,3 +22,11 @@ class Mean(base.AbstractUnivariateSetFunction):
     
     def calculate(self,values):
         return(np.ma.mean(values,axis=0))
+    
+    
+class StandardDeviation(base.AbstractUnivariateSetFunction):
+    description = 'Compute standard deviation of the set.'
+    key = 'std'
+    
+    def calculate(self,values):
+        return(np.ma.std(values,axis=0))

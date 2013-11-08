@@ -1,5 +1,6 @@
 import unittest
-from ocgis.test.make_test_data import SimpleNc, SimpleMaskNc, SimpleNc360
+from ocgis.test.make_test_data import SimpleNc, SimpleMaskNc, SimpleNc360,\
+    SimpleNcNoLevel
 from ocgis.api.operations import OcgOperations
 from ocgis.api.interpreter import OcgInterpreter
 import itertools
@@ -41,6 +42,28 @@ class TestSimpleBase(TestBase):
     def setUp(self):
         TestBase.setUp(self)
         self.nc_factory().write()
+        
+    def assertNcEqual(self,uri_src,uri_dest):
+        src = nc.Dataset(uri_src)
+        dest = nc.Dataset(uri_dest)
+        
+        try:
+            for dimname,dim in src.dimensions.iteritems():
+                self.assertEqual(len(dim),len(dest.dimensions[dimname]))
+            self.assertEqual(set(src.dimensions.keys()),set(dest.dimensions.keys()))
+            
+            for varname,var in src.variables.iteritems():
+                dvar = dest.variables[varname]
+                self.assertNumpyAll(var[:],dvar[:])
+                self.assertEqual(var[:].dtype,dvar[:].dtype)
+                self.assertDictEqual(var.__dict__,dvar.__dict__)
+                self.assertEqual(var.dimensions,dvar.dimensions)
+            self.assertEqual(set(src.variables.keys()),set(dest.variables.keys()))
+            
+            self.assertDictEqual(src.__dict__,dest.__dict__)
+        finally:
+            src.close()
+            dest.close()
     
     def get_dataset(self,time_range=None,level_range=None,time_region=None):
         uri = os.path.join(env.DIR_OUTPUT,self.fn)
@@ -74,6 +97,27 @@ class TestSimpleBase(TestBase):
         ops = OcgOperations(dataset=self.dataset,
                             output_format='shp')
         OcgInterpreter(ops).execute()
+        
+        
+class TestSimpleNoLevel(TestSimpleBase):
+    base_value = np.array([[1.0,1.0,2.0,2.0],
+                           [1.0,1.0,2.0,2.0],
+                           [3.0,3.0,4.0,4.0],
+                           [3.0,3.0,4.0,4.0]])
+    nc_factory = SimpleNcNoLevel
+    fn = 'test_simple_spatial_no_level_01.nc'
+    
+    def test_nc_write_no_level(self):
+        ret = self.get_ret(kwds={'output_format':'nc'})
+        ret2 = self.get_ret(kwds={'output_format':'nc','dataset':{'uri':ret,'variable':'foo'},'prefix':'level_again'})
+        self.assertNcEqual(ret,ret2)
+        
+        ds = nc.Dataset(ret)
+        try:
+            self.assertTrue('level' not in ds.dimensions)
+            self.assertTrue('level' not in ds.variables)
+        finally:
+            ds.close()
 
 
 class TestSimple(TestSimpleBase):
@@ -332,28 +376,6 @@ class TestSimple(TestSimpleBase):
             ret = ip.__repr__()
             self.assertTrue(len(ret) > 100)
             
-    def assertNcEqual(self,uri_src,uri_dest):
-        src = nc.Dataset(uri_src)
-        dest = nc.Dataset(uri_dest)
-        
-        try:
-            for dimname,dim in src.dimensions.iteritems():
-                self.assertEqual(len(dim),len(dest.dimensions[dimname]))
-            self.assertEqual(set(src.dimensions.keys()),set(dest.dimensions.keys()))
-            
-            for varname,var in src.variables.iteritems():
-                dvar = dest.variables[varname]
-                self.assertNumpyAll(var[:],dvar[:])
-                self.assertEqual(var[:].dtype,dvar[:].dtype)
-                self.assertDictEqual(var.__dict__,dvar.__dict__)
-                self.assertEqual(var.dimensions,dvar.dimensions)
-            self.assertEqual(set(src.variables.keys()),set(dest.variables.keys()))
-            
-            self.assertDictEqual(src.__dict__,dest.__dict__)
-        finally:
-            src.close()
-            dest.close()
-            
     def test_nc_conversion(self):
         rd = self.get_dataset()
         ops = OcgOperations(dataset=rd,output_format='nc')
@@ -363,21 +385,48 @@ class TestSimple(TestSimpleBase):
         
     def test_nc_conversion_calc(self):
         calc_grouping = ['month']
-        calc = [{'func':'mean','name':'my_mean'}]
+        calc = [{'func':'mean','name':'my_mean'},
+                {'func':'std','name':'my_stdev'}]
         kwds = dict(calc_grouping=calc_grouping,calc=calc,output_format='nc')
         ret = self.get_ret(kwds=kwds)
-        import ipdb;ipdb.set_trace()
         
-        ## TODO: test calculation writing
+        ds = nc.Dataset(ret)
+        try:
+            for alias in ['my_mean_foo','my_stdev_foo']:
+                self.assertEqual(ds.variables[alias].shape,(2,2,4,4))
+            self.assertEqual(ds.variables['time'].climatology,'climatology_bound')
+            self.assertEqual(ds.variables['climatology_bound'].shape,(2,2))
+        finally:
+            ds.close()
+            
+    def test_nc_conversion_multiple_request_datasets(self):
+        rd1 = self.get_dataset()
+        rd2 = self.get_dataset()
+        rd2['alias'] = 'foo2'
+        with self.assertRaises(DefinitionValidationError):
+            OcgOperations(dataset=[rd1,rd2],output_format='nc')
+            
+    def test_nc_conversion_level_subset(self):
+        rd = self.get_dataset(level_range=[1,1])
+        ops = OcgOperations(dataset=rd,output_format='nc',prefix='no_level')
+        no_level = ops.execute()
         
+        ops = OcgOperations(dataset={'uri':no_level,'variable':'foo'},output_format='nc',prefix='no_level_again')
+        no_level_again = ops.execute()
+        self.assertNcEqual(no_level,no_level_again)
+        
+        ds = nc.Dataset(no_level_again)
+        try:
+            import ipdb;ipdb.set_trace()
+            ref = ds.variables['foo'][:]
+            self.assertEqual(ref.shape[1],1)
+        finally:
+            ds.close()
+                
         ## TODO: test multivariate calculation writing
-        
-        ## TODO: test writing w/ and w/out levels
-        
+                        
         ## TODO: test writing w/ a projection
-        
-        ## TODO: test that multiple request datasets are not written
-        
+                
     def test_shp_conversion(self):
         ocgis.env.OVERWRITE = True
         calc = [
