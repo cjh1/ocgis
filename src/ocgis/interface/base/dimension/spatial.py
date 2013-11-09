@@ -208,7 +208,7 @@ class SpatialDimension(base.AbstractUidDimension):
         if to_crs != self.crs:
             to_sr = to_crs.sr
             from_sr = self.crs.sr
-            
+
             if self.geom.point is not None:
                 self.geom.point.update_crs(to_sr,from_sr)
             try:
@@ -219,7 +219,7 @@ class SpatialDimension(base.AbstractUidDimension):
             if self.grid is not None:
                 r_grid_value = self.grid.value.data
                 r_point_value = self.geom.point.value.data
-                for (idx_row,idx_col),geom in iter_array(r_point_value,return_value=True):
+                for (idx_row,idx_col),geom in iter_array(r_point_value,return_value=True,use_mask=False):
                     x,y = geom.x,geom.y
                     r_grid_value[0,idx_row,idx_col] = y
                     r_grid_value[1,idx_row,idx_col] = x
@@ -229,7 +229,7 @@ class SpatialDimension(base.AbstractUidDimension):
                 self.grid.col = None
             
             self.crs = to_crs
-            
+                    
     def write_fiona(self,path,target='polygon',driver='ESRI Shapefile'):
         attr = getattr(self.geom,target)
         attr.write_fiona(path,self.crs.value,driver=driver)
@@ -558,7 +558,7 @@ class SpatialGeometryPointDimension(base.AbstractUidValueDimension):
     def _get_value_(self):
         ref_grid = self.grid.value
         fill = self._get_geometry_fill_()
-        for idx_row,idx_col in iter_array(ref_grid[0]):
+        for idx_row,idx_col in iter_array(ref_grid[0],use_mask=False):
             y = ref_grid[0,idx_row,idx_col]
             x = ref_grid[1,idx_row,idx_col]
             fill[idx_row,idx_col] = Point(x,y)

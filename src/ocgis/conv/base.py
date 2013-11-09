@@ -74,7 +74,7 @@ class OcgConverter(object):
     def write(self):
         ocgis_lh('starting write method',self._log,logging.DEBUG)
         
-        f = self._get_fileobject_(iter(self.colls).next())
+#        f = self._get_fileobject_(iter(self.colls).next())
         try:
             build = True
             if self._add_ugeom and self.ops.geom is not None:
@@ -83,6 +83,7 @@ class OcgConverter(object):
                 write_geom = False
             for coll in iter(self.colls):
                 if build:
+                    f = self._get_fileobject_(coll)
                     self._build_(f,coll)
                     if write_geom:
                         ugid_shp_name = self.prefix + '_ugid.shp'

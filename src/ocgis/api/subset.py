@@ -62,6 +62,8 @@ class SubsetOperation(object):
     def __iter__(self):
         ''':rtype: AbstractCollection'''
         
+        ocgis_lh('beginning iteration',logger=self._subset_log.name+'.__iter__',level=logging.DEBUG)
+                
         ## simple iterator for serial operations
         if self.serial:
             for coll in self._iter_collections_():
@@ -106,6 +108,8 @@ class SubsetOperation(object):
 #            yield(self,self.ops.geom,subset_log)
 
     def _process_geometries_(self,rds):
+        ocgis_lh(msg='entering _process_geometries_',logger=self._subset_log,level=logging.DEBUG)
+        
         ## select headers
         if self.cengine is not None:
             if self.cengine._check_calculation_members_(self.cengine.funcs,AbstractMultivariateFunction):
@@ -251,7 +255,7 @@ class SubsetOperation(object):
 #        :rtype: AbstractCollection
 #        '''
         
-        ocgis_lh('{0} request dataset(s) to process'.format(len(self.ops.dataset)),self._subset_log)
+        ocgis_lh('{0} request dataset(s) to process'.format(len(self.ops.dataset)),self._subset_log.name+'._iter_collections_')
         
         if self.cengine is None:
             itr_rd = ([rd] for rd in self.ops.dataset)

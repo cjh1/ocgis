@@ -483,7 +483,7 @@ class TestSimple(TestSimpleBase):
                 self._collection = fiona.open(path,'w',driver=self.driver,schema=self.schema,crs=self.crs)
                 return(self)
             
-            def __exit__(self,type,value,traceback):
+            def __exit__(self,*args,**kwds):
                 self._collection.close()
                 
             def make_record(self,dct):
@@ -509,17 +509,22 @@ class TestSimple(TestSimpleBase):
         path = os.path.join(self._test_dir,'ab.shp')
         with FionaMaker(path) as fm:
             fm.write([a,b])
+            
         ocgis.env.DIR_SHPCABINET = self._test_dir
-        
+        ocgis.env.DEBUG = True
+        ocgis.env.VERBOSE = True
         aggregate = [False,True]
         spatial_operation = ['intersects','clip']
         epsg = [2163,4326,None]
         output_format = ['shp','csv+']
+        abstraction = ['polygon','point']
                 
-        for a,s,e,o in itertools.product(aggregate,spatial_operation,epsg,output_format):
+        for tup in itertools.product(aggregate,spatial_operation,epsg,output_format,abstraction):
+            print(tup)
+            a,s,e,o,ab = tup
             output_crs = CoordinateReferenceSystem(epsg=e)
             kwds = dict(aggregate=a,spatial_operation=s,output_format=o,output_crs=output_crs,
-                        geom='ab')
+                        geom='ab',abstraction=ab)
             ret = self.get_ret(kwds=kwds)
             import ipdb;ipdb.set_trace()
                                                                 
