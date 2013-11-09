@@ -173,7 +173,7 @@ class SpatialDimension(base.AbstractUidDimension):
                 
         if return_indices:
             ret = (ret,slc)
-
+        
         return(ret)
     
     def get_geom_iter(self,target=None,as_multipolygon=True):
@@ -505,14 +505,19 @@ class SpatialGeometryPointDimension(base.AbstractUidValueDimension):
         return(ret)
     
     def update_crs(self,to_sr,from_sr):
-        ## project masked geometries!!
-        r_value = self.value.data
+        ## we are modifying the original source data and need to copy the new
+        ## values.
+        new_value = self.value.copy()
+        ## be sure and project masked geometries to maintain underlying geometries
+        ## for masked values.
+        r_value = new_value.data
         r_loads = wkb.loads
         for (idx_row,idx_col),geom in iter_array(r_value,return_value=True,use_mask=False):
             ogr_geom = CreateGeometryFromWkb(geom.wkb)
             ogr_geom.AssignSpatialReference(from_sr)
             ogr_geom.TransformTo(to_sr)
             r_value[idx_row,idx_col] = r_loads(ogr_geom.ExportToWkb())
+        self._value = new_value
             
     def write_fiona(self,path,crs,driver='ESRI Shapefile'):
         schema = {'geometry':self._geom_type,
@@ -556,12 +561,16 @@ class SpatialGeometryPointDimension(base.AbstractUidValueDimension):
         return(fill)
     
     def _get_value_(self):
-        ref_grid = self.grid.value
+        ## we are interested in creating geometries for all the underly coordinates
+        ## regardless if the data is masked
+        ref_grid = self.grid.value.data
+        
         fill = self._get_geometry_fill_()
         for idx_row,idx_col in iter_array(ref_grid[0],use_mask=False):
             y = ref_grid[0,idx_row,idx_col]
             x = ref_grid[1,idx_row,idx_col]
-            fill[idx_row,idx_col] = Point(x,y)
+            pt = Point(x,y)
+            fill[idx_row,idx_col] = pt
         return(fill)
     
     

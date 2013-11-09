@@ -74,7 +74,6 @@ class OcgConverter(object):
     def write(self):
         ocgis_lh('starting write method',self._log,logging.DEBUG)
         
-#        f = self._get_fileobject_(iter(self.colls).next())
         try:
             build = True
             if self._add_ugeom and self.ops.geom is not None:
@@ -84,6 +83,7 @@ class OcgConverter(object):
             for coll in iter(self.colls):
                 if build:
                     f = self._get_fileobject_(coll)
+                    ocgis_lh('got file object',logger=self._log,level=logging.DEBUG)
                     self._build_(f,coll)
                     if write_geom:
                         ugid_shp_name = self.prefix + '_ugid.shp'
@@ -110,7 +110,7 @@ class OcgConverter(object):
                             fiona_meta = {'crs':coll.crs.value,'schema':fiona_schema,'driver':'ESRI Shapefile'}
                         else:
                             fiona_meta = coll.meta
-                            
+                        
                         fiona_object = fiona.open(fiona_path,'w',**fiona_meta)
                         csv_file = open(csv_path,'w')
                         
@@ -134,12 +134,30 @@ class OcgConverter(object):
                         csv_object.writerow({k.upper():v for k,v in row.iteritems()})
                     
         finally:
+            
+            ## errors are masked if the processing failed and file objects, etc.
+            ## were not properly created. if there are UnboundLocalErrors pass
+            ## them through to capture the error that lead to the objects not
+            ## being created.
+            
             try:
-                self._finalize_(f)
+                try:
+                    self._finalize_(f)
+                except UnboundLocalError:
+                    pass
+            except Exception as e:
+                ## this the exception we want to log
+                ocgis_lh(exc=e,logger=self._log)
             finally:
                 if write_geom:
-                    fiona_object.close()
-                    csv_file.close()
+                    try:
+                        fiona_object.close()
+                    except UnboundLocalError:
+                        pass
+                    try:
+                        csv_file.close()
+                    except UnboundLocalError:
+                        pass
             
         ## added OCGIS metadata output if requested.
         if self.add_meta:

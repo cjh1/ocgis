@@ -511,8 +511,8 @@ class TestSimple(TestSimpleBase):
             fm.write([a,b])
             
         ocgis.env.DIR_SHPCABINET = self._test_dir
-        ocgis.env.DEBUG = True
-        ocgis.env.VERBOSE = True
+#        ocgis.env.DEBUG = True
+#        ocgis.env.VERBOSE = True
         aggregate = [False,True]
         spatial_operation = ['intersects','clip']
         epsg = [2163,4326,None]
@@ -524,9 +524,16 @@ class TestSimple(TestSimpleBase):
             a,s,e,o,ab = tup
             output_crs = CoordinateReferenceSystem(epsg=e)
             kwds = dict(aggregate=a,spatial_operation=s,output_format=o,output_crs=output_crs,
-                        geom='ab',abstraction=ab)
-            ret = self.get_ret(kwds=kwds)
+                        geom='ab',abstraction=ab,dataset=self.get_dataset())
+            ops = OcgOperations(**kwds)
+            ret = ops.execute()
+            ugid_path = os.path.join(self._test_dir,ops.prefix,ops.prefix+'_ugid.shp')
+            with fiona.open(ugid_path,'r') as f:
+                self.assertEqual(f.meta['crs'],output_crs.value)
             import ipdb;ipdb.set_trace()
+            
+    def test_empty_dataset_for_operations(self):
+        raise(NotImplementedError('dataset when none should raise an exception'))
                                                                 
     def test_shp_conversion(self):
         ocgis.env.OVERWRITE = True
