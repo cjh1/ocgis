@@ -199,11 +199,20 @@ class OcgOperations(object):
             if self.output_crs is None:
                 _raise_('Dataset coordinate reference systems must be equivalent if no output CRS is chosen.',obj=OutputCRS)
         
+        if self.snippet:
+            if self.calc is not None:
+                _raise_('Snippets are not implemented for calculations. Apply a limiting time range for faster responses.',obj=Snippet)
+            for rd in self.dataset:
+                if rd.time_region is not None:
+                    _raise_('Snippets are not implemented for time regions.',obj=Snippet)
+        
         if self.slice is not None:
             assert(self.geom is None)
+            
         if self.file_only:
             assert(self.output_format == 'nc')
             assert(self.calc is not None)
+            
         if self.output_format == 'nc':
             if len(self.dataset) > 1 and self.calc is None:
                 msg = 'Data packages (i.e. more than one RequestDataset may not be written to netCDF).'

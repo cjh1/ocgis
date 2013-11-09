@@ -25,6 +25,7 @@ from ocgis.interface.base import crs
 from ocgis.util.shp_cabinet import ShpCabinet
 from shapely.geometry.geo import mapping
 from shapely import wkt
+from ocgis.interface.base.crs import CoordinateReferenceSystem
 
 
 class TestSimpleBase(TestBase):
@@ -169,11 +170,17 @@ class TestSimple(TestSimpleBase):
                                  'calc_grouping':['month']})
         try:
             ds = nc.Dataset(ret,'r')
-            self.assertTrue(isinstance(ds.variables['my_mean'][:].sum(),
+            self.assertTrue(isinstance(ds.variables['my_mean_foo'][:].sum(),
                             np.ma.core.MaskedConstant))
-            self.assertEqual(set(ds.variables['my_mean'].ncattrs()),set([u'_FillValue', u'units', u'long_name', u'standard_name']))
+            self.assertEqual(set(ds.variables['my_mean_foo'].ncattrs()),set([u'_FillValue', u'units', u'long_name', u'standard_name']))
         finally:
             ds.close()
+            
+        with self.assertRaises(DefinitionValidationError):
+            self.get_ret(kwds={'file_only':True,'output_format':'shp'})
+            
+        with self.assertRaises(DefinitionValidationError):
+            self.get_ret(kwds={'file_only':True})
 
     def test_return_all(self):
         ret = self.get_ret()
@@ -323,15 +330,20 @@ class TestSimple(TestSimpleBase):
         self.assertEqual(ret[1]['foo'],None)
         
     def test_snippet(self):
+        
         ret = self.get_ret(kwds={'snippet':True})
-        ref = ret[1].variables[self.var].value
-        self.assertEqual(ref.shape,(1,1,4,4))
+        ref = ret.gvu(1,self.var)
+        self.assertEqual(ref.shape,(1,1,1,4,4))
         
         calc = [{'func':'mean','name':'my_mean'}]
         group = ['month','year']
-        ret = self.get_ret(kwds={'calc':calc,'calc_grouping':group,'snippet':True})
-        ref = ret[1].calc[self.var]['my_mean']
-        self.assertEqual(ref.shape,(1,1,4,4))
+        with self.assertRaises(DefinitionValidationError):
+            self.get_ret(kwds={'calc':calc,'calc_grouping':group,'snippet':True})
+            
+    def test_snippet_time_region(self):
+        with self.assertRaises(DefinitionValidationError):
+            rd = self.get_dataset(time_region={'month':[1]})
+            OcgOperations(dataset=rd,snippet=True)
         
     def test_calc(self):
         calc = [{'func':'mean','name':'my_mean'}]
@@ -439,9 +451,78 @@ class TestSimple(TestSimpleBase):
             self.assertEqual(np.unique(ref)[0],1.)
         finally:
             ds.close()
-                                                
-        ## TODO: test writing w/ a projection
+            
+    def test_nc_projection(self):
+        raise(NotImplementedError)
+    
+    def test_shp_projection(self):
+        output_crs = CoordinateReferenceSystem(epsg=2163)
+        ret = self.get_ret(kwds=dict(output_crs=output_crs,output_format='shp'))
+        with fiona.open(ret) as f:
+            self.assertDictEqual(f.meta['crs'],output_crs.value)
+    
+    def test_csv_plus_projection(self):
+        raise(NotImplementedError('csv plus ugid and gid files are projected correctly'))
+    
+    def test_shp_csv_plus_projection_with_geometries(self):
+        
+        class FionaMaker(object):
+            
+            def __init__(self,path,epsg=4326,driver='ESRI Shapefile',geometry='Polygon'):
+                assert(not os.path.exists(path))
+                self.path = path
+                self.crs = fiona.crs.from_epsg(epsg)
+                self.properties = {'UGID':'int','NAME':'str'}
+                self.geometry = geometry
+                self.driver = driver
+                self.schema = {'geometry':self.geometry,
+                               'properties':self.properties}
+                                
+            def __enter__(self):
+                self._ugid = 1
+                self._collection = fiona.open(path,'w',driver=self.driver,schema=self.schema,crs=self.crs)
+                return(self)
+            
+            def __exit__(self,type,value,traceback):
+                self._collection.close()
                 
+            def make_record(self,dct):
+                properties = dct.copy()
+                geom = wkt.loads(properties.pop('wkt'))
+                properties.update({'UGID':self._ugid})
+                self._ugid += 1
+                record = {'geometry':mapping(geom),
+                          'properties':properties}
+                return(record)
+            
+            def write(self,sequence_or_dct):
+                if isinstance(sequence_or_dct,dict):
+                    itr = [sequence_or_dct]
+                else:
+                    itr = sequence_or_dct
+                for element in itr:
+                    record = self.make_record(element)
+                    self._collection.write(record)
+        
+        a = {'NAME':'a','wkt':'POLYGON((-105.020430 40.073118,-105.810753 39.327957,-105.660215 38.831183,-104.907527 38.763441,-104.004301 38.816129,-103.643011 39.802151,-103.643011 39.802151,-103.643011 39.802151,-103.643011 39.802151,-103.959140 40.118280,-103.959140 40.118280,-103.959140 40.118280,-103.959140 40.118280,-104.327957 40.201075,-104.327957 40.201075,-105.020430 40.073118))'}
+        b = {'NAME':'b','wkt':'POLYGON((-102.212903 39.004301,-102.905376 38.906452,-103.311828 37.694624,-103.326882 37.295699,-103.898925 37.220430,-103.846237 36.746237,-102.619355 37.107527,-102.634409 37.724731,-101.874194 37.882796,-102.212903 39.004301))'}
+        path = os.path.join(self._test_dir,'ab.shp')
+        with FionaMaker(path) as fm:
+            fm.write([a,b])
+        ocgis.env.DIR_SHPCABINET = self._test_dir
+        
+        aggregate = [False,True]
+        spatial_operation = ['intersects','clip']
+        epsg = [2163,4326,None]
+        output_format = ['shp','csv+']
+                
+        for a,s,e,o in itertools.product(aggregate,spatial_operation,epsg,output_format):
+            output_crs = CoordinateReferenceSystem(epsg=e)
+            kwds = dict(aggregate=a,spatial_operation=s,output_format=o,output_crs=output_crs,
+                        geom='ab')
+            ret = self.get_ret(kwds=kwds)
+            import ipdb;ipdb.set_trace()
+                                                                
     def test_shp_conversion(self):
         ocgis.env.OVERWRITE = True
         calc = [

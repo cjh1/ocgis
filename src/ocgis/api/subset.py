@@ -29,35 +29,35 @@ class SubsetOperation(object):
                                            raw=self.ops.calc_raw,
                                            agg=self.ops.aggregate)
             
-        ## check for snippet request in the operations dictionary. if there is
-        ## on, the time range should be set in the operations dictionary.
-        if self.ops.snippet is True:
-            raise(NotImplementedError)
-            ##TODO: move snippet to iteration
-            ocgis_lh('getting snippet bounds',self._subset_log)
-            for rd in self.ops.dataset:
-                ## snippet is not implemented for time regions
-                if rd.time_region is not None:
-                    exc = NotImplementedError('snippet is not implemented for time regions')
-                    ocgis_lh(exc=exc,logger=self._subset_log)
-                
-                rd.level_range = [1,1]
-                ods = rd.ds
-                ## load the first time slice if there is calculation or the 
-                ## calculation does not use a temporal group.
-                if self.cengine is None or (self.cengine is not None and self.cengine.grouping is None):
-                    ##TODO: improve slicing to not load all time values in a more
-                    ## elegant way.
-                    ods._load_slice.update({'T':slice(0,1)})
-                ## snippet for the computation. this currently requires loading
-                ## all the data from the time dimension into memory.
-                ##TODO: more efficiently pull dates for monthly grouping (for
-                ##example).
-                else:
-                    ods.temporal.set_grouping(self.cengine.grouping)
-                    tgdim = ods.temporal.group
-                    times = ods.temporal.value[tgdim.dgroups[0]]
-                    rd.time_range = list(ods.temporal.get_datetime([times.min(),times.max()]))
+#        ## check for snippet request in the operations dictionary. if there is
+#        ## on, the time range should be set in the operations dictionary.
+#        if self.ops.snippet is True:
+#            raise(NotImplementedError)
+#            ##TODO: move snippet to iteration
+#            ocgis_lh('getting snippet bounds',self._subset_log)
+#            for rd in self.ops.dataset:
+#                ## snippet is not implemented for time regions
+#                if rd.time_region is not None:
+#                    exc = NotImplementedError('snippet is not implemented for time regions')
+#                    ocgis_lh(exc=exc,logger=self._subset_log)
+#                
+#                rd.level_range = [1,1]
+#                ods = rd.ds
+#                ## load the first time slice if there is calculation or the 
+#                ## calculation does not use a temporal group.
+#                if self.cengine is None or (self.cengine is not None and self.cengine.grouping is None):
+#                    ##TODO: improve slicing to not load all time values in a more
+#                    ## elegant way.
+#                    ods._load_slice.update({'T':slice(0,1)})
+#                ## snippet for the computation. this currently requires loading
+#                ## all the data from the time dimension into memory.
+#                ##TODO: more efficiently pull dates for monthly grouping (for
+#                ##example).
+#                else:
+#                    ods.temporal.set_grouping(self.cengine.grouping)
+#                    tgdim = ods.temporal.group
+#                    times = ods.temporal.value[tgdim.dgroups[0]]
+#                    rd.time_range = list(ods.temporal.get_datetime([times.min(),times.max()]))
         
     def __iter__(self):
         ''':rtype: AbstractCollection'''
@@ -167,8 +167,11 @@ class SubsetOperation(object):
                     
             ocgis_lh('processing',self._subset_log,level=logging.DEBUG,alias=alias,ugid=ugid)
             
+            ## if there is a snippet, return the first realization, time, and level
+            if self.ops.snippet:
+                sfield = field[0,0,0,:,:]
             ## if there is a slice, use it to subset the field
-            if self.ops.slice is not None:
+            elif self.ops.slice is not None:
                 sfield = field.__getitem__(self.ops.slice)
             else:
                 ## see if the selection
@@ -231,7 +234,11 @@ class SubsetOperation(object):
                                 ## if none of the other conditions are met, raise the masked data error
                                 else:
                                     ocgis_lh(logger=self._subset_log,exc=MaskedDataError(),alias=alias,ugid=ugid)
-                
+            
+            ## update the coordinate system of the data output
+            if self.ops.output_crs is not None:
+                sfield.spatial.update_crs(self.ops.output_crs)
+            
             coll.add_field(ugid,geom,alias,sfield,properties=gd.get('properties'))
             
             yield(coll)
@@ -262,7 +269,7 @@ class SubsetOperation(object):
                              self._subset_log,
                              alias=coll.items()[0][1].keys()[0],
                              ugid=coll.keys()[0])
-                    coll = self.cengine.execute(coll,file_only=self.ops.file_only)
+                    coll = self.cengine.execute(coll)
                 
                 ## conversion of groups.
                 if self.ops.output_grouping is not None:
