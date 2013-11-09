@@ -15,7 +15,19 @@ import sys
 import datetime
 from copy import deepcopy
 from ocgis.util.logging_ocgis import ocgis_lh
+from osgeo.ogr import CreateGeometryFromWkb
+from shapely.wkb import loads as wkb_loads
 
+
+def project_shapely_geometry(geom,from_sr,to_sr):
+    if from_sr.IsSame(to_sr) == 1:
+        ret = geom
+    else:
+        ogr_geom = CreateGeometryFromWkb(geom.wkb)
+        ogr_geom.AssignSpatialReference(from_sr)
+        ogr_geom.TransformTo(to_sr)
+        ret = wkb_loads(ogr_geom.ExportToWkb())
+    return(ret)
 
 def assert_raise(test,**kwds):
     try:

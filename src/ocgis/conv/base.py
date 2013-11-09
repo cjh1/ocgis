@@ -107,9 +107,14 @@ class OcgConverter(object):
                                 ocgis_lh(exc=NotImplementedError(type(r_geom)),logger='conv.base')
                             fiona_schema = {'geometry':geom_type,
                                             'properties':fiona_properties}
-                            fiona_meta = {'crs':coll.crs.value,'schema':fiona_schema,'driver':'ESRI Shapefile'}
+                            fiona_meta = {'schema':fiona_schema,'driver':'ESRI Shapefile'}
                         else:
                             fiona_meta = coll.meta
+                            
+                        ## always use the CRS from the collection. shapefile metadata
+                        ## will always be WGS84, but it may be overloaded in the
+                        ## operations.
+                        fiona_meta['crs'] = coll.crs.value
                         
                         fiona_object = fiona.open(fiona_path,'w',**fiona_meta)
                         csv_file = open(csv_path,'w')

@@ -8,6 +8,7 @@ from ocgis.api.collection import SpatialCollection
 from ocgis.interface.base.crs import CFWGS84
 from shapely.geometry.point import Point
 from ocgis.calc.base import AbstractMultivariateFunction
+from ocgis.util.helpers import project_shapely_geometry
 
 
 class SubsetOperation(object):
@@ -74,9 +75,9 @@ class SubsetOperation(object):
         ## for the parallel case
         else:
             raise(ocgis_lh(exc=NotImplementedError('multiprocessing is not available')))
-            pool = Pool(processes=self.nprocs)
-            it = pool.imap_unordered(get_collection,
-                                     self._iter_proc_args_())
+#            pool = Pool(processes=self.nprocs)
+#            it = pool.imap_unordered(get_collection,
+#                                     self._iter_proc_args_())
 #        ## the iterator return from the Pool requires calling its 'next'
 #        ## method and catching the StopIteration exception
 #        while True:
@@ -146,18 +147,24 @@ class SubsetOperation(object):
             itr = [{}] if self.ops.geom is None else self.ops.geom
         ## loop over the iterator
         for gd in itr:
-            ## initialize the collection object to store the subsetted data.
-            coll = SpatialCollection(crs=field.spatial.crs,headers=headers,meta=gd.get('meta'))
+            ## initialize the collection object to store the subsetted data. if
+            ## the output CRS differs from the field's CRS, adjust accordingly 
+            ## when initilizing.
+            if self.ops.output_crs is not None and field.spatial.crs != self.ops.output_crs:
+                collection_crs = self.ops.output_crs
+            else:
+                collection_crs = field.spatial.crs
+            coll = SpatialCollection(crs=collection_crs,headers=headers,meta=gd.get('meta'))
             
             ## reference variables from the geometry dictionary
             geom = gd.get('geom')
             
+            crs = gd.get('crs')
             ## if the geometry is a point, we need to buffer it...
             if isinstance(geom,Point):
                 ocgis_lh(logger=self._subset_log,msg='buffering point geometry',level=logging.DEBUG)
                 geom = geom.buffer(self.ops.search_radius_mult*field.spatial.grid.resolution)
             
-            crs = gd.get('crs')
             try:
                 ugid = gd['properties']['UGID']
             except KeyError:
@@ -241,6 +248,11 @@ class SubsetOperation(object):
             
             ## update the coordinate system of the data output
             if self.ops.output_crs is not None:
+                ## if the geometry is not None, it may need to be projected to match
+                ## the output crs.
+                if crs != self.ops.output_crs:
+                    geom = project_shapely_geometry(geom,crs.sr,self.ops.output_crs.sr)
+                    
                 sfield.spatial.update_crs(self.ops.output_crs)
             
             coll.add_field(ugid,geom,alias,sfield,properties=gd.get('properties'))

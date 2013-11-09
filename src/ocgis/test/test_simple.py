@@ -519,21 +519,44 @@ class TestSimple(TestSimpleBase):
         output_format = ['shp','csv+']
         abstraction = ['polygon','point']
                 
-        for tup in itertools.product(aggregate,spatial_operation,epsg,output_format,abstraction):
-            print(tup)
+        for ii,tup in enumerate(itertools.product(aggregate,spatial_operation,epsg,output_format,abstraction)):
             a,s,e,o,ab = tup
-            output_crs = CoordinateReferenceSystem(epsg=e)
+#            print(tup)
+            output_crs = CoordinateReferenceSystem(epsg=e) if e is not None else None
             kwds = dict(aggregate=a,spatial_operation=s,output_format=o,output_crs=output_crs,
-                        geom='ab',abstraction=ab,dataset=self.get_dataset())
+                        geom='ab',abstraction=ab,dataset=self.get_dataset(),prefix=str(ii))
             ops = OcgOperations(**kwds)
             ret = ops.execute()
-            ugid_path = os.path.join(self._test_dir,ops.prefix,ops.prefix+'_ugid.shp')
+            
+            if ab == 'point':
+                print ret
+                import ipdb;ipdb.set_trace()
+            
+            if o == 'shp':
+                ugid_path = os.path.join(self._test_dir,ops.prefix,ops.prefix+'_ugid.shp')
+            else:
+                ugid_path = os.path.join(self._test_dir,ops.prefix,'shp',ops.prefix+'_ugid.shp')
             with fiona.open(ugid_path,'r') as f:
-                self.assertEqual(f.meta['crs'],output_crs.value)
-            import ipdb;ipdb.set_trace()
+                if e:
+                    second = output_crs
+                else:
+                    second = CoordinateReferenceSystem(epsg=4326)
+                self.assertEqual(CoordinateReferenceSystem(crs=f.meta['crs']),second)
+                
+            with fiona.open(ret,'r') as f:
+                self.assertEqual(f.meta['schema']['geometry'],ab.title())
             
     def test_empty_dataset_for_operations(self):
         raise(NotImplementedError('dataset when none should raise an exception'))
+    
+    def test_differing_projections_geometry_dataset(self):
+        raise(NotImplementedError)
+    
+    def test_differing_projections_input_data(self):
+        raise(NotImplementedError)
+    
+    def test_differing_projections_combinations(self):
+        raise(NotImplementedError)
                                                                 
     def test_shp_conversion(self):
         ocgis.env.OVERWRITE = True

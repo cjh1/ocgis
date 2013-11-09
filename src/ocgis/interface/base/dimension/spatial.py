@@ -216,7 +216,7 @@ class SpatialDimension(base.AbstractUidDimension):
             except ImproperPolygonBoundsError:
                 pass
             
-            if self.grid is not None:
+            if self.grid is not None and self.geom.point is not None:
                 r_grid_value = self.grid.value.data
                 r_point_value = self.geom.point.value.data
                 for (idx_row,idx_col),geom in iter_array(r_point_value,return_value=True,use_mask=False):
@@ -227,6 +227,10 @@ class SpatialDimension(base.AbstractUidDimension):
                 ## to make them vectors again.
                 self.grid.row = None
                 self.grid.col = None
+            ## if there is not point dimension, then a grid representation is not
+            ## possible. mask the grid values accordingly.
+            elif self.grid is not None and self.geom.point is None:
+                self.grid.value.mask = True
             
             self.crs = to_crs
                     
