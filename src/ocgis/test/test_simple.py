@@ -517,7 +517,10 @@ class TestSimple(TestSimpleBase):
         spatial_operation = ['intersects','clip']
         epsg = [2163,4326,None]
         output_format = ['shp','csv+']
-        abstraction = ['polygon','point']
+        abstraction = [
+#                       'polygon',
+                       'point'
+                       ]
                 
         for ii,tup in enumerate(itertools.product(aggregate,spatial_operation,epsg,output_format,abstraction)):
             a,s,e,o,ab = tup
@@ -528,9 +531,9 @@ class TestSimple(TestSimpleBase):
             ops = OcgOperations(**kwds)
             ret = ops.execute()
             
-            if ab == 'point':
-                print ret
-                import ipdb;ipdb.set_trace()
+#            if ab == 'point':
+#                print ret
+#                import ipdb;ipdb.set_trace()
             
             if o == 'shp':
                 ugid_path = os.path.join(self._test_dir,ops.prefix,ops.prefix+'_ugid.shp')

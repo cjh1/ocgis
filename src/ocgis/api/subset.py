@@ -255,6 +255,9 @@ class SubsetOperation(object):
                     
                 sfield.spatial.update_crs(self.ops.output_crs)
             
+            ## update the spatial abstraction to match the operations value
+            sfield.spatial.abstraction = self.ops.abstraction
+            
             coll.add_field(ugid,geom,alias,sfield,properties=gd.get('properties'))
             
             yield(coll)
