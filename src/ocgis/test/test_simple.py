@@ -514,8 +514,9 @@ class TestSimple(TestSimpleBase):
                     record = self.make_record(element)
                     self._collection.write(record)
         
-#        self.get_ret(kwds={'output_format':'shp','prefix':'as_polygon'})
-#        self.get_ret(kwds={'output_format':'shp','prefix':'as_point','abstraction':'point'})
+        self.get_ret(kwds={'output_format':'shp','prefix':'as_polygon'})
+        self.get_ret(kwds={'output_format':'shp','prefix':'as_point','abstraction':'point'})
+        
         features = [
          {'NAME':'a','wkt':'POLYGON((-105.020430 40.073118,-105.810753 39.327957,-105.660215 38.831183,-104.907527 38.763441,-104.004301 38.816129,-103.643011 39.802151,-103.643011 39.802151,-103.643011 39.802151,-103.643011 39.802151,-103.959140 40.118280,-103.959140 40.118280,-103.959140 40.118280,-103.959140 40.118280,-104.327957 40.201075,-104.327957 40.201075,-105.020430 40.073118))'},
          {'NAME':'b','wkt':'POLYGON((-102.212903 39.004301,-102.905376 38.906452,-103.311828 37.694624,-103.326882 37.295699,-103.898925 37.220430,-103.846237 36.746237,-102.619355 37.107527,-102.634409 37.724731,-101.874194 37.882796,-102.212903 39.004301))'},
@@ -564,12 +565,15 @@ class TestSimple(TestSimpleBase):
                    self.get_dataset(),
                    {'uri':no_bounds_uri,'variable':'foo'}
                    ]
-        geom = ['ab_polygon','ab_point']
+        geom = [
+                'ab_polygon',
+                'ab_point'
+                ]
         
         args = (aggregate,spatial_operation,epsg,output_format,abstraction,geom,dataset)
         for ii,tup in enumerate(itertools.product(*args)):
             a,s,e,o,ab,g,d = tup
-            print(tup[0:-1],tup[-1]['uri'])
+#            print(tup[0:-1],tup[-1]['uri'])
             
             if os.path.split(d['uri'])[1] == 'test_simple_spatial_no_bounds_01.nc':
                 unbounded = True

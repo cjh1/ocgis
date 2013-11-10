@@ -98,14 +98,7 @@ class OcgConverter(object):
                             
                         if coll.meta is None:
                             fiona_properties = {'UGID':'int'}
-                            r_geom = coll.geoms.values()[0]
-                            if type(r_geom) in [Polygon,MultiPolygon]:
-                                geom_type = 'MultiPolygon'
-                            elif type(r_geom) == Point:
-                                geom_type = 'Point'
-                            else:
-                                ocgis_lh(exc=NotImplementedError(type(r_geom)),logger='conv.base')
-                            fiona_schema = {'geometry':geom_type,
+                            fiona_schema = {'geometry':'MultiPolygon',
                                             'properties':fiona_properties}
                             fiona_meta = {'schema':fiona_schema,'driver':'ESRI Shapefile'}
                         else:
@@ -115,6 +108,11 @@ class OcgConverter(object):
                         ## will always be WGS84, but it may be overloaded in the
                         ## operations.
                         fiona_meta['crs'] = coll.crs.value
+                        
+                        ## selection geometries will always come out as MultiPolygon
+                        ## regardless if they began as points. points are buffered
+                        ## during the subsetting process.
+                        fiona_meta['schema']['geometry'] = 'MultiPolygon'
                         
                         fiona_object = fiona.open(fiona_path,'w',**fiona_meta)
                         csv_file = open(csv_path,'w')
