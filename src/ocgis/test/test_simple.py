@@ -1,6 +1,6 @@
 import unittest
 from ocgis.test.make_test_data import SimpleNc, SimpleMaskNc, SimpleNc360,\
-    SimpleNcNoLevel
+    SimpleNcNoLevel, SimpleNcNoBounds
 from ocgis.api.operations import OcgOperations
 from ocgis.api.interpreter import OcgInterpreter
 import itertools
@@ -524,6 +524,10 @@ class TestSimple(TestSimpleBase):
                       b,
                       c
                       ])
+        
+        no_bounds_nc = SimpleNcNoBounds()
+        no_bounds_nc.write()
+        no_bounds_uri = os.path.join(env.DIR_OUTPUT,no_bounds_nc.filename)
             
         ocgis.env.DIR_SHPCABINET = self._test_dir
 #        ocgis.env.DEBUG = True
@@ -541,15 +545,19 @@ class TestSimple(TestSimpleBase):
         output_format = ['shp','csv+']
         abstraction = [
                        'polygon',
-                       'point'
+                       'point',
+                       None
                        ]
-                
-        for ii,tup in enumerate(itertools.product(aggregate,spatial_operation,epsg,output_format,abstraction)):
-            a,s,e,o,ab = tup
-#            print(tup)
+        dataset = [self.get_dataset(),{'uri':no_bounds_uri,'variable':'foo'}]
+        
+        args = (aggregate,spatial_operation,epsg,output_format,abstraction,dataset)
+        for ii,tup in enumerate(itertools.product(*args)):
+            a,s,e,o,ab,d = tup
+            print(tup[0:-1],tup[-1]['uri'])
+            
             output_crs = CoordinateReferenceSystem(epsg=e) if e is not None else None
             kwds = dict(aggregate=a,spatial_operation=s,output_format=o,output_crs=output_crs,
-                        geom='ab',abstraction=ab,dataset=self.get_dataset(),prefix=str(ii))
+                        geom='ab',abstraction=ab,dataset=d,prefix=str(ii))
             ops = OcgOperations(**kwds)
             ret = ops.execute()
             

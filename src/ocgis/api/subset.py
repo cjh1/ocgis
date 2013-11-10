@@ -177,7 +177,7 @@ class SubsetOperation(object):
                     ugid = gd['properties']['ugid']
                     
             ocgis_lh('processing',self._subset_log,level=logging.DEBUG,alias=alias,ugid=ugid)
-            
+                        
             ## if there is a snippet, return the first realization, time, and level
             if self.ops.snippet:
                 sfield = field[0,0,0,:,:]
