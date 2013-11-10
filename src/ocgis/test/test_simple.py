@@ -513,12 +513,13 @@ class TestSimple(TestSimpleBase):
                     record = self.make_record(element)
                     self._collection.write(record)
         
-#        ret = self.get_ret(kwds={'output_format':'shp'})
-#        import ipdb;ipdb.set_trace()
+#        self.get_ret(kwds={'output_format':'shp','prefix':'as_polygon'})
+#        self.get_ret(kwds={'output_format':'shp','prefix':'as_point','abstraction':'point'})
         
         a = {'NAME':'a','wkt':'POLYGON((-105.020430 40.073118,-105.810753 39.327957,-105.660215 38.831183,-104.907527 38.763441,-104.004301 38.816129,-103.643011 39.802151,-103.643011 39.802151,-103.643011 39.802151,-103.643011 39.802151,-103.959140 40.118280,-103.959140 40.118280,-103.959140 40.118280,-103.959140 40.118280,-104.327957 40.201075,-104.327957 40.201075,-105.020430 40.073118))'}
         b = {'NAME':'b','wkt':'POLYGON((-102.212903 39.004301,-102.905376 38.906452,-103.311828 37.694624,-103.326882 37.295699,-103.898925 37.220430,-103.846237 36.746237,-102.619355 37.107527,-102.634409 37.724731,-101.874194 37.882796,-102.212903 39.004301))'}
         c = {'NAME':'c','wkt':'POLYGON((-105.336559 37.175269,-104.945161 37.303226,-104.726882 37.175269,-104.696774 36.844086,-105.043011 36.693548,-105.283871 36.640860,-105.336559 37.175269))'}
+        d = {'NAME':'d','wkt':'POLYGON((-102.318280 39.741935,-103.650538 39.779570,-103.620430 39.448387,-103.349462 39.433333,-103.078495 39.606452,-102.325806 39.613978,-102.325806 39.613978,-102.333333 39.741935,-102.318280 39.741935))'}
         
         ## TODO: add geometry that creates a multipolygon when clipped
         ## TODO: add geometry that does not cover a point centroid
@@ -528,7 +529,8 @@ class TestSimple(TestSimpleBase):
             fm.write([
                       a,
                       b,
-                      c
+                      c,
+                      d,
                       ])
         
         no_bounds_nc = SimpleNcNoBounds()
@@ -564,6 +566,11 @@ class TestSimple(TestSimpleBase):
             a,s,e,o,ab,d = tup
             print(tup[0:-1],tup[-1]['uri'])
             
+            if os.path.split(d['uri'])[1] == 'test_simple_spatial_no_bounds_01.nc':
+                unbounded = True
+            else:
+                unbounded = False
+            
             output_crs = CoordinateReferenceSystem(epsg=e) if e is not None else None
             kwds = dict(aggregate=a,spatial_operation=s,output_format=o,output_crs=output_crs,
                         geom='ab',abstraction=ab,dataset=d,prefix=str(ii))
@@ -571,7 +578,12 @@ class TestSimple(TestSimpleBase):
             try:
                 ret = ops.execute()
             except ImproperPolygonBoundsError:
-                if ab == 'polygon' and os.path.split(d['uri'])[1] == 'test_simple_spatial_no_bounds_01.nc':
+                if ab == 'polygon' and unbounded:
+                    continue
+                else:
+                    raise
+            except ExtentError:
+                if unbounded or ab == 'point':
                     continue
                 else:
                     raise
