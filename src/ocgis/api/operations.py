@@ -71,7 +71,7 @@ class OcgOperations(object):
                  output_format='numpy', agg_selection=False, select_ugid=None, 
                  vector_wrap=True, allow_empty=False, dir_output=None, 
                  slice=None, file_only=False, headers=None, output_crs=None,
-                 search_radius_mult=1.):
+                 search_radius_mult=0.75):
         
         # # Tells "__setattr__" to not perform global validation until all
         # # values are set initially.
