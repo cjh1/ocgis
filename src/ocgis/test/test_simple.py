@@ -540,7 +540,7 @@ class TestSimple(TestSimpleBase):
 #        ocgis.env.VERBOSE = True
 
         aggregate = [
-#                     False,
+                     False,
                      True
                      ]
         spatial_operation = [
@@ -550,12 +550,12 @@ class TestSimple(TestSimpleBase):
         epsg = [2163,4326,None]
         output_format = ['shp','csv+']
         abstraction = [
-#                       'polygon',
+                       'polygon',
                        'point',
                        None
                        ]
         dataset = [
-#                   self.get_dataset(),
+                   self.get_dataset(),
                    {'uri':no_bounds_uri,'variable':'foo'}
                    ]
         
@@ -599,9 +599,10 @@ class TestSimple(TestSimpleBase):
                     
                     if second in ['Polygon','MultiPolygon']:
                         second = ['Polygon','MultiPolygon']
-                        self.assertTrue(f.meta['schema']['geometry'] in second)
-                    else:
-                        self.assertEqual(f.meta['schema']['geometry'],second)
+                    elif second in ['Point','MultiPoint']:
+                        second = ['Point','MultiPoint']
+                        
+                    self.assertTrue(f.meta['schema']['geometry'] in second)
                                         
     def test_points_used_for_spatial_operations_with_point_abstraction(self):
         raise(ToTest)

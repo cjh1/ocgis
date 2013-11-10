@@ -10,6 +10,9 @@ from shapely.geometry.multipolygon import MultiPolygon
 from ocgis.interface.base.variable import Variable, VariableCollection
 from ocgis import constants
 from shapely.geometry.point import Point
+from ocgis.exc import ImproperPolygonBoundsError
+import logging
+from ocgis.util.logging_ocgis import ocgis_lh
         
 
 class Field(object):
@@ -174,10 +177,16 @@ class Field(object):
             unioned = _get_geometry_union_(ret.spatial.geom.point.value)
             ret.spatial.geom.point._value = unioned
             ret.spatial.geom.point.uid = new_spatial_uid
-        if ret.spatial.geom.polygon is not None:
-            unioned = _get_geometry_union_(ret.spatial.geom.polygon.value)
-            ret.spatial.geom.polygon._value = _get_geometry_union_(ret.spatial.geom.polygon.value)
-            ret.spatial.geom.polygon.uid = new_spatial_uid
+            
+        try:
+            if ret.spatial.geom.polygon is not None:
+                unioned = _get_geometry_union_(ret.spatial.geom.polygon.value)
+                ret.spatial.geom.polygon._value = _get_geometry_union_(ret.spatial.geom.polygon.value)
+                ret.spatial.geom.polygon.uid = new_spatial_uid
+        except ImproperPolygonBoundsError:
+            msg = 'No polygon representation to aggregate.'
+            ocgis_lh(msg=msg,logger='field',level=logging.WARN)
+        
         ## update the spatial uid
         ret.spatial.uid = new_spatial_uid
         ## there are no grid objects for aggregated spatial dimensions.

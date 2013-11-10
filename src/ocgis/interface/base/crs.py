@@ -9,6 +9,7 @@ from ocgis.util.helpers import iter_array, assert_raise
 from shapely.geometry.multipolygon import MultiPolygon
 import abc
 import logging
+from shapely.geometry.multipoint import MultiPoint
 
 
 class CoordinateReferenceSystem(object):
@@ -87,14 +88,25 @@ class WGS84(CoordinateReferenceSystem):
                     ocgis_lh(exc=e)
             except AttributeError as e:
                 ## there may be no grid, access the geometries directly
-                for geom in spatial.geom.polygon.value.compressed():
-                    if isinstance(geom,MultiPolygon):
+                try:
+                    geoms_to_check = spatial.geom.polygon.value
+                except ImproperPolygonBoundsError:
+                    geoms_to_check = spatial.geom.point.value
+                geoms_to_check = geoms_to_check.compressed()
+                
+                for geom in geoms_to_check:
+                    if type(geom) in [MultiPolygon,MultiPoint]:
                         it = geom
                     else:
                         it = [geom]
                     for sub_geom in it:
-                        if np.any(np.array(sub_geom.exterior.coords) > 180.):
-                            return(True)
+                        try:
+                            if np.any(np.array(sub_geom.exterior.coords) > 180.):
+                                return(True)
+                        ## might be checking a point
+                        except AttributeError:
+                            if np.any(np.array(sub_geom) > 180.):
+                                return(True)
                 return(False)
         if np.any(check > 180.):
             ret = True
