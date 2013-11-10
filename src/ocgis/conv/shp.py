@@ -58,7 +58,7 @@ class ShpConverter(OcgConverter):
         headers = [h.upper() for h in coll.headers]
         arch_row = coll.get_iter().next()
             
-        fiona_properties = OrderedDict([[k,_get_field_type_(k,type(v))] for k,v in zip(headers,arch_row[1])])
+        fiona_properties = OrderedDict([[k,_get_field_type_(k,type(v))] for k,v in zip(headers,arch_row[1])])        
         fiona_schema = {'geometry':archetype_field.spatial.abstraction_geometry._geom_type,
                         'properties':fiona_properties}
         fiona_object = fiona.open(self.path,'w',driver='ESRI Shapefile',crs=fiona_crs,schema=fiona_schema)

@@ -9,6 +9,7 @@ from shapely.geometry.multipoint import MultiPoint
 from shapely.geometry.multipolygon import MultiPolygon
 from ocgis.interface.base.variable import Variable, VariableCollection
 from ocgis import constants
+from shapely.geometry.point import Point
         
 
 class Field(object):
@@ -153,6 +154,11 @@ class Field(object):
                 else:
                     processed_to_union.append(geom)
             unioned = cascaded_union(processed_to_union)
+            
+            ## convert any unioned points to MultiPoint
+            if isinstance(unioned,Point):
+                unioned = MultiPoint([unioned])
+            
             ret = np.ma.array([[None]],mask=False,dtype=object)
             ret[0,0] = unioned
             return(ret)
@@ -197,7 +203,10 @@ class Field(object):
             new_variable._value = fill
             new_variables.append(new_variable)
         ret.variables = VariableCollection(variables=new_variables)
-                            
+        
+        ## the geometry type of the point dimension is now MultiPoint
+        ret.spatial.geom.point._geom_type = 'MultiPoint'
+        
         ## we want to keep a copy of the raw data around for later calculations.
         ret._raw = copy(self)
                 

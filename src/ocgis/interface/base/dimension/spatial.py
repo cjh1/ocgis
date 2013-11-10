@@ -114,12 +114,12 @@ class SpatialDimension(base.AbstractUidDimension):
         for (row_idx,col_idx),geom in iter_array(ref_value,return_value=True):
             ref_value[row_idx,col_idx] = geom.intersection(polygon)
             
-        ## clipped geometries have no grid or point representations
-        ret.grid._value = None
-        ret._geom_to_grid = False
-        ret._geom = deepcopy(ret.geom)
-        ret._geom.grid = None
-        ret._geom._point = None
+#        ## clipped geometries have no grid or point representations
+#        ret.grid._value = None
+#        ret._geom_to_grid = False
+#        ret._geom = deepcopy(ret.geom)
+#        ret._geom.grid = None
+#        ret._geom._point = None
                 
         if return_indices:
             ret = (ret,slc)
@@ -170,7 +170,7 @@ class SpatialDimension(base.AbstractUidDimension):
                 ret.grid.value.mask[:,:,:] = grid_mask.copy()
         else:
             raise(NotImplementedError)
-                
+            
         if return_indices:
             ret = (ret,slc)
         
@@ -505,7 +505,7 @@ class SpatialGeometryPointDimension(base.AbstractUidValueDimension):
         
         ret._value = fill
         ret.uid.mask = fill.mask.copy()
-        
+                
         return(ret)
     
     def update_crs(self,to_sr,from_sr):
@@ -570,11 +570,12 @@ class SpatialGeometryPointDimension(base.AbstractUidValueDimension):
         ref_grid = self.grid.value.data
         
         fill = self._get_geometry_fill_()
+        r_data = fill.data
         for idx_row,idx_col in iter_array(ref_grid[0],use_mask=False):
             y = ref_grid[0,idx_row,idx_col]
             x = ref_grid[1,idx_row,idx_col]
             pt = Point(x,y)
-            fill[idx_row,idx_col] = pt
+            r_data[idx_row,idx_col] = pt
         return(fill)
     
     
@@ -609,8 +610,9 @@ class SpatialGeometryPolygonDimension(SpatialGeometryPointDimension):
         ref_row_bounds = self.grid.row.bounds
         ref_col_bounds = self.grid.col.bounds
         fill = self._get_geometry_fill_()
+        r_data = fill.data
         for idx_row,idx_col in itertools.product(range(ref_row_bounds.shape[0]),range(ref_col_bounds.shape[0])):
             row_min,row_max = ref_row_bounds[idx_row,:].min(),ref_row_bounds[idx_row,:].max()
             col_min,col_max = ref_col_bounds[idx_col,:].min(),ref_col_bounds[idx_col,:].max()
-            fill[idx_row,idx_col] = Polygon([(col_min,row_min),(col_min,row_max),(col_max,row_max),(col_max,row_min)])
+            r_data[idx_row,idx_col] = Polygon([(col_min,row_min),(col_min,row_max),(col_max,row_max),(col_max,row_min)])
         return(fill)

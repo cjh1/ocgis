@@ -111,8 +111,8 @@ class OcgOperations(object):
     def __str__(self):
         msg = ['{0}('.format(self.__class__.__name__)]
         for key, value in self.as_dict().iteritems():
-            if key == 'geom' and value is not None and len(value) > 1:
-                value = '{0} custom geometries...'.format(len(value))
+            if key == 'geom' and value is not None:
+                value = 'custom geometries'
             msg.append(' {0},'.format(self._get_object_(key)))
         msg.append('  )')
         msg = '\n'.join(msg)
@@ -245,3 +245,4 @@ class OcgOperations(object):
         if self.calc is not None:
             for c in self.calc:
                 c['ref'].validate(self)
+            
