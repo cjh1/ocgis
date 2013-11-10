@@ -210,8 +210,10 @@ class OcgOperations(object):
             assert(self.geom is None)
             
         if self.file_only:
-            assert(self.output_format == 'nc')
-            assert(self.calc is not None)
+            if self.output_format != 'nc':
+                _raise_('Only netCDF may be written with file_only as True.',obj=FileOnly)
+            if self.calc is None:
+                _raise_('File only outputs are only relevant for computations.',obj=FileOnly)
             
         if self.output_format == 'nc':
             if len(self.dataset) > 1 and self.calc is None:

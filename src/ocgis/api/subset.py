@@ -63,7 +63,7 @@ class SubsetOperation(object):
     def __iter__(self):
         ''':rtype: AbstractCollection'''
         
-        ocgis_lh('beginning iteration',logger=self._subset_log.name+'.__iter__',level=logging.DEBUG)
+        ocgis_lh('beginning iteration',logger='conv.__iter__',level=logging.DEBUG)
                 
         ## simple iterator for serial operations
         if self.serial:
@@ -250,13 +250,16 @@ class SubsetOperation(object):
             if self.ops.output_crs is not None:
                 ## if the geometry is not None, it may need to be projected to match
                 ## the output crs.
-                if crs != self.ops.output_crs:
+                if geom is not None and crs != self.ops.output_crs:
                     geom = project_shapely_geometry(geom,crs.sr,self.ops.output_crs.sr)
                     
                 sfield.spatial.update_crs(self.ops.output_crs)
             
-            ## update the spatial abstraction to match the operations value
-            sfield.spatial.abstraction = self.ops.abstraction
+            ## update the spatial abstraction to match the operations value. sfield
+            ## will be none if the operation returns empty and it is allowed to have
+            ## empty returns.
+            if sfield is not None:
+                sfield.spatial.abstraction = self.ops.abstraction
             
             coll.add_field(ugid,geom,alias,sfield,properties=gd.get('properties'))
             
@@ -270,7 +273,7 @@ class SubsetOperation(object):
 #        :rtype: AbstractCollection
 #        '''
         
-        ocgis_lh('{0} request dataset(s) to process'.format(len(self.ops.dataset)),self._subset_log.name+'._iter_collections_')
+        ocgis_lh('{0} request dataset(s) to process'.format(len(self.ops.dataset)),'conv._iter_collections_')
         
         if self.cengine is None:
             itr_rd = ([rd] for rd in self.ops.dataset)

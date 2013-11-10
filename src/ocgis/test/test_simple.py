@@ -28,6 +28,10 @@ from shapely import wkt
 from ocgis.interface.base.crs import CoordinateReferenceSystem
 
 
+class ToTest(Exception):
+    pass
+
+
 class TestSimpleBase(TestBase):
     __metaclass__ = ABCMeta
     
@@ -453,19 +457,19 @@ class TestSimple(TestSimpleBase):
             ds.close()
             
     def test_nc_projection(self):
-        raise(NotImplementedError)
+        raise(ToTest)
     
     def test_shp_projection(self):
         output_crs = CoordinateReferenceSystem(epsg=2163)
         ret = self.get_ret(kwds=dict(output_crs=output_crs,output_format='shp'))
         with fiona.open(ret) as f:
-            self.assertDictEqual(f.meta['crs'],output_crs.value)
+            self.assertEqual(CoordinateReferenceSystem(crs=f.meta['crs']),output_crs)
     
     def test_csv_plus_projection(self):
-        raise(NotImplementedError('csv plus ugid and gid files are projected correctly'))
+        raise(ToTest('csv plus ugid and gid files are projected correctly'))
     
     def test_spatial_on_unbounded_data(self):
-        raise(NotImplementedError)
+        raise(ToTest)
     
     def test_shp_csv_plus_projection_with_geometries(self):
         
@@ -542,16 +546,12 @@ class TestSimple(TestSimpleBase):
                 
         for ii,tup in enumerate(itertools.product(aggregate,spatial_operation,epsg,output_format,abstraction)):
             a,s,e,o,ab = tup
-            print(tup)
+#            print(tup)
             output_crs = CoordinateReferenceSystem(epsg=e) if e is not None else None
             kwds = dict(aggregate=a,spatial_operation=s,output_format=o,output_crs=output_crs,
                         geom='ab',abstraction=ab,dataset=self.get_dataset(),prefix=str(ii))
             ops = OcgOperations(**kwds)
             ret = ops.execute()
-            
-#            if ab == 'point' and a:
-#                print ret
-#                import ipdb;ipdb.set_trace()
             
             if o == 'shp':
                 ugid_path = os.path.join(self._test_dir,ops.prefix,ops.prefix+'_ugid.shp')
@@ -573,19 +573,19 @@ class TestSimple(TestSimpleBase):
                     self.assertEqual(f.meta['schema']['geometry'],second)
                     
     def test_points_used_for_spatial_operations_with_point_abstraction(self):
-        raise(NotImplementedError)
+        raise(ToTest)
             
     def test_empty_dataset_for_operations(self):
-        raise(NotImplementedError('dataset when none should raise an exception'))
+        raise(ToTest('dataset when none should raise an exception'))
     
     def test_differing_projections_geometry_dataset(self):
-        raise(NotImplementedError)
+        raise(ToTest)
     
     def test_differing_projections_input_data(self):
-        raise(NotImplementedError)
+        raise(ToTest)
     
     def test_differing_projections_combinations(self):
-        raise(NotImplementedError)
+        raise(ToTest)
                                                                 
     def test_shp_conversion(self):
         ocgis.env.OVERWRITE = True
