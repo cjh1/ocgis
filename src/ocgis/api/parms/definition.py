@@ -16,11 +16,15 @@ from ocgis.interface.base.crs import CoordinateReferenceSystem, CFWGS84
 
 class Abstraction(base.StringOptionParameter):
     name = 'abstraction'
-    default = 'polygon'
+    default = None
     valid = ('point','polygon')
+    nullable = True
     
     def _get_meta_(self):
-        msg = 'Spatial dimension abstracted to {0}.'.format(self.value)
+        if self.value is None:
+            msg = 'Highest order geometry available used for spatial output.'
+        else:
+            msg = 'Spatial dimension abstracted to {0}.'.format(self.value)
         return(msg)
 
 

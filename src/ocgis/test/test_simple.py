@@ -16,7 +16,8 @@ from ocgis.test.base import TestBase
 from unittest.case import SkipTest
 from shapely.geometry.point import Point
 import ocgis
-from ocgis.exc import ExtentError, DefinitionValidationError
+from ocgis.exc import ExtentError, DefinitionValidationError,\
+    ImproperPolygonBoundsError
 from shapely.geometry.polygon import Polygon
 import csv
 import fiona
@@ -26,6 +27,7 @@ from ocgis.util.shp_cabinet import ShpCabinet
 from shapely.geometry.geo import mapping
 from shapely import wkt
 from ocgis.interface.base.crs import CoordinateReferenceSystem
+from ocgis.api.request.base import RequestDataset
 
 
 class ToTest(Exception):
@@ -559,7 +561,13 @@ class TestSimple(TestSimpleBase):
             kwds = dict(aggregate=a,spatial_operation=s,output_format=o,output_crs=output_crs,
                         geom='ab',abstraction=ab,dataset=d,prefix=str(ii))
             ops = OcgOperations(**kwds)
-            ret = ops.execute()
+            try:
+                ret = ops.execute()
+            except ImproperPolygonBoundsError:
+                if ab == 'polygon' and os.path.split(d['uri'])[1] == 'test_simple_spatial_no_bounds_01.nc':
+                    continue
+                else:
+                    raise
             
             if o == 'shp':
                 ugid_path = os.path.join(self._test_dir,ops.prefix,ops.prefix+'_ugid.shp')
@@ -576,8 +584,15 @@ class TestSimple(TestSimpleBase):
                 with fiona.open(ret,'r') as f:
                     if a and ab == 'point':
                         second = 'MultiPoint'
+                    elif ab is None:
+                        field = RequestDataset(uri=d['uri'],variable='foo').get()
+                        second = field.spatial.geom.get_highest_order_abstraction()._geom_type
                     else:
                         second = ab.title()
+                        
+                    if second == 'Polygon':
+                        second = 'MultiPolygon'
+                        
                     self.assertEqual(f.meta['schema']['geometry'],second)
                     
     def test_points_used_for_spatial_operations_with_point_abstraction(self):

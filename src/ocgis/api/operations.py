@@ -41,7 +41,7 @@ class OcgOperations(object):
     :type calc_grouping: list of str
     :param calc_raw: If `True`, perform calculations on the "raw" data regardless of `aggregation` flag.
     :type calc_raw: bool
-    :param abstraction: The geometric abstraction to use for the dataset geometries.
+    :param abstraction: The geometric abstraction to use for the dataset geometries. If `None` (the default), use the highest order geometry available.
     :type abstraction: str
     :param snippet: If `True`, return a data "snippet" composed of the first time point/group, first level (if applicable), and the entire spatial domain.
     :type snippet: bool

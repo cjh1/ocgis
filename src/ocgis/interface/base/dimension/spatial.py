@@ -56,9 +56,10 @@ class SpatialDimension(base.AbstractUidDimension):
     @property
     def abstraction_geometry(self):
         if self.abstraction is None:
-            ocgis_lh(exc=ValueError('The abstraction attribute value is "None".'))
+            ret = self.geom.get_highest_order_abstraction()
         else:
-            return(getattr(self.geom,self.abstraction))
+            ret = getattr(self.geom,self.abstraction)
+        return(ret)
     
     @property
     def geom(self):
@@ -178,7 +179,10 @@ class SpatialDimension(base.AbstractUidDimension):
     
     def get_geom_iter(self,target=None,as_multipolygon=True):
         target = target or self.abstraction
-        value = getattr(self.geom,target).value
+        if target is None:
+            value = self.geom.get_highest_order_abstraction().value
+        else:
+            value = getattr(self.geom,target).value
         
         ## no need to attempt and convert to MultiPolygon if we are working with
         ## point data.

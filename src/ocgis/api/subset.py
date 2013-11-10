@@ -1,6 +1,7 @@
 from ocgis.calc.engine import OcgCalculationEngine
 from ocgis import env, constants
-from ocgis.exc import EmptyData, ExtentError, MaskedDataError, EmptySubsetError
+from ocgis.exc import EmptyData, ExtentError, MaskedDataError, EmptySubsetError,\
+    DefinitionValidationError, ImproperPolygonBoundsError
 from ocgis.util.spatial.wrap import Wrapper
 from ocgis.util.logging_ocgis import ocgis_lh
 import logging
@@ -9,6 +10,7 @@ from ocgis.interface.base.crs import CFWGS84
 from shapely.geometry.point import Point
 from ocgis.calc.base import AbstractMultivariateFunction
 from ocgis.util.helpers import project_shapely_geometry
+from ocgis.api.parms.definition import Abstraction
 
 
 class SubsetOperation(object):
@@ -177,7 +179,17 @@ class SubsetOperation(object):
                     ugid = gd['properties']['ugid']
                     
             ocgis_lh('processing',self._subset_log,level=logging.DEBUG,alias=alias,ugid=ugid)
-                        
+            
+            ## if there is a spatial abstraction, ensure it may be loaded.
+            if self.ops.abstraction is not None:
+                try:
+                    getattr(field.spatial.geom,self.ops.abstraction)
+                except ImproperPolygonBoundsError:
+                    exc = ImproperPolygonBoundsError('A "polygon" spatial abstraction is not available without the presence of bounds.')
+                    ocgis_lh(exc=exc,logger='subset')
+                except Exception as e:
+                    ocgis_lh(exc=e,logger='subset')
+                    
             ## if there is a snippet, return the first realization, time, and level
             if self.ops.snippet:
                 sfield = field[0,0,0,:,:]
