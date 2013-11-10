@@ -163,7 +163,7 @@ class OcgConverter(object):
                         csv_file.close()
                     except UnboundLocalError:
                         pass
-            
+        
         ## added OCGIS metadata output if requested.
         if self.add_meta:
             ocgis_lh('adding OCGIS metadata file','conv',logging.DEBUG)

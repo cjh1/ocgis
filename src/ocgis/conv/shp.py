@@ -58,8 +58,15 @@ class ShpConverter(OcgConverter):
         headers = [h.upper() for h in coll.headers]
         arch_row = coll.get_iter().next()
             
-        fiona_properties = OrderedDict([[k,_get_field_type_(k,type(v))] for k,v in zip(headers,arch_row[1])])        
-        fiona_schema = {'geometry':archetype_field.spatial.abstraction_geometry._geom_type,
+        fiona_properties = OrderedDict([[k,_get_field_type_(k,type(v))] for k,v in zip(headers,arch_row[1])])    
+        
+        ## polygon geometry types are always converted to multipolygons to avoid
+        ## later collections having multipolygon geometries.
+        geometry_type = archetype_field.spatial.abstraction_geometry._geom_type
+        if geometry_type == 'Polygon':
+            geometry_type = 'MultiPolygon'
+        
+        fiona_schema = {'geometry':geometry_type,
                         'properties':fiona_properties}
         fiona_object = fiona.open(self.path,'w',driver='ESRI Shapefile',crs=fiona_crs,schema=fiona_schema)
         
