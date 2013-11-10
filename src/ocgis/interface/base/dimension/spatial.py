@@ -110,8 +110,12 @@ class SpatialDimension(base.AbstractUidDimension):
         assert(type(polygon) in (Polygon,MultiPolygon))
         
         ret,slc = self.get_intersects(polygon,return_indices=True)
-
-        ref_value = ret.geom.polygon.value
+        
+        ## clipping with points is okay...
+        try:
+            ref_value = ret.geom.polygon.value
+        except ImproperPolygonBoundsError:
+            ref_value = ret.geom.point.value
         for (row_idx,col_idx),geom in iter_array(ref_value,return_value=True):
             ref_value[row_idx,col_idx] = geom.intersection(polygon)
             
