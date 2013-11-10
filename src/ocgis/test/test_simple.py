@@ -28,6 +28,7 @@ from shapely.geometry.geo import mapping
 from shapely import wkt
 from ocgis.interface.base.crs import CoordinateReferenceSystem
 from ocgis.api.request.base import RequestDataset
+from copy import deepcopy
 
 
 class ToTest(Exception):
@@ -515,23 +516,26 @@ class TestSimple(TestSimpleBase):
         
 #        self.get_ret(kwds={'output_format':'shp','prefix':'as_polygon'})
 #        self.get_ret(kwds={'output_format':'shp','prefix':'as_point','abstraction':'point'})
-        
-        a = {'NAME':'a','wkt':'POLYGON((-105.020430 40.073118,-105.810753 39.327957,-105.660215 38.831183,-104.907527 38.763441,-104.004301 38.816129,-103.643011 39.802151,-103.643011 39.802151,-103.643011 39.802151,-103.643011 39.802151,-103.959140 40.118280,-103.959140 40.118280,-103.959140 40.118280,-103.959140 40.118280,-104.327957 40.201075,-104.327957 40.201075,-105.020430 40.073118))'}
-        b = {'NAME':'b','wkt':'POLYGON((-102.212903 39.004301,-102.905376 38.906452,-103.311828 37.694624,-103.326882 37.295699,-103.898925 37.220430,-103.846237 36.746237,-102.619355 37.107527,-102.634409 37.724731,-101.874194 37.882796,-102.212903 39.004301))'}
-        c = {'NAME':'c','wkt':'POLYGON((-105.336559 37.175269,-104.945161 37.303226,-104.726882 37.175269,-104.696774 36.844086,-105.043011 36.693548,-105.283871 36.640860,-105.336559 37.175269))'}
-        d = {'NAME':'d','wkt':'POLYGON((-102.318280 39.741935,-103.650538 39.779570,-103.620430 39.448387,-103.349462 39.433333,-103.078495 39.606452,-102.325806 39.613978,-102.325806 39.613978,-102.333333 39.741935,-102.318280 39.741935))'}
-        
-        ## TODO: add geometry that creates a multipolygon when clipped
-        ## TODO: add geometry that does not cover a point centroid
-        
-        path = os.path.join(self._test_dir,'ab.shp')
-        with FionaMaker(path) as fm:
-            fm.write([
-                      a,
-                      b,
-                      c,
-                      d,
-                      ])
+        features = [
+         {'NAME':'a','wkt':'POLYGON((-105.020430 40.073118,-105.810753 39.327957,-105.660215 38.831183,-104.907527 38.763441,-104.004301 38.816129,-103.643011 39.802151,-103.643011 39.802151,-103.643011 39.802151,-103.643011 39.802151,-103.959140 40.118280,-103.959140 40.118280,-103.959140 40.118280,-103.959140 40.118280,-104.327957 40.201075,-104.327957 40.201075,-105.020430 40.073118))'},
+         {'NAME':'b','wkt':'POLYGON((-102.212903 39.004301,-102.905376 38.906452,-103.311828 37.694624,-103.326882 37.295699,-103.898925 37.220430,-103.846237 36.746237,-102.619355 37.107527,-102.634409 37.724731,-101.874194 37.882796,-102.212903 39.004301))'},
+         {'NAME':'c','wkt':'POLYGON((-105.336559 37.175269,-104.945161 37.303226,-104.726882 37.175269,-104.696774 36.844086,-105.043011 36.693548,-105.283871 36.640860,-105.336559 37.175269))'},
+         {'NAME':'d','wkt':'POLYGON((-102.318280 39.741935,-103.650538 39.779570,-103.620430 39.448387,-103.349462 39.433333,-103.078495 39.606452,-102.325806 39.613978,-102.325806 39.613978,-102.333333 39.741935,-102.318280 39.741935))'},
+                   ]
+        for filename in ['polygon','point']:
+            if filename == 'point':
+                geometry = 'Point'
+                to_write = deepcopy(features)
+                for feature in to_write:
+                    geom = wkt.loads(feature['wkt'])
+                    feature['wkt'] = geom.centroid.wkt
+            else:
+                to_write = features
+                geometry = 'Polygon'
+            
+            path = os.path.join(self._test_dir,'ab_{0}.shp'.format(filename))
+            with FionaMaker(path,geometry=geometry) as fm:
+                fm.write(to_write)
         
         no_bounds_nc = SimpleNcNoBounds()
         no_bounds_nc.write()
@@ -560,10 +564,11 @@ class TestSimple(TestSimpleBase):
                    self.get_dataset(),
                    {'uri':no_bounds_uri,'variable':'foo'}
                    ]
+        geom = ['ab_polygon','ab_point']
         
-        args = (aggregate,spatial_operation,epsg,output_format,abstraction,dataset)
+        args = (aggregate,spatial_operation,epsg,output_format,abstraction,geom,dataset)
         for ii,tup in enumerate(itertools.product(*args)):
-            a,s,e,o,ab,d = tup
+            a,s,e,o,ab,g,d = tup
             print(tup[0:-1],tup[-1]['uri'])
             
             if os.path.split(d['uri'])[1] == 'test_simple_spatial_no_bounds_01.nc':
@@ -573,7 +578,7 @@ class TestSimple(TestSimpleBase):
             
             output_crs = CoordinateReferenceSystem(epsg=e) if e is not None else None
             kwds = dict(aggregate=a,spatial_operation=s,output_format=o,output_crs=output_crs,
-                        geom='ab',abstraction=ab,dataset=d,prefix=str(ii))
+                        geom=g,abstraction=ab,dataset=d,prefix=str(ii))
             ops = OcgOperations(**kwds)
             try:
                 ret = ops.execute()
