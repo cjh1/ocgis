@@ -157,5 +157,4 @@ class NcConverter(OcgConverter):
         ## add projection variable if applicable ###############################
         
         if not isinstance(arch.spatial.crs,CFWGS84):
-            raise(NotImplementedError)
-            arch.spatial.projection.write_to_rootgrp(ds,meta)
+            arch.spatial.crs.write_to_rootgrp(ds,meta)

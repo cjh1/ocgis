@@ -197,13 +197,15 @@ class SubsetOperation(object):
             elif self.ops.slice is not None:
                 sfield = field.__getitem__(self.ops.slice)
             else:
-                ## see if the selection
+                ## see if the selection crs matches the field's crs
                 if crs is not None and crs != field.spatial.crs:
-                    raise(NotImplementedError('project single geometry'))
+                    geom = project_shapely_geometry(geom,crs.sr,field.spatial.crs.sr)
+                    crs = field.spatial.crs
                 ## unwrap the data if it is geographic and 360
-                if geom is not None and CFWGS84.get_is_360(field.spatial):
-                    ocgis_lh('unwrapping selection geometry',self._subset_log,alias=alias,ugid=ugid)
-                    geom = Wrapper().unwrap(geom)
+                if geom is not None and crs == CFWGS84():
+                    if CFWGS84.get_is_360(field.spatial):
+                        ocgis_lh('unwrapping selection geometry',self._subset_log,alias=alias,ugid=ugid)
+                        geom = Wrapper().unwrap(geom)
                 ## perform the spatial operation
                 if geom is not None:
                     try:

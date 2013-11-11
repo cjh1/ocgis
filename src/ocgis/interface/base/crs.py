@@ -220,7 +220,7 @@ class CFCoordinateReferenceSystem(CoordinateReferenceSystem):
     
     @classmethod
     def load_from_metadata(cls,var,meta):
-        
+
         def _get_projection_coordinate_(target,meta):
             key = 'projection_{0}_coordinate'.format(target)
             for k,v in meta['variables'].iteritems():
@@ -245,14 +245,23 @@ class CFCoordinateReferenceSystem(CoordinateReferenceSystem):
             raise(ProjectionDoesNotMatch)
         pc_x,pc_y = [_get_projection_coordinate_(target,meta) for target in ['x','y']]
         
-        kwds = r_grid_mapping['attrs']
+        ## this variable name is used by the netCDF converter
+        meta['grid_mapping_variable_name'] = r_grid_mapping['name']
+        
+        kwds = r_grid_mapping['attrs'].copy()
         kwds.pop('grid_mapping_name',None)
         kwds['projection_x_coordinate'] = pc_x
         kwds['projection_y_coordinate'] = pc_y
         
         cls._load_from_metadata_finalize_(kwds,var,meta)
-
+        
         return(cls(**kwds))
+    
+    def write_to_rootgrp(self,rootgrp,meta):
+        name = meta['grid_mapping_variable_name']
+        crs = rootgrp.createVariable(name,meta['variables'][name]['dtype'])
+        attrs = meta['variables'][name]['attrs']
+        crs.setncatts(attrs)
     
     @classmethod
     def _load_from_metadata_finalize_(cls,kwds,var,meta):

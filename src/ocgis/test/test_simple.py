@@ -6,7 +6,7 @@ from ocgis.api.interpreter import OcgInterpreter
 import itertools
 import numpy as np
 import datetime
-from ocgis.util.helpers import make_poly
+from ocgis.util.helpers import make_poly, FionaMaker, project_shapely_geometry
 from ocgis import exc, env
 import os.path
 from ocgis.util.inspect import Inspect
@@ -26,7 +26,7 @@ from ocgis.interface.base import crs
 from ocgis.util.shp_cabinet import ShpCabinet
 from shapely.geometry.geo import mapping
 from shapely import wkt
-from ocgis.interface.base.crs import CoordinateReferenceSystem
+from ocgis.interface.base.crs import CoordinateReferenceSystem, WGS84, CFWGS84
 from ocgis.api.request.base import RequestDataset
 from copy import deepcopy
 from contextlib import contextmanager
@@ -75,9 +75,17 @@ class TestSimpleBase(TestBase):
             
             for varname,var in src.variables.iteritems():
                 dvar = dest.variables[varname]
-                self.assertNumpyAll(var[:],dvar[:])
+                try:
+                    self.assertNumpyAll(var[:],dvar[:])
+                except AssertionError:
+                    cmp = var[:] == dvar[:]
+                    if cmp.shape == (1,) and cmp.data[0] == True:
+                        pass
+                    else:
+                        raise
                 self.assertEqual(var[:].dtype,dvar[:].dtype)
-                self.assertDictEqual(var.__dict__,dvar.__dict__)
+                for k,v in var.__dict__.iteritems():
+                    self.assertNumpyAll(v,getattr(dvar,k))
                 self.assertEqual(var.dimensions,dvar.dimensions)
             self.assertEqual(set(src.variables.keys()),set(dest.variables.keys()))
             
@@ -486,44 +494,6 @@ class TestSimple(TestSimpleBase):
     
     def test_shp_csv_plus_projection_with_geometries(self):
         
-        class FionaMaker(object):
-            
-            def __init__(self,path,epsg=4326,driver='ESRI Shapefile',geometry='Polygon'):
-                assert(not os.path.exists(path))
-                self.path = path
-                self.crs = fiona.crs.from_epsg(epsg)
-                self.properties = {'UGID':'int','NAME':'str'}
-                self.geometry = geometry
-                self.driver = driver
-                self.schema = {'geometry':self.geometry,
-                               'properties':self.properties}
-                                
-            def __enter__(self):
-                self._ugid = 1
-                self._collection = fiona.open(path,'w',driver=self.driver,schema=self.schema,crs=self.crs)
-                return(self)
-            
-            def __exit__(self,*args,**kwds):
-                self._collection.close()
-                
-            def make_record(self,dct):
-                properties = dct.copy()
-                geom = wkt.loads(properties.pop('wkt'))
-                properties.update({'UGID':self._ugid})
-                self._ugid += 1
-                record = {'geometry':mapping(geom),
-                          'properties':properties}
-                return(record)
-            
-            def write(self,sequence_or_dct):
-                if isinstance(sequence_or_dct,dict):
-                    itr = [sequence_or_dct]
-                else:
-                    itr = sequence_or_dct
-                for element in itr:
-                    record = self.make_record(element)
-                    self._collection.write(record)
-        
         self.get_ret(kwds={'output_format':'shp','prefix':'as_polygon'})
         self.get_ret(kwds={'output_format':'shp','prefix':'as_point','abstraction':'point'})
         
@@ -592,7 +562,7 @@ class TestSimple(TestSimpleBase):
         args = (aggregate,spatial_operation,epsg,output_format,abstraction,geom,calc,dataset)
         for ii,tup in enumerate(itertools.product(*args)):
             a,s,e,o,ab,g,c,d = tup
-            print(tup[0:-1],tup[-1]['uri'])
+#            print(tup[0:-1],tup[-1]['uri'])
             
             if os.path.split(d['uri'])[1] == 'test_simple_spatial_no_bounds_01.nc':
                 unbounded = True
@@ -914,13 +884,59 @@ class TestSimpleProjected(TestSimpleBase):
                            [3.0,3.0,4.0,4.0],
                            [3.0,3.0,4.0,4.0]])
     nc_factory = SimpleNcProjection
-    fn = 'test_simple_spatial_projected_01.nc'
+    fn = 'test_simple_spatial_projected_01.nc'        
     
     def test_nc_projection(self):
+        dataset = self.get_dataset()
         ret = self.get_ret(kwds={'output_format':'nc'})
-        with nc_scope(ret) as ds:
-            self.assertTrue('crs' in ds.variables)
-
+        self.assertNcEqual(dataset['uri'],ret)
+        
+    def test_nc_projection_to_shp(self):
+        ret = self.get_ret(kwds={'output_format':'shp'})
+        with fiona.open(ret) as f:
+            self.assertEqual(f.meta['crs']['proj'],'lcc')
+            
+    def test_agg_selection(self):
+        raise(ToTest)
+            
+    def test_with_geometry(self):
+        self.get_ret(kwds={'output_format':'shp','prefix':'as_polygon'})
+        
+        features = [
+         {'NAME':'a','wkt':'POLYGON((-425985.928175 -542933.565515,-425982.789465 -542933.633257,-425982.872261 -542933.881644,-425985.837852 -542933.934332,-425985.837852 -542933.934332,-425985.928175 -542933.565515))'},
+         {'NAME':'b','wkt':'POLYGON((-425982.548605 -542936.839709,-425982.315272 -542936.854762,-425982.322799 -542936.937558,-425982.526024 -542936.937558,-425982.548605 -542936.839709))'},
+                   ]
+        
+        from_crs = RequestDataset(**self.get_dataset()).get().spatial.crs
+        to_sr = CoordinateReferenceSystem(epsg=4326).sr
+        for feature in features:
+            geom = wkt.loads(feature['wkt'])
+            geom = project_shapely_geometry(geom,from_crs.sr,to_sr)
+            feature['wkt'] = geom.wkt
+            
+        path = os.path.join(self._test_dir,'ab_{0}.shp'.format('polygon'))
+        with FionaMaker(path,geometry='Polygon') as fm:
+            fm.write(features)
+        ocgis.env.DIR_SHPCABINET = self._test_dir
+        
+        ops = OcgOperations(dataset=self.get_dataset(),output_format='shp',
+                            geom='ab_polygon')
+        ret = ops.execute()
+        ugid_shp = os.path.join(os.path.split(ret)[0],ops.prefix+'_ugid.shp')
+        
+        with fiona.open(ugid_shp) as f:
+            self.assertEqual(CoordinateReferenceSystem(crs=f.meta['crs']),from_crs)
+            
+        ops = OcgOperations(dataset=self.get_dataset(),output_format='shp',
+                            geom='ab_polygon',output_crs=CFWGS84(),prefix='xx')
+        ret = ops.execute()
+        ugid_shp = os.path.join(os.path.split(ret)[0],ops.prefix+'_ugid.shp')
+        
+        with fiona.open(ugid_shp) as f:
+            self.assertEqual(CoordinateReferenceSystem(crs=f.meta['crs']),WGS84())
+        with fiona.open(ret) as f:
+            self.assertEqual(CoordinateReferenceSystem(crs=f.meta['crs']),WGS84())
+            
 
 if __name__ == "__main__":
 #    import sys;sys.argv = ['', 'TestSimple.test_time_level_subset']

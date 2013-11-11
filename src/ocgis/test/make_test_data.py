@@ -3,9 +3,10 @@ import datetime
 import numpy as np
 import os.path
 import netCDF4 as nc
-from ocgis.util.helpers import iter_array
+from ocgis.util.helpers import iter_array, project_shapely_geometry
 from ocgis import env
 from abc import ABCMeta, abstractproperty, abstractmethod
+from ocgis.interface.base.crs import CoordinateReferenceSystem
 
 
 class NcFactory(object):
@@ -284,6 +285,9 @@ class SimpleNcProjection(NcFactory):
         SEED = 1 #: random number seeding for missing data
         RES = 1 #: resolution of the grid
         ORIGIN = Point(-105,40) #: center coordinate of upper left cell
+        from_sr = CoordinateReferenceSystem(epsg=4326).sr
+        to_sr = CoordinateReferenceSystem(epsg=2163).sr
+        ORIGIN = project_shapely_geometry(ORIGIN,from_sr,to_sr)
         DIM = [4,4] #: number of cells [dimx,dimy]
         VAR = 'foo' #: name of the data variable
         ## any relevant variables for the time construction
