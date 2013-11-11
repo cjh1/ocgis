@@ -85,7 +85,7 @@ class CsvPlusConverter(CsvConverter):
                         rstore[did][ugid] = []
                     if gid not in rstore[did][ugid]:
                         rstore[did][ugid].append(gid)
-                    feature = {'properties':{'GID':gid,'UGID':ugid,'DID':did},
+                    feature = {'properties':{'GID':int(gid),'UGID':int(ugid),'DID':int(did)},
                                'geometry':mapping(geom)}
                     file_fiona.write(feature)
             

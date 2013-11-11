@@ -1,6 +1,6 @@
 import unittest
 from ocgis.test.make_test_data import SimpleNc, SimpleMaskNc, SimpleNc360,\
-    SimpleNcNoLevel, SimpleNcNoBounds
+    SimpleNcNoLevel, SimpleNcNoBounds, SimpleNcProjection
 from ocgis.api.operations import OcgOperations
 from ocgis.api.interpreter import OcgInterpreter
 import itertools
@@ -29,6 +29,19 @@ from shapely import wkt
 from ocgis.interface.base.crs import CoordinateReferenceSystem
 from ocgis.api.request.base import RequestDataset
 from copy import deepcopy
+from contextlib import contextmanager
+
+
+@contextmanager
+def nc_scope(path,mode='r'):
+    """Provide a transactional scope around a series of operations."""
+    ds = nc.Dataset(path,mode=mode)
+    try:
+        yield(ds)
+    except:
+        raise
+    finally:
+        ds.close()
 
 
 class ToTest(Exception):
@@ -458,9 +471,6 @@ class TestSimple(TestSimpleBase):
             self.assertEqual(np.unique(ref)[0],1.)
         finally:
             ds.close()
-            
-    def test_nc_projection(self):
-        raise(ToTest)
     
     def test_shp_projection(self):
         output_crs = CoordinateReferenceSystem(epsg=2163)
@@ -555,7 +565,11 @@ class TestSimple(TestSimpleBase):
                              'clip'
                              ]
         epsg = [2163,4326,None]
-        output_format = ['shp','csv+']
+        output_format = [
+#                         'nc',
+                         'shp',
+                         'csv+'
+                         ]
         abstraction = [
                        'polygon',
                        'point',
@@ -569,11 +583,16 @@ class TestSimple(TestSimpleBase):
                 'ab_polygon',
                 'ab_point'
                 ]
+        calc = [
+                None,
+                [{'func':'mean','name':'my_mean'}]
+                ]
+        calc_grouping = ['month']
         
-        args = (aggregate,spatial_operation,epsg,output_format,abstraction,geom,dataset)
+        args = (aggregate,spatial_operation,epsg,output_format,abstraction,geom,calc,dataset)
         for ii,tup in enumerate(itertools.product(*args)):
-            a,s,e,o,ab,g,d = tup
-#            print(tup[0:-1],tup[-1]['uri'])
+            a,s,e,o,ab,g,c,d = tup
+            print(tup[0:-1],tup[-1]['uri'])
             
             if os.path.split(d['uri'])[1] == 'test_simple_spatial_no_bounds_01.nc':
                 unbounded = True
@@ -582,7 +601,8 @@ class TestSimple(TestSimpleBase):
             
             output_crs = CoordinateReferenceSystem(epsg=e) if e is not None else None
             kwds = dict(aggregate=a,spatial_operation=s,output_format=o,output_crs=output_crs,
-                        geom=g,abstraction=ab,dataset=d,prefix=str(ii))
+                        geom=g,abstraction=ab,dataset=d,prefix=str(ii),calc=c,
+                        calc_grouping=calc_grouping)
             ops = OcgOperations(**kwds)
             try:
                 ret = ops.execute()
@@ -886,6 +906,20 @@ class TestSimple360(TestSimpleBase):
             self.get_ret(kwds={'vector_wrap':False})
             ret = self.get_ret(kwds={'geom':geom,'vector_wrap':False,'abstraction':abstraction})
             self.assertEqual(len(ret[1][self.var].spatial.uid.compressed()),4)
+
+
+class TestSimpleProjected(TestSimpleBase):
+    base_value = np.array([[1.0,1.0,2.0,2.0],
+                           [1.0,1.0,2.0,2.0],
+                           [3.0,3.0,4.0,4.0],
+                           [3.0,3.0,4.0,4.0]])
+    nc_factory = SimpleNcProjection
+    fn = 'test_simple_spatial_projected_01.nc'
+    
+    def test_nc_projection(self):
+        ret = self.get_ret(kwds={'output_format':'nc'})
+        with nc_scope(ret) as ds:
+            self.assertTrue('crs' in ds.variables)
 
 
 if __name__ == "__main__":
