@@ -17,38 +17,35 @@ class OcgDialect(excel):
 
 class CsvConverter(OcgConverter):
     _ext = 'csv'
-
-    def _get_fileobject_(self,coll):
-        f = open(self.path,'w')
-        writer = csv.writer(f,dialect=OcgDialect)
-        return(f,writer)
                     
-    def _build_(self,f,coll):
+    def _build_(self,coll):
         headers = [h.upper() for h in coll.headers]
-        f[1].writerow(headers)
+        f = open(self.path,'w')
+        writer = csv.DictWriter(f,headers,dialect=OcgDialect)
+        writer.writeheader()
+        ret = {'file_object':f,'csv_writer':writer}
+        return(ret)
         
     def _write_coll_(self,f,coll):
-        f,writer = f
-        for geom,row in coll.get_iter():
+        writer = f['csv_writer']
+        
+        for geom,row in coll.get_iter_dict(use_upper_keys=True):
             writer.writerow(row)
-            
-    def _finalize_(self,f):
-        f[0].close()
 
+    def _finalize_(self,f):
+        for fobj in f.itervalues():
+            try:
+                fobj.close()
+            except:
+                pass
 
 class CsvPlusConverter(CsvConverter):
     _add_ugeom = True
 
-    def _build_(self,f,coll):
-        headers = [h.upper() for h in coll.headers]
-        f[1].writerow(headers)
+    def _build_(self,coll):
+        ret = CsvConverter._build_(self,coll)
+        
         self._ugid_gid_store = {}
-    
-    def _get_fileobject_(self,coll):
-        '''
-        :returns: (CSV file object,CSV writer object,Fiona shapefile object)
-        '''
-        ret = CsvConverter._get_fileobject_(self,coll)
         
         if not self.ops.aggregate:
             fiona_path = os.path.join(self._get_or_create_shp_folder_(),self.prefix+'_gid.shp')
@@ -63,16 +60,20 @@ class CsvPlusConverter(CsvConverter):
                      logging.WARN)
             fiona_object = None
         
-        return(list(ret)+[fiona_object])
+        ret.update({'fiona_object':fiona_object})
+        
+        return(ret)
     
     def _write_coll_(self,f,coll):
-        file_csv,file_writer,file_fiona = f
+        writer = f['csv_writer']
+        file_fiona = f['fiona_object']
         rstore = self._ugid_gid_store
         is_aggregated = self.ops.aggregate
-        for geom,row in coll.get_iter():
-            file_writer.writerow(row)
+        
+        for geom,row in coll.get_iter_dict(use_upper_keys=True):
+            writer.writerow(row)
             if not is_aggregated:
-                did,gid,ugid = row[0],row[5],row[2]
+                did,gid,ugid = row['DID'],row['GID'],row['UGID']
                 try:
                     if gid in rstore[did][ugid]:
                         continue
@@ -88,13 +89,6 @@ class CsvPlusConverter(CsvConverter):
                     feature = {'properties':{'GID':int(gid),'UGID':int(ugid),'DID':int(did)},
                                'geometry':mapping(geom)}
                     file_fiona.write(feature)
-            
-    def _finalize_(self,f):
-        for fobj in f:
-            try:
-                fobj.close()
-            except:
-                pass
     
 #    def _OLD_write_(self):
 #        gid_file = OrderedDict()

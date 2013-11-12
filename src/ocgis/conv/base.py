@@ -55,9 +55,7 @@ class OcgConverter(object):
         ocgis_lh('converter initialized',level=logging.DEBUG,logger=self._log)
         
     def _build_(self,*args,**kwds): raise(NotImplementedError)
-    
-    def _get_fileobject_(self,*args,**kwds): raise(NotImplementedError)
-    
+        
     def _get_return_(self):
         return(self.path)
     
@@ -82,9 +80,7 @@ class OcgConverter(object):
                 write_geom = False
             for coll in iter(self.colls):
                 if build:
-                    f = self._get_fileobject_(coll)
-                    ocgis_lh('got file object',logger=self._log,level=logging.DEBUG)
-                    self._build_(f,coll)
+                    f = self._build_(coll)
                     if write_geom:
                         ugid_shp_name = self.prefix + '_ugid.shp'
                         ugid_csv_name = self.prefix + '_ugid.csv'

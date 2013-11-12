@@ -31,14 +31,10 @@ class ShpConverter(OcgConverter):
                            np.int16:'int',
                            str:'str'}
     
-    def _build_(self,*args,**kwds):
-        pass
-    
     def _finalize_(self,f):
         f['fiona_object'].close()
     
-    def _get_fileobject_(self,coll):
-        
+    def _build_(self,coll):
         fiona_conversion = {}
         
         def _get_field_type_(key,the_type):

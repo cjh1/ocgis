@@ -537,6 +537,10 @@ class TestSimple(TestSimpleBase):
         msg = 'test that limiting the headers will actually do so'
         raise(ToTest(msg))
     
+    def test_writing_multivariate_calculations(self):
+        msg = 'in the combinatorial test, include a multivariate calculation'
+        raise(ToTest(msg))
+    
     def test_shp_csv_plus_nc_projection_with_geometries(self):
         
 #        self.get_ret(kwds={'output_format':'shp','prefix':'as_polygon'})
@@ -575,6 +579,8 @@ class TestSimple(TestSimpleBase):
 #        ocgis.env.DEBUG = True
 #        ocgis.env.VERBOSE = True
 
+################################################################################
+
         aggregate = [
                      False,
                      True
@@ -589,8 +595,8 @@ class TestSimple(TestSimpleBase):
                 None
                 ]
         output_format = [
-#                         'nc',
-#                         'shp',
+                         'nc',
+                         'shp',
                          'csv+'
                          ]
         abstraction = [
@@ -599,8 +605,8 @@ class TestSimple(TestSimpleBase):
                        None
                        ]
         dataset = [
-#                   self.get_dataset(),
-#                   {'uri':no_bounds_uri,'variable':'foo'},
+                   self.get_dataset(),
+                   {'uri':no_bounds_uri,'variable':'foo'},
                    {'uri':no_level_uri,'variable':'foo'}
                    ]
         geom = [
@@ -608,14 +614,15 @@ class TestSimple(TestSimpleBase):
                 'ab_point'
                 ]
         calc = [
-#                None,
+                None,
                 [{'func':'mean','name':'my_mean'}]
                 ]
         calc_grouping = ['month']
         
+################################################################################
+        
         args = (aggregate,spatial_operation,epsg,output_format,abstraction,geom,calc,dataset)
         for ii,tup in enumerate(itertools.product(*args)):
-            print ii
             a,s,e,o,ab,g,c,d = tup
             print(tup[0:-1],tup[-1]['uri'])
             

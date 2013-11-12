@@ -10,15 +10,12 @@ from ocgis.interface.nc.temporal import NcTemporalGroupDimension
 class NcConverter(OcgConverter):
     _ext = 'nc'
     
-    def _get_fileobject_(self,coll):
-        ds = nc.Dataset(self.path,'w',format=self._get_file_format_())
-        return(ds)
-    
     def _finalize_(self,ds):
         ds.close()
         
-    def _build_(self,*args,**kwds):
-        pass
+    def _build_(self,coll):
+        ds = nc.Dataset(self.path,'w',format=self._get_file_format_())
+        return(ds)
         
     def _get_file_format_(self):
         file_format = set()
