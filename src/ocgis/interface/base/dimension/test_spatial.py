@@ -89,7 +89,11 @@ class TestSpatialDimension(TestSpatialBase):
         
         self.assertEqual(ret.uid,np.array([[9]]))
         self.assertTrue(poly.almost_equals(ret.geom.polygon.value[0,0]))
-        self.assertEqual(ret.geom.point,None)
+        
+        self.assertNumpyAll(ret.geom.point.value.shape,ret.geom.polygon.shape)
+        ref_pt = ret.geom.point.value[0,0]
+        ref_poly = ret.geom.polygon.value[0,0]
+        self.assertTrue(ref_poly.intersects(ref_pt))
         
     def test_get_geom_iter(self):
         sdim = self.get_sdim(bounds=True)

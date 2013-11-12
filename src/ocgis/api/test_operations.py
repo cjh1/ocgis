@@ -168,8 +168,8 @@ class Test(TestBase):
         K = definition.Abstraction
         
         k = K()
-        self.assertEqual(k.value,'polygon')
-        self.assertEqual(str(k),'abstraction="polygon"')
+        self.assertEqual(k.value,None)
+        self.assertEqual(str(k),'abstraction="None"')
         
         k = K('point')
         self.assertEqual(k.value,'point')

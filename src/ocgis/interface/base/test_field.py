@@ -185,7 +185,7 @@ class TestField(AbstractTestField):
         rows = list(field.get_iter())
         self.assertEqual(len(rows),2*31*2*3*4)
         rows[100]['geom'] = rows[100]['geom'].bounds
-        self.assertDictEqual(rows[100],{'realization_bnds_lower': None, 'vid': 1, 'GEOM_uid': 5, 'realization_bnds_upper': None, 'year': 2000, 'level_bnds_upper': 100, 'realization_uid': 1, 'realization': 1, 'geom': (-100.5, 38.5, -99.5, 39.5), 'level_bnds_lower': 0, 'variable': 'tmax', 'time_bnds_upper': datetime.datetime(2000, 1, 6, 0, 0), 'time_bnds_lower': datetime.datetime(2000, 1, 5, 0, 0), 'day': 5, 'level': 50, 'did': None, 'value': 0.32664490177209615, 'alias': 'tmax', 'level_uid': 1, 'month': 1, 'time': datetime.datetime(2000, 1, 5, 12, 0), 'time_uid': 5})
+        self.assertDictEqual(rows[100],{'realization_bnds_lower': None, 'vid': 1, 'time_bnds_upper': datetime.datetime(2000, 1, 6, 0, 0), 'realization_bnds_upper': None, 'year': 2000, 'SPATIAL_uid': 5, 'level_bnds_upper': 100, 'realization_uid': 1, 'realization': 1, 'geom': (-100.5, 38.5, -99.5, 39.5), 'level_bnds_lower': 0, 'variable': 'tmax', 'month': 1, 'time_bnds_lower': datetime.datetime(2000, 1, 5, 0, 0), 'day': 5, 'level': 50, 'did': 1, 'value': 0.32664490177209615, 'alias': 'tmax', 'level_uid': 1, 'time': datetime.datetime(2000, 1, 5, 12, 0), 'time_uid': 5})
         self.assertEqual(set(field.variables['tmax'].value.flatten().tolist()),set([r['value'] for r in rows]))
         
     def test_get_intersects_domain_polygon(self):
@@ -209,9 +209,13 @@ class TestField(AbstractTestField):
         ret = field.get_clip(single)
         self.assertEqual(ret.shape,(2,31,2,1,1))
         self.assertEqual(ret.spatial.grid._value.sum(),-59.0)
-        self.assertEqual(ret.spatial.geom.point,None)
         self.assertTrue(ret.spatial.geom.polygon.value[0,0].almost_equals(single))
         self.assertEqual(ret.spatial.uid,np.array([[7]]))
+        
+        self.assertNumpyAll(ret.spatial.geom.point.value.shape,ret.spatial.geom.polygon.shape)
+        ref_pt = ret.spatial.geom.point.value[0,0]
+        ref_poly = ret.spatial.geom.polygon.value[0,0]
+        self.assertTrue(ref_poly.intersects(ref_pt))
         
     def test_get_clip_irregular(self):
         for wv in [True,False]:
