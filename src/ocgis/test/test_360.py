@@ -3,15 +3,14 @@ from datetime import datetime
 import numpy as np
 import netCDF4 as nc
 from ocgis.api.operations import OcgOperations
-from ocgis.util.shp_cabinet import ShpCabinet
 from shapely.geometry.polygon import Polygon
 from ocgis import env
 from ocgis.api.interpreter import OcgInterpreter
 from ocgis.util.inspect import Inspect
 import os
 from ocgis.test.base import TestBase
-from ocgis.interface.shp import ShpDataset
 import ocgis
+from ocgis.util.shp_cabinet import ShpCabinetIterator
 
 
 class NcSpatial(object):
@@ -89,7 +88,8 @@ class Test360(TestBase):
         
     @property
     def nebraska(self):
-        geom = ShpDataset('state_boundaries',select_ugid=[16])
+        sci = ShpCabinetIterator('state_boundaries',select_ugid=[16])
+        geom = list(sci)
         return(geom)
         
     def transform_to_360(self,polygon):
