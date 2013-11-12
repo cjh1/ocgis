@@ -151,7 +151,8 @@ class SpatialDimension(base.AbstractUidDimension):
     def get_intersects(self,polygon,return_indices=False):
         ret = copy(self)
         if type(polygon) in (Point,MultiPoint):
-            raise(NotImplementedError)
+            exc = ValueError('Only Polygons and MultiPolygons are acceptable geometry types for intersects operations.')
+            ocgis_lh(exc=exc,logger='dimension.spatial')
         elif type(polygon) in (Polygon,MultiPolygon):
             ## for a polygon subset, first the grid is subsetted by the bounds
             ## of the polygon object. the intersects operations is then performed

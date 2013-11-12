@@ -233,7 +233,7 @@ class OcgOperations(object):
                 _raise_(msg,OutputFormat)
             
             if self.output_crs is not None and not isinstance(self.output_crs,CFWGS84):
-                msg = 'CFWGS84 is the only acceptable output CRS at this time for netCDF output'
+                msg = 'CFWGS84 is the only acceptable overloaded output CRS at this time for netCDF output.'
                 _raise_(msg,OutputFormat)
                 
             if self.calc is not None:

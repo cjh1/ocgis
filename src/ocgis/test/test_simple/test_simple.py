@@ -529,7 +529,7 @@ class TestSimple(TestSimpleBase):
         with fiona.open(ret) as f:
             self.assertEqual(CoordinateReferenceSystem(crs=f.meta['crs']),output_crs)
     
-    def test_shp_csv_plus_projection_with_geometries(self):
+    def test_shp_csv_plus_nc_projection_with_geometries(self):
         
         self.get_ret(kwds={'output_format':'shp','prefix':'as_polygon'})
         self.get_ret(kwds={'output_format':'shp','prefix':'as_point','abstraction':'point'})
@@ -571,7 +571,11 @@ class TestSimple(TestSimpleBase):
                              'intersects',
                              'clip'
                              ]
-        epsg = [2163,4326,None]
+        epsg = [
+                2163,
+                4326,
+                None
+                ]
         output_format = [
                          'nc',
                          'shp',
@@ -598,21 +602,35 @@ class TestSimple(TestSimpleBase):
         
         args = (aggregate,spatial_operation,epsg,output_format,abstraction,geom,calc,dataset)
         for ii,tup in enumerate(itertools.product(*args)):
+            print ii
             a,s,e,o,ab,g,c,d = tup
-#            print(tup[0:-1],tup[-1]['uri'])
+            print(tup[0:-1],tup[-1]['uri'])
             
             if os.path.split(d['uri'])[1] == 'test_simple_spatial_no_bounds_01.nc':
                 unbounded = True
             else:
                 unbounded = False
             
-            output_crs = CoordinateReferenceSystem(epsg=e) if e is not None else None
+            if o == 'nc' and e == 4326:
+                output_crs = CFWGS84()
+            else:
+                output_crs = CoordinateReferenceSystem(epsg=e) if e is not None else None
+                
             kwds = dict(aggregate=a,spatial_operation=s,output_format=o,output_crs=output_crs,
                         geom=g,abstraction=ab,dataset=d,prefix=str(ii),calc=c,
                         calc_grouping=calc_grouping)
-            ops = OcgOperations(**kwds)
+            
             try:
+                ops = OcgOperations(**kwds)
                 ret = ops.execute()
+            except DefinitionValidationError:
+                if o == 'nc':
+                    if e not in [4326,None]:
+                        continue
+                    if s == 'clip':
+                        continue
+                else:
+                    raise
             except ImproperPolygonBoundsError:
                 if ab == 'polygon' and unbounded:
                     continue
@@ -628,12 +646,14 @@ class TestSimple(TestSimpleBase):
                 ugid_path = os.path.join(self._test_dir,ops.prefix,ops.prefix+'_ugid.shp')
             else:
                 ugid_path = os.path.join(self._test_dir,ops.prefix,'shp',ops.prefix+'_ugid.shp')
-            with fiona.open(ugid_path,'r') as f:
-                if e:
-                    second = output_crs
-                else:
-                    second = CoordinateReferenceSystem(epsg=4326)
-                self.assertEqual(CoordinateReferenceSystem(crs=f.meta['crs']),second)
+            
+            if o != 'nc':
+                with fiona.open(ugid_path,'r') as f:
+                    if e:
+                        second = output_crs
+                    else:
+                        second = CoordinateReferenceSystem(epsg=4326)
+                    self.assertEqual(CoordinateReferenceSystem(crs=f.meta['crs']),second)
             
             if o == 'shp':
                 with fiona.open(ret,'r') as f:

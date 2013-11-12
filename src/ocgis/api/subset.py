@@ -11,6 +11,7 @@ from shapely.geometry.point import Point
 from ocgis.calc.base import AbstractMultivariateFunction
 from ocgis.util.helpers import project_shapely_geometry
 from ocgis.api.parms.definition import Abstraction
+from shapely.geometry.multipoint import MultiPoint
 
 
 class SubsetOperation(object):
@@ -142,6 +143,7 @@ class SubsetOperation(object):
                     return
             else:
                 ocgis_lh(exc=ExtentError(message=str(e)),alias=rd.alias,logger=self._subset_log)
+                
         ## set iterator based on presence of slice. slice always overrides geometry.
         if self.ops.slice is not None:
             itr = [{}]
@@ -150,7 +152,7 @@ class SubsetOperation(object):
             ## also true for the case of the selection geometry being requested as
             ## aggregated.
             if (self.ops.output_format == 'nc' or self.ops.agg_selection is True) \
-             and self.ops.geom is not None and len(self.ops.geom) > 1:
+             and self.ops.geom is not None:
                 ocgis_lh('aggregating selection geometry',self._subset_log)
                 build = True
                 for element_geom in self.ops.geom:
@@ -165,6 +167,7 @@ class SubsetOperation(object):
                 self.ops.geom = itr
             else:
                 itr = [{}] if self.ops.geom is None else self.ops.geom
+                
         ## loop over the iterator
         for gd in itr:
             ## initialize the collection object to store the subsetted data. if
@@ -181,10 +184,9 @@ class SubsetOperation(object):
             
             crs = gd.get('crs')
             ## if the geometry is a point, we need to buffer it...
-            if isinstance(geom,Point):
+            if type(geom) in [Point,MultiPoint]:
                 ocgis_lh(logger=self._subset_log,msg='buffering point geometry',level=logging.DEBUG)
                 geom = geom.buffer(self.ops.search_radius_mult*field.spatial.grid.resolution)
-            
             try:
                 ugid = gd['properties']['UGID']
             except KeyError:
