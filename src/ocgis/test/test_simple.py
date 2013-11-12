@@ -13,7 +13,6 @@ from ocgis.util.inspect import Inspect
 from abc import ABCMeta, abstractproperty
 import netCDF4 as nc
 from ocgis.test.base import TestBase
-from unittest.case import SkipTest
 from shapely.geometry.point import Point
 import ocgis
 from ocgis.exc import ExtentError, DefinitionValidationError,\
@@ -23,7 +22,6 @@ import csv
 import fiona
 from collections import OrderedDict
 from ocgis.interface.base import crs
-from ocgis.util.shp_cabinet import ShpCabinet
 from shapely.geometry.geo import mapping
 from shapely import wkt
 from ocgis.interface.base.crs import CoordinateReferenceSystem, WGS84, CFWGS84
@@ -159,9 +157,6 @@ class TestSimple(TestSimpleBase):
     
                 
     def test_agg_selection(self):
-        ## TODO: always happens for netCDF output
-        ## TODO: check shapefile output
-        ## TODO: check numpy output
         features = [
          {'NAME':'a','wkt':'POLYGON((-105.020430 40.073118,-105.810753 39.327957,-105.660215 38.831183,-104.907527 38.763441,-104.004301 38.816129,-103.643011 39.802151,-103.643011 39.802151,-103.643011 39.802151,-103.643011 39.802151,-103.959140 40.118280,-103.959140 40.118280,-103.959140 40.118280,-103.959140 40.118280,-104.327957 40.201075,-104.327957 40.201075,-105.020430 40.073118))'},
          {'NAME':'b','wkt':'POLYGON((-102.212903 39.004301,-102.905376 38.906452,-103.311828 37.694624,-103.326882 37.295699,-103.898925 37.220430,-103.846237 36.746237,-102.619355 37.107527,-102.634409 37.724731,-101.874194 37.882796,-102.212903 39.004301))'},
@@ -523,12 +518,6 @@ class TestSimple(TestSimpleBase):
         with fiona.open(ret) as f:
             self.assertEqual(CoordinateReferenceSystem(crs=f.meta['crs']),output_crs)
     
-    def test_csv_plus_projection(self):
-        raise(ToTest('csv plus ugid and gid files are projected correctly'))
-    
-    def test_spatial_on_unbounded_data(self):
-        raise(ToTest)
-    
     def test_shp_csv_plus_projection_with_geometries(self):
         
         self.get_ret(kwds={'output_format':'shp','prefix':'as_polygon'})
@@ -653,19 +642,13 @@ class TestSimple(TestSimpleBase):
                     self.assertTrue(f.meta['schema']['geometry'] in second)
                                         
     def test_points_used_for_spatial_operations_with_point_abstraction(self):
+        ## when data is abstracted to point, only the point data should be
+        ## used and not the bounds information / polygons
         raise(ToTest)
             
     def test_empty_dataset_for_operations(self):
-        raise(ToTest('dataset when none should raise an exception'))
-    
-    def test_differing_projections_geometry_dataset(self):
-        raise(ToTest)
-    
-    def test_differing_projections_input_data(self):
-        raise(ToTest)
-    
-    def test_differing_projections_combinations(self):
-        raise(ToTest)
+        with self.assertRaises(DefinitionValidationError):
+            OcgOperations()
                                                                 
     def test_shp_conversion(self):
         ocgis.env.OVERWRITE = True

@@ -186,22 +186,25 @@ class Dataset(base.OcgParameter):
     return_type = RequestDatasetCollection
     
     def __init__(self,arg):
-        if isinstance(arg,RequestDatasetCollection):
-            init_value = arg
-        else:
-            if isinstance(arg,RequestDataset):
-                itr = [arg]
-            elif isinstance(arg,dict):
-                itr = [arg]
+        if arg is not None:
+            if isinstance(arg,RequestDatasetCollection):
+                init_value = arg
             else:
-                itr = arg
-            rdc = RequestDatasetCollection()
-            for rd in itr:
-                rdc.update(rd)
-            init_value = rdc
-        ## dereference any prior dataset connections
-        for rd in init_value:
-            rd._ds = None
+                if isinstance(arg,RequestDataset):
+                    itr = [arg]
+                elif isinstance(arg,dict):
+                    itr = [arg]
+                else:
+                    itr = arg
+                rdc = RequestDatasetCollection()
+                for rd in itr:
+                    rdc.update(rd)
+                init_value = rdc
+            ## dereference any prior dataset connections
+            for rd in init_value:
+                rd._ds = None
+        else:
+            init_value = arg
         super(Dataset,self).__init__(init_value)
         
     def parse_string(self,value):
