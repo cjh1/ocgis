@@ -148,7 +148,10 @@ class NcConverter(OcgConverter):
             value = ds.createVariable(variable.alias,variable.value.dtype,value_dims,
                                       fill_value=variable.value.fill_value)
             if not self.ops.file_only:
-                value[:] = np.squeeze(variable.value)
+                try:
+                    value[:] = variable.value.reshape(*value.shape)
+                except:
+                    import ipdb;ipdb.set_trace()
             value.setncatts(variable.meta['attrs'])
             ## and the units, converting to string as passing a NoneType will raise
             ## an exception.
