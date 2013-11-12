@@ -155,7 +155,18 @@ class TestSimple(TestSimpleBase):
     nc_factory = SimpleNc
     fn = 'test_simple_spatial_01.nc'
     
-                
+    def test_projection_axis_to_nc(self):
+        msg = 'write data with a projection axis to netCDF'
+        raise(ToTest(msg))
+    
+    def test_projection_axis_to_csv(self):
+        msg = 'write data with a projection axis to CSV'
+        raise(ToTest(msg))
+    
+    def test_calculation_name(self):
+        msg = 'get a better grasp on how calculation names are changed and if they may be circumvented with one request dataset'
+        raise(ToTest(msg))
+    
     def test_agg_selection(self):
         features = [
          {'NAME':'a','wkt':'POLYGON((-105.020430 40.073118,-105.810753 39.327957,-105.660215 38.831183,-104.907527 38.763441,-104.004301 38.816129,-103.643011 39.802151,-103.643011 39.802151,-103.643011 39.802151,-103.643011 39.802151,-103.959140 40.118280,-103.959140 40.118280,-103.959140 40.118280,-103.959140 40.118280,-104.327957 40.201075,-104.327957 40.201075,-105.020430 40.073118))'},
@@ -562,7 +573,7 @@ class TestSimple(TestSimpleBase):
                              ]
         epsg = [2163,4326,None]
         output_format = [
-#                         'nc',
+                         'nc',
                          'shp',
                          'csv+'
                          ]

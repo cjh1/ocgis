@@ -152,15 +152,29 @@ class NcRequestDataset(object):
                 fill = None
             else:
                 ref_variable = self._source_metadata['variables'].get(ref_axis['variable'])
-                ref_variable['axis'] = ref_axis
+                
+                ## for data with a projection/realization axis there may be no 
+                ## associated variable.
+                try:
+                    ref_variable['axis'] = ref_axis
+                except TypeError:
+                    if axis_value == 'R' and ref_variable is None:
+                        ref_variable = {'axis':ref_axis,'name':ref_axis['dimension'],'attrs':{}}
+                
+                ## extract the data length to use when creating the source index
+                ## arrays.
                 length = self._source_metadata['dimensions'][ref_axis['dimension']]['len']
                 src_idx = np.arange(0,length)
+                
+                ## assemble parameters for creating the dimension class then initialize
+                ## the class.
                 kwds = dict(name_uid=v['name_uid'],name_value=v['name_value'],src_idx=src_idx,
                             data=self,meta=ref_variable,axis=axis_value,name=ref_variable.get('name'))
                 if v['adds'] is not None:
                     kwds.update(v['adds'](ref_variable['attrs']))
                 kwds.update({'name':ref_variable.get('name')})
                 fill = v['cls'](**kwds)
+                
             loaded[k] = fill
             
         assert_raise(set(('temporal','row','col')).issubset(set([k for k,v in loaded.iteritems() if v != None])),
