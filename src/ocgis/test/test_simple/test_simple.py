@@ -528,11 +528,15 @@ class TestSimple(TestSimpleBase):
         ret = self.get_ret(kwds=dict(output_crs=output_crs,output_format='shp'))
         with fiona.open(ret) as f:
             self.assertEqual(CoordinateReferenceSystem(crs=f.meta['crs']),output_crs)
+            
+    def test_limiting_headers(self):
+        msg = 'test that limiting the headers will actually do so'
+        raise(ToTest(msg))
     
     def test_shp_csv_plus_nc_projection_with_geometries(self):
         
-        self.get_ret(kwds={'output_format':'shp','prefix':'as_polygon'})
-        self.get_ret(kwds={'output_format':'shp','prefix':'as_point','abstraction':'point'})
+#        self.get_ret(kwds={'output_format':'shp','prefix':'as_polygon'})
+#        self.get_ret(kwds={'output_format':'shp','prefix':'as_point','abstraction':'point'})
         
         features = [
          {'NAME':'a','wkt':'POLYGON((-105.020430 40.073118,-105.810753 39.327957,-105.660215 38.831183,-104.907527 38.763441,-104.004301 38.816129,-103.643011 39.802151,-103.643011 39.802151,-103.643011 39.802151,-103.643011 39.802151,-103.959140 40.118280,-103.959140 40.118280,-103.959140 40.118280,-103.959140 40.118280,-104.327957 40.201075,-104.327957 40.201075,-105.020430 40.073118))'},
@@ -558,6 +562,10 @@ class TestSimple(TestSimpleBase):
         no_bounds_nc = SimpleNcNoBounds()
         no_bounds_nc.write()
         no_bounds_uri = os.path.join(env.DIR_OUTPUT,no_bounds_nc.filename)
+        
+        no_level_nc = SimpleNcNoLevel()
+        no_level_nc.write()
+        no_level_uri = os.path.join(env.DIR_OUTPUT,no_level_nc.filename)
             
         ocgis.env.DIR_SHPCABINET = self._test_dir
 #        ocgis.env.DEBUG = True
@@ -577,7 +585,7 @@ class TestSimple(TestSimpleBase):
                 None
                 ]
         output_format = [
-                         'nc',
+#                         'nc',
                          'shp',
                          'csv+'
                          ]
@@ -587,8 +595,9 @@ class TestSimple(TestSimpleBase):
                        None
                        ]
         dataset = [
-                   self.get_dataset(),
-                   {'uri':no_bounds_uri,'variable':'foo'}
+#                   self.get_dataset(),
+#                   {'uri':no_bounds_uri,'variable':'foo'},
+                   {'uri':no_level_uri,'variable':'foo'}
                    ]
         geom = [
                 'ab_polygon',
@@ -615,7 +624,7 @@ class TestSimple(TestSimpleBase):
                 output_crs = CFWGS84()
             else:
                 output_crs = CoordinateReferenceSystem(epsg=e) if e is not None else None
-                
+            
             kwds = dict(aggregate=a,spatial_operation=s,output_format=o,output_crs=output_crs,
                         geom=g,abstraction=ab,dataset=d,prefix=str(ii),calc=c,
                         calc_grouping=calc_grouping)
