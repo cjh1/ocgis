@@ -68,6 +68,13 @@ class ShpConverter(OcgConverter):
         
         fiona_schema = {'geometry':geometry_type,
                         'properties':fiona_properties}
+        
+        ## if there is no data for a header, it may be empty. in this case, the
+        ## value comes through as none and it should be replaced with bool.
+        for k,v in fiona_schema['properties'].iteritems():
+            if v is None:
+                fiona_schema['properties'][k] = 'str:1'
+        
         fiona_object = fiona.open(self.path,'w',driver='ESRI Shapefile',crs=fiona_crs,schema=fiona_schema)
         
         ret = {'fiona_object':fiona_object,'fiona_conversion':fiona_conversion}

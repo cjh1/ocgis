@@ -590,7 +590,7 @@ class TestSimple(TestSimpleBase):
                 ]
         output_format = [
 #                         'nc',
-                         'shp',
+#                         'shp',
                          'csv+'
                          ]
         abstraction = [
@@ -608,7 +608,7 @@ class TestSimple(TestSimpleBase):
                 'ab_point'
                 ]
         calc = [
-                None,
+#                None,
                 [{'func':'mean','name':'my_mean'}]
                 ]
         calc_grouping = ['month']

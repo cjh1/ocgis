@@ -99,6 +99,10 @@ class Field(object):
         is_masked = np.ma.is_masked
         masked_value = constants.fill_value
         
+        ## there is not level, these keys will need to be provided a None value
+        has_level = True if self.level is not None else False
+        r_level_defaults = dict.fromkeys(constants.level_headers)
+        
         r_gid_name = self.spatial.name_uid
         for variable in self.variables.itervalues():
             yld = self._get_variable_iter_yield_(variable)
@@ -119,7 +123,10 @@ class Field(object):
                 to_yld['value'] = ref_idx
                 to_yld['geom'] = geom
                 to_yld[r_gid_name] = gid
-                                
+                
+                if not has_level:
+                    to_yld.update(r_level_defaults)
+                
                 yield(to_yld)
                 
     def get_shallow_copy(self):
