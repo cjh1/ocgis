@@ -12,6 +12,8 @@ calc_headers = ['did','vid','cid','ugid','tid','lid','gid','variable','alias','c
 multi_headers = ['did','ugid','tid','lid','gid','calc_key','calc_alias','time','year','month','day','level','value']
 #multi_headers = ['did','ugid','tid','lid','gid','variable','alias','time','year','month','day','level','value']
 
+level_headers = ['lid','level']
+
 #test_data_download_url_prefix = 'https://dl.dropboxusercontent.com/u/867854/test_data_download/'
 test_data_download_url_prefix = 'http://www.earthsystemmodeling.org/download/data/ocgis/nc/'
 
