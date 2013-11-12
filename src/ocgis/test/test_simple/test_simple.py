@@ -1,6 +1,4 @@
 import unittest
-from ocgis.test.make_test_data import SimpleNc, SimpleMaskNc, SimpleNc360,\
-    SimpleNcNoLevel, SimpleNcNoBounds, SimpleNcProjection
 from ocgis.api.operations import OcgOperations
 from ocgis.api.interpreter import OcgInterpreter
 import itertools
@@ -28,6 +26,8 @@ from ocgis.interface.base.crs import CoordinateReferenceSystem, WGS84, CFWGS84
 from ocgis.api.request.base import RequestDataset
 from copy import deepcopy
 from contextlib import contextmanager
+from ocgis.test.test_simple.make_test_data import SimpleNcNoLevel, SimpleNc,\
+    SimpleNcNoBounds, SimpleMaskNc, SimpleNc360, SimpleNcProjection
 
 
 @contextmanager
