@@ -624,7 +624,7 @@ class TestSimple(TestSimpleBase):
         args = (aggregate,spatial_operation,epsg,output_format,abstraction,geom,calc,dataset)
         for ii,tup in enumerate(itertools.product(*args)):
             a,s,e,o,ab,g,c,d = tup
-            print(tup[0:-1],tup[-1]['uri'])
+#            print(tup[0:-1],tup[-1]['uri'])
             
             if os.path.split(d['uri'])[1] == 'test_simple_spatial_no_bounds_01.nc':
                 unbounded = True
