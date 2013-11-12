@@ -6,6 +6,7 @@ import tempfile
 import os
 from ocgis.test.base import TestBase
 from ocgis.util.shp_cabinet import ShpCabinet
+from ocgis.calc.library.statistics import Mean
 
 
 class Test(TestBase):
@@ -30,11 +31,11 @@ class Test(TestBase):
         slc = Slice(None)
         self.assertEqual(slc.value,None)
         
-        slc = Slice([None,0,0])
-        self.assertEqual(slc.value,(slice(None),slice(0,1),slice(0, 1)))
+        slc = Slice([None,0,0,0,0])
+        self.assertEqual(slc.value,(slice(None),slice(0,1),slice(0, 1),slice(0, 1),slice(0, 1)))
         
-        slc = Slice([0,None,[0,1],[0,100]])
-        self.assertEqual(slc.value,(slice(0,1),slice(None),slice(0,1),slice(0,100)))
+        slc = Slice([None,0,None,[0,1],[0,100]])
+        self.assertEqual(slc.value,(slice(None),slice(0,1),slice(None),slice(0,1),slice(0,100)))
         
         with self.assertRaises(DefinitionValidationError):
             slc.value = 4
@@ -115,7 +116,7 @@ class Test(TestBase):
         geom = make_poly((37.762,38.222),(-102.281,-101.754))
 
         g = Geom(geom)
-        self.assertEqual(type(g.value),GeometryDataset)
+        self.assertEqual(type(g.value),list)
         g.value = None
         self.assertEqual(None,g.value)
         
@@ -124,37 +125,37 @@ class Test(TestBase):
         self.assertEqual(str(g),'geom=None')
         
         g = Geom('-120|40|-110|50')
-        self.assertEqual(g.value.spatial.geom[0].bounds,(-120.0, 40.0, -110.0, 50.0))
+        self.assertEqual(g.value[0]['geom'].bounds,(-120.0, 40.0, -110.0, 50.0))
         self.assertEqual(str(g),'geom=-120.0|40.0|-110.0|50.0')
         
         g = Geom('mi_watersheds')
         self.assertEqual(str(g),'geom=mi_watersheds')
         
-        geoms = ShpCabinet().get_geoms('mi_watersheds')
+        geoms = list(ShpCabinetIterator('mi_watersheds'))
         g = Geom('mi_watersheds')
-        self.assertEqual(len(g.value),len(geoms))
+        self.assertEqual(len(list(g.value)),len(geoms))
         
         su = SelectUgid([1,2,3])
         g = Geom('mi_watersheds',select_ugid=su)
-        self.assertEqual(len(g.value),3)
+        self.assertEqual(len(list(g.value)),3)
         
-        geoms = GeometryDataset(uid=[1,2],geom=[geom,geom])
+        geoms = [{'geom':geom,'UGID':1},{'geom':geom,'UGID':2}]
         g = Geom(geoms)
         
         bbox = [-120,40,-110,50]
         g = Geom(bbox)
-        self.assertEqual(g.value.spatial.geom[0].bounds,tuple(map(float,bbox)))
+        self.assertEqual(g.value[0]['geom'].bounds,tuple(map(float,bbox)))
             
     def test_calc(self):
         calc = [{'func':'mean','name':'my_mean'}]
         cc = Calc(calc)
-        eq = [{'ref':library.Mean,'name':'my_mean','func':'mean','kwds':{}}, 
-              {'ref':library.SampleSize,'name':'n','func':'n','kwds':{}}]
+        eq = [{'ref':Mean,'name':'my_mean','func':'mean','kwds':{}}]
         self.assertEqual(cc.value,eq)
         cc.value = 'mean~my_mean'
         self.assertEqual(cc.value,eq)
         cc.value = 'mean~my_mean|max~my_max|between~between5_10!lower~5!upper~10'
-        self.assertEqual(cc.get_url_string(),'mean~my_mean|max~my_max|between~between5_10!lower~5.0!upper~10.0')
+        with self.assertRaises(NotImplementedError):
+            self.assertEqual(cc.get_url_string(),'mean~my_mean|max~my_max|between~between5_10!lower~5.0!upper~10.0')
         
         ## test duplicate parameters
         calc = [{'func':'mean','name':'my_mean'},

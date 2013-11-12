@@ -14,7 +14,15 @@ class FrequencyPercentile(base.AbstractUnivariateSetFunction,base.AbstractParame
         '''
         ret = np.percentile(values,percentile,axis=0)
         return(ret)
+
+
+class Max(base.AbstractUnivariateSetFunction):
+    description = 'Max value for the series.'
+    key = 'max'
     
+    def _calculate_(self,values):
+        return(np.ma.max(values,axis=0))
+
     
 class Mean(base.AbstractUnivariateSetFunction):
     description = 'Compute mean value of the set.'
