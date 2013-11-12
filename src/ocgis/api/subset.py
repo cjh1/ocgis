@@ -142,11 +142,29 @@ class SubsetOperation(object):
                     return
             else:
                 ocgis_lh(exc=ExtentError(message=str(e)),alias=rd.alias,logger=self._subset_log)
-        ## set iterator based on presence of slice
+        ## set iterator based on presence of slice. slice always overrides geometry.
         if self.ops.slice is not None:
             itr = [{}]
         else:
-            itr = [{}] if self.ops.geom is None else self.ops.geom
+            ## in the case of netcdf output, geometries must be unioned. this is
+            ## also true for the case of the selection geometry being requested as
+            ## aggregated.
+            if (self.ops.output_format == 'nc' or self.ops.agg_selection is True) \
+             and self.ops.geom is not None and len(self.ops.geom) > 1:
+                ocgis_lh('aggregating selection geometry',self._subset_log)
+                build = True
+                for element_geom in self.ops.geom:
+                    if build:
+                        new_geom = element_geom['geom']
+                        new_crs = element_geom['crs']
+                        new_properties = {'UGID':1}
+                        build = False
+                    else:
+                        new_geom = new_geom.union(element_geom['geom'])
+                itr = [{'geom':new_geom,'properties':new_properties,'crs':new_crs}]
+                self.ops.geom = itr
+            else:
+                itr = [{}] if self.ops.geom is None else self.ops.geom
         ## loop over the iterator
         for gd in itr:
             ## initialize the collection object to store the subsetted data. if

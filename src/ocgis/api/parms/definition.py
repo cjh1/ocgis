@@ -12,6 +12,8 @@ from ocgis import constants
 from ocgis.util.shp_cabinet import ShpCabinetIterator
 from ocgis.calc.library.register import FunctionRegistry
 from ocgis.interface.base.crs import CoordinateReferenceSystem, CFWGS84
+from ocgis.util.logging_ocgis import ocgis_lh
+import logging
 
 
 class Abstraction(base.StringOptionParameter):
@@ -273,18 +275,29 @@ class Geom(base.OcgParameter):
         if type(value) in [Polygon,MultiPolygon,Point]:
             ret = [{'geom':value,'properties':{'ugid':1},'crs':CFWGS84()}]
         elif type(value) in [list,tuple]:
-            if len(value) == 2:
-                geom = Point(value[0],value[1])
-            elif len(value) == 4:
-                minx,miny,maxx,maxy = value
-                geom = Polygon(((minx,miny),
-                                (minx,maxy),
-                                (maxx,maxy),
-                                (maxx,miny)))
-            if not geom.is_valid:
-                raise(DefinitionValidationError(self,'Parsed geometry is not valid.'))
-            ret = [{'geom':geom,'properties':{'ugid':1},'crs':CFWGS84()}]
-            self._bounds = geom.bounds
+            if all([isinstance(element,dict) for element in value]):
+                for ii,element in enumerate(value,start=1):
+                    if 'geom' not in element:
+                        ocgis_lh(exc=DefinitionValidationError(self,'Geometry dictionaries must have a "geom" key.'))
+                    if 'properties' not in element:
+                        element['properties'] = {'UGID':ii}
+                    if 'crs' not in element:
+                        element['crs'] = CFWGS84()
+                        ocgis_lh(msg='No CRS in geometry dictionary - assuming WGS84.',level=logging.WARN,check_duplicate=True)
+                ret = value
+            else:
+                if len(value) == 2:
+                    geom = Point(value[0],value[1])
+                elif len(value) == 4:
+                    minx,miny,maxx,maxy = value
+                    geom = Polygon(((minx,miny),
+                                    (minx,maxy),
+                                    (maxx,maxy),
+                                    (maxx,miny)))
+                if not geom.is_valid:
+                    raise(DefinitionValidationError(self,'Parsed geometry is not valid.'))
+                ret = [{'geom':geom,'properties':{'ugid':1},'crs':CFWGS84()}]
+                self._bounds = geom.bounds
         elif isinstance(value,ShpCabinetIterator):
             self._shp_key = value.key
             ret = value

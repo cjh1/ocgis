@@ -98,14 +98,6 @@ class OcgInterpreter(Interpreter):
                 
             self.check() ## run validation - doesn't do much now
                 
-            ## in the case of netcdf output, geometries must be unioned. this is
-            ## also true for the case of the selection geometry being requested as
-            ## aggregated.
-            if (self.ops.output_format == 'nc' or self.ops.agg_selection is True) \
-             and self.ops.geom is not None and len(self.ops.geom) > 1:
-                ocgis_lh('aggregating selection geometry',interpreter_log)
-                self.ops.geom.aggregate()
-                
             ## do not perform vector wrapping for NetCDF output
             if self.ops.output_format == 'nc':
                 ocgis_lh('"vector_wrap" set to False for netCDF output',

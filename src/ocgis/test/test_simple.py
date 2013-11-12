@@ -157,6 +157,43 @@ class TestSimple(TestSimpleBase):
     nc_factory = SimpleNc
     fn = 'test_simple_spatial_01.nc'
     
+                
+    def test_agg_selection(self):
+        ## TODO: always happens for netCDF output
+        ## TODO: check shapefile output
+        ## TODO: check numpy output
+        features = [
+         {'NAME':'a','wkt':'POLYGON((-105.020430 40.073118,-105.810753 39.327957,-105.660215 38.831183,-104.907527 38.763441,-104.004301 38.816129,-103.643011 39.802151,-103.643011 39.802151,-103.643011 39.802151,-103.643011 39.802151,-103.959140 40.118280,-103.959140 40.118280,-103.959140 40.118280,-103.959140 40.118280,-104.327957 40.201075,-104.327957 40.201075,-105.020430 40.073118))'},
+         {'NAME':'b','wkt':'POLYGON((-102.212903 39.004301,-102.905376 38.906452,-103.311828 37.694624,-103.326882 37.295699,-103.898925 37.220430,-103.846237 36.746237,-102.619355 37.107527,-102.634409 37.724731,-101.874194 37.882796,-102.212903 39.004301))'},
+         {'NAME':'c','wkt':'POLYGON((-105.336559 37.175269,-104.945161 37.303226,-104.726882 37.175269,-104.696774 36.844086,-105.043011 36.693548,-105.283871 36.640860,-105.336559 37.175269))'},
+         {'NAME':'d','wkt':'POLYGON((-102.318280 39.741935,-103.650538 39.779570,-103.620430 39.448387,-103.349462 39.433333,-103.078495 39.606452,-102.325806 39.613978,-102.325806 39.613978,-102.333333 39.741935,-102.318280 39.741935))'},
+                   ]
+        
+        geom = []
+        for feature in features:
+            geom.append({'geom':wkt.loads(feature['wkt']),'properties':{'NAME':feature['NAME']}})
+        ops = OcgOperations(dataset=self.get_dataset(),geom=geom,output_format='shp',agg_selection=True)
+        ret = ops.execute()
+        ugid_path = os.path.join(os.path.split(ret)[0],ops.prefix+'_ugid.shp')
+        with fiona.open(ugid_path) as f:
+            self.assertEqual(len(f),1)
+            
+        ops = OcgOperations(dataset=self.get_dataset(),geom=geom,agg_selection=True)
+        ret = ops.execute()
+        self.assertEqual(ret[1]['foo'].spatial.shape,(4,4))
+        self.assertEqual(len(ret),1)
+        self.assertEqual(len(ret.geoms),1)
+        
+        ops = OcgOperations(dataset=self.get_dataset(),geom=geom,output_format='nc',
+                            prefix='nc')
+        ret = ops.execute()
+        with nc_scope(ret) as ds:
+            ref = ds.variables['foo']
+            self.assertFalse(ref[:].mask.all())
+            
+        ops = OcgOperations(dataset=self.get_dataset(),agg_selection=True)
+        ret = ops.execute()
+    
     def test_point_subset(self):
         ops = self.get_ops(kwds={'geom':[-103.5,38.5,]})
         self.assertEqual(type(ops.geom[0]['geom']),Point)
@@ -895,9 +932,6 @@ class TestSimpleProjected(TestSimpleBase):
         ret = self.get_ret(kwds={'output_format':'shp'})
         with fiona.open(ret) as f:
             self.assertEqual(f.meta['crs']['proj'],'lcc')
-            
-    def test_agg_selection(self):
-        raise(ToTest)
             
     def test_with_geometry(self):
         self.get_ret(kwds={'output_format':'shp','prefix':'as_polygon'})
