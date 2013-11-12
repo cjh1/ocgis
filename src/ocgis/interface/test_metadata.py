@@ -15,7 +15,7 @@ class TestNcMeta(TestBase):
 
     def test_ncmeta(self):
         ncm = NcMetadata(self.rootgrp)
-        self.assertEqual(ncm.keys(),['dataset','variables','dimensions'])
+        self.assertEqual(set(ncm.keys()),set(['dataset','variables','dimensions','file_format']))
 
 
 if __name__ == "__main__":

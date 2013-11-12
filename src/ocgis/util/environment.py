@@ -1,6 +1,4 @@
 import os
-from ocgis.exc import OcgisEnvironmentError
-from ocgis.util.logging_ocgis import ocgis_lh
 
 
 class Environment(object):
@@ -105,16 +103,16 @@ class EnvParm(object):
         raise(NotImplementedError)
     
     
-class ReferenceProjection(EnvParm):
-    
-    def __init__(self):
-        EnvParm.__init__(self,'REFERENCE_PROJECTION',WGS84())
-        
-    def format(self,value):
-        if os.environ.get(self.env_name) is not None:
-            msg = 'REFERENCE_PROJECTION may not be set as a system environment variable. It must be parameterized at runtime.'
-            e = OcgisEnvironmentError(self,msg)
-            ocgis_lh(exc=e,logger='env')
+#class ReferenceProjection(EnvParm):
+#    
+#    def __init__(self):
+#        EnvParm.__init__(self,'REFERENCE_PROJECTION',WGS84())
+#        
+#    def format(self,value):
+#        if os.environ.get(self.env_name) is not None:
+#            msg = 'REFERENCE_PROJECTION may not be set as a system environment variable. It must be parameterized at runtime.'
+#            e = OcgisEnvironmentError(self,msg)
+#            ocgis_lh(exc=e,logger='env')
 
 
 env = Environment()

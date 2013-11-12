@@ -12,7 +12,17 @@ from shapely.geometry.multipolygon import MultiPolygon
 from ocgis.util.helpers import get_temp_path
 import netCDF4 as nc
 from ocgis.interface.metadata import NcMetadata
+from ocgis.test.test_simple.test_simple import ToTest
 
+
+def test_dayment():
+    raise(ToTest('test that daymet projection may be read'))
+
+def test_narccap_projections():
+    raise(ToTest('ensure all narccap projections may be read and also perform basic operations on those data'))
+
+def test_same_and_differing_projections():
+    raise(ToTest('for two datasets, test what happens when both are the same and when they differ'))
 
 class TestCoordinateReferenceSystem(TestBase):
 
