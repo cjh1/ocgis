@@ -28,6 +28,7 @@ from copy import deepcopy
 from contextlib import contextmanager
 from ocgis.test.test_simple.make_test_data import SimpleNcNoLevel, SimpleNc,\
     SimpleNcNoBounds, SimpleMaskNc, SimpleNc360, SimpleNcProjection
+from csv import DictReader
 
 
 @contextmanager
@@ -534,8 +535,15 @@ class TestSimple(TestSimpleBase):
             self.assertEqual(CoordinateReferenceSystem(crs=f.meta['crs']),output_crs)
             
     def test_limiting_headers(self):
-        msg = 'test that limiting the headers will actually do so'
-        raise(ToTest(msg))
+        headers = ['value']
+        ops = OcgOperations(dataset=self.get_dataset(),headers=headers,output_format='csv')
+        ret = ops.execute()
+        with open(ret) as f:
+            reader = DictReader(f)
+            self.assertEqual(reader.fieldnames,['VALUE'])
+        
+        with self.assertRaises(DefinitionValidationError):    
+            OcgOperations(dataset=self.get_dataset(),headers=['foo'],output_format='csv')
     
     def test_writing_multivariate_calculations(self):
         msg = 'in the combinatorial test, include a multivariate calculation'

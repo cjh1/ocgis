@@ -115,13 +115,16 @@ class SubsetOperation(object):
         ocgis_lh(msg='entering _process_geometries_',logger=self._subset_log,level=logging.DEBUG)
         
         ## select headers
-        if self.cengine is not None:
-            if self.cengine._check_calculation_members_(self.cengine.funcs,AbstractMultivariateFunction):
-                headers = constants.multi_headers
-            else:
-                headers = constants.calc_headers
+        if self.ops.headers is not None:
+            headers = self.ops.headers
         else:
-            headers = constants.raw_headers
+            if self.cengine is not None:
+                if self.cengine._check_calculation_members_(self.cengine.funcs,AbstractMultivariateFunction):
+                    headers = constants.multi_headers
+                else:
+                    headers = constants.calc_headers
+            else:
+                headers = constants.raw_headers
         
         alias = '_'.join([r.alias for r in rds])
         ocgis_lh('processing...',self._subset_log,alias=alias)
