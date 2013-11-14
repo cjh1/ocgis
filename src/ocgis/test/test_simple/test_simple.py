@@ -955,7 +955,48 @@ class TestSimpleProjected(TestSimpleBase):
                            [3.0,3.0,4.0,4.0],
                            [3.0,3.0,4.0,4.0]])
     nc_factory = SimpleNcProjection
-    fn = 'test_simple_spatial_projected_01.nc'        
+    fn = 'test_simple_spatial_projected_01.nc'
+    
+    def test_differing_projection_no_output_crs(self):
+        nc_normal = SimpleNc()
+        nc_normal.write()
+        uri = os.path.join(self._test_dir,nc_normal.filename)
+        
+        rd_projected = self.get_dataset()
+        rd_projected['alias'] = 'projected'
+        rd_normal = {'uri':uri,'variable':'foo','alias':'normal'}
+        dataset = [rd_projected,rd_normal]
+        
+        output_format = ['numpy','shp','nc','csv+']
+        for o in output_format:
+            try:
+                OcgOperations(dataset=dataset,output_format=o)
+            except DefinitionValidationError:
+                if o != 'numpy':
+                    pass
+                
+    def test_differing_projection_with_output_crs(self):
+        ## TODO: confirm crs is applied for numpy output
+        
+        nc_normal = SimpleNc()
+        nc_normal.write()
+        uri = os.path.join(self._test_dir,nc_normal.filename)
+        
+        rd_projected = self.get_dataset()
+        rd_projected['alias'] = 'projected'
+        rd_normal = {'uri':uri,'variable':'foo','alias':'normal'}
+        dataset = [rd_projected,rd_normal]
+        
+        output_format = ['numpy','shp','nc','csv+']
+        for o in output_format:
+            try:
+                ops = OcgOperations(dataset=dataset,output_format=o,output_crs=CFWGS84())
+                ret = ops.execute()
+            except DefinitionValidationError:
+                if o == 'nc':
+                    pass
+                else:
+                    raise
     
     def test_nc_projection(self):
         dataset = self.get_dataset()

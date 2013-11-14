@@ -191,11 +191,11 @@ class OcgOperations(object):
             ocgis_lh(exc=e,logger='operations')
             
         ## confirm projections are equivalent
-        projections = []
+        projections = set([])
         for rd in self.dataset:
             crs = rd._get_crs_()
-            projections.append(crs if crs is None else crs.sr.ExportToProj4())
-        if len(set(projections)) == 2 and self.output_format != 'numpy': #@UndefinedVariable
+            projections.update([crs])
+        if len(set(projections)) > 1 and self.output_format != 'numpy': #@UndefinedVariable
             if self.output_crs is None:
                 _raise_('Dataset coordinate reference systems must be equivalent if no output CRS is chosen.',obj=OutputCRS)
         

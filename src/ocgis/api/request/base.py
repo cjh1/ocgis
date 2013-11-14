@@ -87,8 +87,8 @@ class RequestDatasetCollection(object):
             self._did.append(request_dataset.did)
             
         if alias in self._s:
-            raise(KeyError('Alias "{0}" already in collection.'\
-                           .format(request_dataset.alias)))
+            raise(KeyError('Alias "{0}" already in collection. Attempted to add dataset with URI "{1}".'\
+                           .format(request_dataset.alias,request_dataset.uri)))
         else:
             self._s.update({request_dataset.alias:request_dataset})
             
