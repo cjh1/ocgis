@@ -975,6 +975,7 @@ class TestSimpleProjected(TestSimpleBase):
                 if o != 'numpy':
                     pass
                 
+                
     def test_differing_projection_with_output_crs(self):
         ## TODO: confirm crs is applied for numpy output
         
@@ -990,8 +991,24 @@ class TestSimpleProjected(TestSimpleBase):
         output_format = ['numpy','shp','nc','csv+']
         for o in output_format:
             try:
-                ops = OcgOperations(dataset=dataset,output_format=o,output_crs=CFWGS84())
+                ops = OcgOperations(dataset=dataset,output_format=o,output_crs=CFWGS84(),
+                                    prefix=o)
                 ret = ops.execute()
+                
+                if o == 'numpy':
+                    for field in ret[1].itervalues():
+                        self.assertIsInstance(field.spatial.crs,CFWGS84)
+                if o == 'shp':
+                    with fiona.open(ret) as f:
+                        self.assertEqual(CoordinateReferenceSystem(crs=f.meta['crs']),CFWGS84())
+                        aliases = set([row['properties']['ALIAS'] for row in f])
+                    self.assertEqual(set(['projected','normal']),aliases)
+                if o == 'csv+':
+                    gid_shp = os.path.join(ops.dir_output,ops.prefix,'shp',ops.prefix+'_gid.shp')
+                    with fiona.open(gid_shp) as f:
+                        dids = set([row['properties']['DID'] for row in f])
+                        self.assertEqual(dids,set([1,2]))
+                
             except DefinitionValidationError:
                 if o == 'nc':
                     pass
