@@ -203,7 +203,7 @@ class NcRequestDataset(object):
         
         ## apply any subset parameters after the field is loaded
         if self.time_range is not None:
-            ret = ret.get_between('temporal',self.time_range[0],self.time_range[1])
+            ret = ret.get_between('temporal',min(self.time_range),max(self.time_range))
         if self.time_region is not None:
             ret = ret.get_time_region(self.time_region)
         if self.level_range is not None:

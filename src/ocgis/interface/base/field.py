@@ -248,7 +248,7 @@ class Field(object):
                     
     def _get_variable_iter_yield_(self,variable):
         yld = {}
-        yld['did'] = variable.uid
+        yld['did'] = self.uid
         yld['variable'] = variable.name
         yld['alias'] = variable.alias
         yld['vid'] = variable.uid
@@ -264,7 +264,7 @@ class DerivedField(Field):
         yld['calc_alias'] = variable.alias
         
         raw_variable = variable.parents.values()[0]
-        yld['did'] = raw_variable.uid
+        yld['did'] = self.uid
         yld['variable'] = raw_variable.name
         yld['alias'] = raw_variable.alias
         yld['vid'] = raw_variable.uid

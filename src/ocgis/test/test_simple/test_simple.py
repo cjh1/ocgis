@@ -976,9 +976,7 @@ class TestSimpleProjected(TestSimpleBase):
                     pass
                 
                 
-    def test_differing_projection_with_output_crs(self):
-        ## TODO: confirm crs is applied for numpy output
-        
+    def test_differing_projection_with_output_crs(self):        
         nc_normal = SimpleNc()
         nc_normal.write()
         uri = os.path.join(self._test_dir,nc_normal.filename)
@@ -988,7 +986,11 @@ class TestSimpleProjected(TestSimpleBase):
         rd_normal = {'uri':uri,'variable':'foo','alias':'normal'}
         dataset = [rd_projected,rd_normal]
         
-        output_format = ['numpy','shp','nc','csv+']
+        output_format = [
+                         'numpy','shp','nc',
+                         'csv+'
+                         ]
+        
         for o in output_format:
             try:
                 ops = OcgOperations(dataset=dataset,output_format=o,output_crs=CFWGS84(),
@@ -996,18 +998,30 @@ class TestSimpleProjected(TestSimpleBase):
                 ret = ops.execute()
                 
                 if o == 'numpy':
+                    uids = []
                     for field in ret[1].itervalues():
+                        uids.append(field.uid)
                         self.assertIsInstance(field.spatial.crs,CFWGS84)
+                    self.assertEqual(set(uids),set([1,2]))
                 if o == 'shp':
                     with fiona.open(ret) as f:
                         self.assertEqual(CoordinateReferenceSystem(crs=f.meta['crs']),CFWGS84())
                         aliases = set([row['properties']['ALIAS'] for row in f])
                     self.assertEqual(set(['projected','normal']),aliases)
                 if o == 'csv+':
+                    with open(ret,'r') as f:
+                        reader = csv.DictReader(f)
+                        collect = {'dids':[],'aliases':[]}
+                        for row in reader:
+                            collect['dids'].append(int(row['DID']))
+                            collect['aliases'].append(row['ALIAS'])
+                        self.assertEqual(set(['projected','normal']),set(collect['aliases']))
+                        self.assertEqual(set([1,2]),set(collect['dids']),msg='did missing in csv file')
+                    
                     gid_shp = os.path.join(ops.dir_output,ops.prefix,'shp',ops.prefix+'_gid.shp')
                     with fiona.open(gid_shp) as f:
                         dids = set([row['properties']['DID'] for row in f])
-                        self.assertEqual(dids,set([1,2]))
+                        self.assertEqual(dids,set([1,2]),msg='did missing in overview file')
                 
             except DefinitionValidationError:
                 if o == 'nc':
