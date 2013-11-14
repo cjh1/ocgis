@@ -5,7 +5,7 @@ import itertools
 import numpy as np
 import datetime
 from ocgis.util.helpers import make_poly, FionaMaker, project_shapely_geometry
-from ocgis import exc, env
+from ocgis import exc, env, constants
 import os.path
 from ocgis.util.inspect import Inspect
 from abc import ABCMeta, abstractproperty
@@ -549,7 +549,7 @@ class TestSimple(TestSimpleBase):
         msg = 'in the combinatorial test, include a multivariate calculation'
         raise(ToTest(msg))
     
-    def test_shp_csv_plus_nc_projection_with_geometries(self):
+    def test_combinatorial_projection_with_geometries(self):
         
 #        self.get_ret(kwds={'output_format':'shp','prefix':'as_polygon'})
 #        self.get_ret(kwds={'output_format':'shp','prefix':'as_point','abstraction':'point'})
@@ -845,21 +845,34 @@ class TestSimple(TestSimpleBase):
             row = reader.next()
             self.assertDictEqual(row,{'LID': '1', 'UGID': '1', 'VID': '1', 'CID': '1', 'DID': '1', 'YEAR': '2000', 'TIME': '2000-03-16 00:00:00', 'CALC_ALIAS': 'my_mean_foo', 'VALUE': '1.0', 'MONTH': '3', 'VARIABLE': 'foo', 'ALIAS': 'foo', 'GID': '1', 'CALC_KEY': 'mean', 'TID': '1', 'LEVEL': '50', 'DAY': '16'})
     
-    def test_csv_calc_multivariate_conversion(self):
+    def test_calc_multivariate_conversion(self):
         rd1 = self.get_dataset()
         rd1['alias'] = 'var1'
         rd2 = self.get_dataset()
         rd2['alias'] = 'var2'
         calc = [{'name':'divide','func':'divide','kwds':{'arr1':'var1','arr2':'var2'}}]
-        
-        calc_grouping = ['month']
-        ops = OcgOperations(dataset=[rd1,rd2],calc=calc,calc_grouping=calc_grouping,prefix='yay',output_format='csv')
-        ret = ops.execute()
-        
-        with open(ret,'r') as f:
-            reader = csv.DictReader(f)
-            row = reader.next()
-            self.assertDictEqual(row,{'LID': '1', 'UGID': '1', 'LEVEL': '50', 'DID': '', 'YEAR': '2000', 'TIME': '2000-03-16 00:00:00', 'CALC_ALIAS': 'divide', 'VALUE': '1.0', 'MONTH': '3', 'GID': '1', 'CALC_KEY': 'divide', 'TID': '1', 'DAY': '16'})
+                
+        for o in constants.output_formats:
+            calc_grouping = ['month']
+            ops = OcgOperations(dataset=[rd1,rd2],calc=calc,calc_grouping=calc_grouping,output_format=o,
+                                prefix=o+'yay')
+            ret = ops.execute()
+            
+            if o in ['csv','csv+']:
+                with open(ret,'r') as f:
+                    reader = csv.DictReader(f)
+                    row = reader.next()
+                    self.assertDictEqual(row,{'LID': '1', 'UGID': '1', 'CID':'1', 'LEVEL': '50', 'DID': '', 'YEAR': '2000', 'TIME': '2000-03-16 00:00:00', 'CALC_ALIAS': 'divide', 'VALUE': '1.0', 'MONTH': '3', 'GID': '1', 'CALC_KEY': 'divide', 'TID': '1', 'DAY': '16'})
+    
+            if o == 'nc':
+                with nc_scope(ret) as ds:
+                    self.assertIn('divide',ds.variables)
+                    self.assertTrue(np.all(ds.variables['divide'][:] == 1.))
+                    
+            if o == 'shp':
+                with fiona.open(ret) as f:
+                    row = f.next()
+                    self.assertIn('CID',row['properties'])
     
     def test_meta_conversion(self):
         ops = OcgOperations(dataset=self.get_dataset(),output_format='meta')

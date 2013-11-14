@@ -9,10 +9,12 @@ fill_value = 1e20
 
 raw_headers = ['did','vid','ugid','tid','lid','gid','variable','alias','time','year','month','day','level','value']
 calc_headers = ['did','vid','cid','ugid','tid','lid','gid','variable','alias','calc_key','calc_alias','time','year','month','day','level','value']
-multi_headers = ['did','ugid','tid','lid','gid','calc_key','calc_alias','time','year','month','day','level','value']
+multi_headers = ['did','ugid','tid','lid','gid','cid','calc_key','calc_alias','time','year','month','day','level','value']
 #multi_headers = ['did','ugid','tid','lid','gid','variable','alias','time','year','month','day','level','value']
 
 level_headers = ['lid','level']
+
+output_formats = ['numpy','nc','csv','csv+','shp']
 
 #test_data_download_url_prefix = 'https://dl.dropboxusercontent.com/u/867854/test_data_download/'
 test_data_download_url_prefix = 'http://www.earthsystemmodeling.org/download/data/ocgis/nc/'
