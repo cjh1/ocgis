@@ -545,10 +545,6 @@ class TestSimple(TestSimpleBase):
         with self.assertRaises(DefinitionValidationError):    
             OcgOperations(dataset=self.get_dataset(),headers=['foo'],output_format='csv')
     
-    def test_writing_multivariate_calculations(self):
-        msg = 'in the combinatorial test, include a multivariate calculation'
-        raise(ToTest(msg))
-    
     def test_combinatorial_projection_with_geometries(self):
         
 #        self.get_ret(kwds={'output_format':'shp','prefix':'as_polygon'})
