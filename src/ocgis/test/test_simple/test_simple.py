@@ -156,10 +156,6 @@ class TestSimple(TestSimpleBase):
     nc_factory = SimpleNc
     fn = 'test_simple_spatial_01.nc'
     
-    def test_multiple_request_datasets(self):
-        msg = 'ensure all data for multiple request datasets is written to file'
-        raise(ToTest(msg))
-    
     def test_projection_axis_to_nc(self):
         msg = 'write data with a projection axis to netCDF'
         raise(ToTest(msg))
