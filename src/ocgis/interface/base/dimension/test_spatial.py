@@ -11,7 +11,7 @@ from shapely.geometry import shape, mapping
 from shapely.geometry.point import Point
 from ocgis.exc import EmptySubsetError, ImproperPolygonBoundsError
 from ocgis.test.base import TestBase
-from ocgis.interface.base.crs import CoordinateReferenceSystem
+from ocgis.interface.base.crs import CoordinateReferenceSystem, WGS84
 
 
 class TestSpatialBase(TestBase):
@@ -350,14 +350,14 @@ class TestSpatialDimension(TestSpatialBase):
     def test_grid_get_subset_bbox(self):
         for b in [True,False]:
             sdim = self.get_sdim(bounds=b)
-            bg = sdim.grid.get_subset_bbox(39,-99,39,-98,closed=False)
+            bg = sdim.grid.get_subset_bbox(-99,39,-98,39,closed=False)
             self.assertEqual(bg._value,None)
             self.assertEqual(bg.uid.shape,(1,2))
             self.assertNumpyAll(bg.uid,np.array([[6,7]]))
             with self.assertRaises(EmptySubsetError):
                 sdim.grid.get_subset_bbox(1000,1000,1001,10001)
                 
-            bg2 = sdim.grid.get_subset_bbox(1,-99999,1000,1)
+            bg2 = sdim.grid.get_subset_bbox(-99999,1,1,1000)
             self.assertNumpyAll(bg2.value,sdim.grid.value)
             
     def test_weights(self):
@@ -389,8 +389,8 @@ class TestSpatialGridDimension(TestSpatialBase):
         value[1,:,:] = x
         minx,miny,maxx,maxy = x.min(),y.min(),x.max(),y.max()
         grid = SpatialGridDimension(value=value)
-        sub = grid.get_subset_bbox(minx,miny,maxx,maxy)
-        import ipdb;ipdb.set_trace()
+        sub = grid.get_subset_bbox(minx,miny,maxx,maxy,closed=False)
+        self.assertNumpyAll(sub.value,value)
     
     def test_load_from_source_grid_slicing(self):
         row = VectorDimension(src_idx=[10,20,30,40],name='row',data='foo')

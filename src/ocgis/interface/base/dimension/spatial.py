@@ -2,7 +2,7 @@ import base
 import numpy as np
 from ocgis.util.logging_ocgis import ocgis_lh
 from ocgis.util.helpers import iter_array, get_none_or_slice, \
-    get_formatted_slice, get_reduced_slice
+    get_formatted_slice, get_reduced_slice, make_poly
 from shapely.geometry.point import Point
 from ocgis import constants
 import itertools
@@ -164,7 +164,7 @@ class SpatialDimension(base.AbstractUidDimension):
                 ## reset the geometries
                 ret._geom = None
                 ## subset the grid by its bounding box
-                ret.grid,slc = self.grid.get_subset_bbox(miny,minx,maxy,maxx,return_indices=True)
+                ret.grid,slc = self.grid.get_subset_bbox(minx,miny,maxx,maxy,return_indices=True)
                 ## attempt to mask the polygons
                 try:
                     ret._geom._polygon = ret.geom.polygon.get_intersects_masked(polygon)
@@ -295,8 +295,13 @@ class SpatialGridDimension(base.AbstractUidValueDimension):
             row = None
             col = None
         
-        ret = SpatialGridDimension(value=value,uid=uid,row=row,col=col,name_value=self.name_value,
-                                   units=self.units,meta=self.meta,name=self.name,name_uid=self.name_uid)
+        ret = copy(self)
+        ret.uid = uid
+        ret._value = value
+        ret.row = row
+        ret.col = col
+#        ret = SpatialGridDimension(value=value,uid=uid,row=row,col=col,name_value=self.name_value,
+#                                   units=self.units,meta=self.meta,name=self.name,name_uid=self.name_uid)
             
         return(ret)
     
@@ -332,26 +337,84 @@ class SpatialGridDimension(base.AbstractUidValueDimension):
             ret = len(self.row),len(self.col)
         return(ret)
         
-    def get_subset_bbox(self,min_row,min_col,max_row,max_col,return_indices=False,closed=True):
+    def get_subset_bbox(self,min_col,min_row,max_col,max_row,return_indices=False,closed=True):
+        assert(min_row <= max_row)
+        assert(min_col <= max_col)
+        
         if self.row is None:
-            raise(NotImplementedError('no bbox subset w/out rows and columns'))
+            r_row = self.value[0,:,:]
+            real_idx_row = np.arange(0,r_row.shape[0])
+            r_col = self.value[1,:,:]
+            real_idx_col = np.arange(0,r_col.shape[1])
+            
+            if closed:
+                lower_row = r_row > min_row
+                upper_row = r_row < max_row
+                lower_col = r_col > min_col
+                upper_col = r_col < max_col
+            else:
+                lower_row = r_row >= min_row
+                upper_row = r_row <= max_row
+                lower_col = r_col >= min_col
+                upper_col = r_col <= max_col
+            
+            idx_row = np.logical_and(lower_row,upper_row)
+            idx_col = np.logical_and(lower_col,upper_col)
+            
+            keep_row = np.any(idx_row,axis=1)
+            keep_col = np.any(idx_col,axis=0)
+            
+            row_slc = get_reduced_slice(real_idx_row[keep_row])
+            col_slc = get_reduced_slice(real_idx_col[keep_col])
+            
+            new_mask = np.invert(np.logical_or(idx_row,idx_col)[row_slc,col_slc])
+            
+#            import ipdb;ipdb.set_trace()
+#            idx_row_start = None
+#            idx_row_stop = None
+#            for ii in range(idx_row.shape[0]):
+#                if not idx_row[ii,:].any():
+#                    continue
+#                else:
+#                    if idx_row_start is None:
+#                        idx_row_start = ii
+#            import ipdb;ipdb.set_trace()
+#                
+#            ## if all data is returned the indices are equivalent to the size
+#            ## of the array.
+#            if not r_value_mask.any():
+#                row_slc = slice(0,r_value.shape[1])
+#                col_slc = slice(0,r_value.shape[2])
+#            else:
+#                import ipdb;ipdb.set_trace()
         else:
             new_row,row_indices = self.row.get_between(min_row,max_row,return_indices=True,closed=closed)
             new_col,col_indices = self.col.get_between(min_col,max_col,return_indices=True,closed=closed)
             row_slc = get_reduced_slice(row_indices)
             col_slc = get_reduced_slice(col_indices)
-            new_uid = self.uid[row_slc,col_slc]
             
-        if self._value is None:
-            new_value = None
-        else:
-            new_value = self._value[:,row_slc,col_slc]
+#        new_uid = self.uid[row_slc,col_slc]
+#            
+#        if self._value is None:
+#            new_value = None
+#        else:
+#            new_value = self._value[:,row_slc,col_slc]
+#        
+#        ret = copy(self)
+#        ret._value = new_value
+#        ret.row = new_row
+#        ret.col = new_col
+#        ret.uid = new_uid
+
+        ret = self[row_slc,col_slc]
         
-        ret = copy(self)
-        ret._value = new_value
-        ret.row = new_row
-        ret.col = new_col
-        ret.uid = new_uid
+        try:
+            ret._value.mask = new_mask
+        except UnboundLocalError:
+            if self.row is None:
+                pass
+            else:
+                raise
         
         if return_indices:
             ret = (ret,(row_slc,col_slc))
