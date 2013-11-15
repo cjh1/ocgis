@@ -478,6 +478,8 @@ def get_rotated_pole_spatial_grid_dimension(crs,grid):
 #        new_real_column_idx = real_idx[:,0].reshape(*shp)
         
         new_grid = copy(grid)
+        new_grid._row_src_idx = new_grid.row._src_idx
+        new_grid._col_src_idx = new_grid.col._src_idx
         new_grid.row = None
         new_grid.col = None
         new_value = np.zeros([2]+list(new_row.shape))

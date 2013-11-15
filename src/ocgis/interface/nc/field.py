@@ -10,8 +10,14 @@ class NcField(Field):
         ## collect the dimension slices
         axis_slc = {}
         axis_slc['T'] = self.temporal._src_idx
-        axis_slc['Y'] = self.spatial.grid.row._src_idx
-        axis_slc['X'] = self.spatial.grid.col._src_idx
+        try:
+            axis_slc['Y'] = self.spatial.grid.row._src_idx
+            axis_slc['X'] = self.spatial.grid.col._src_idx
+        ## if grid and row are not present on the GridDimesion object. the source
+        ## indices are attached to the grid object itself.
+        except AttributeError:
+            axis_slc['Y'] = self.spatial.grid._row_src_idx
+            axis_slc['X'] = self.spatial.grid._col_src_idx
         if self.realization is not None:
             axis_slc['R'] = self.realization._src_idx
         if self.level is not None:

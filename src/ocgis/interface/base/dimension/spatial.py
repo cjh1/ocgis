@@ -275,6 +275,8 @@ class SpatialGridDimension(base.AbstractUidValueDimension):
     def __init__(self,*args,**kwds):
         self.row = kwds.pop('row',None)
         self.col = kwds.pop('col',None)
+        self._row_src_idx = kwds.pop('row_src_idx',None)
+        self._col_src_idx = kwds.pop('col_src_idx',None)
         
         super(SpatialGridDimension,self).__init__(*args,**kwds)
         
@@ -296,6 +298,11 @@ class SpatialGridDimension(base.AbstractUidValueDimension):
             col = None
         
         ret = copy(self)
+        
+        if self._row_src_idx is not None:
+            ret._row_src_idx = self._row_src_idx[slc[0]]
+            ret._col_src_idx = self._col_src_idx[slc[1]]
+        
         ret.uid = uid
         ret._value = value
         ret.row = row
@@ -327,7 +334,15 @@ class SpatialGridDimension(base.AbstractUidValueDimension):
         
     @property
     def resolution(self):
-        return(np.mean([self.row.resolution,self.col.resolution]))
+        try:
+            ret = np.mean([self.row.resolution,self.col.resolution])
+        except AttributeError:
+            resolution_limit = int(constants.resolution_limit)/2
+            r_value = self.value[:,0:resolution_limit,0:resolution_limit]
+            rows = np.mean(np.diff(r_value[0,:,:],axis=0))
+            cols = np.mean(np.diff(r_value[1,:,:],axis=1))
+            ret = np.mean([rows,cols])
+        return(ret)
     
     @property
     def shape(self):
