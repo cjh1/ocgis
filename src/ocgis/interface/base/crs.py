@@ -334,9 +334,60 @@ class CFPolarStereographic(CFCoordinateReferenceSystem):
     def __init__(self,*args,**kwds):
         if 'scale_factor' not in kwds:
             kwds['scale_factor'] = 1.0
-#        self.scale_factor = kwds.pop('scale_factor',1.0)
-#        import ipdb;ipdb.set_trace()
         super(CFPolarStereographic,self).__init__(*args,**kwds)
+    
+    
+class CFNarccapObliqueMercator(CFCoordinateReferenceSystem):
+    grid_mapping_name = 'transverse_mercator'
+    map_parameters = {'latitude_of_projection_origin':'lat_0',
+                      'longitude_of_central_meridian':'lonc',
+                      'scale_factor_at_central_meridian':'k_0',
+                      'false_easting':'x_0',
+                      'false_northing':'y_0',
+                      'alpha':'alpha'}
+    proj_name = 'omerc'
+    iterable_parameters = {}
+    
+    def __init__(self,*args,**kwds):
+        if 'alpha' not in kwds:
+            kwds['alpha'] = 360
+        super(CFNarccapObliqueMercator,self).__init__(*args,**kwds)
+      
+        
+#class NarccapObliqueMercator(DatasetSpatialReference):
+#    _names = ['Transverse_Mercator']
+#    _template = ('+proj=omerc +lat_0={lat_0} +lonc={lonc} +k_0={k_0} '
+#                 '+x_0={x_0} +y_0={y_0} +alpha={alpha}')
+#    
+#    def __init__(self,latitude_of_projection_origin,longitude_of_central_meridian,
+#                 scale_factor_at_central_meridian,false_easting,false_northing,
+#                 alpha=360):
+#        self.latitude_of_projection_origin = latitude_of_projection_origin
+#        self.longitude_of_central_meridian = longitude_of_central_meridian
+#        self.scale_factor_at_central_meridian = scale_factor_at_central_meridian
+#        self.false_easting = false_easting
+#        self.false_northing = false_northing
+#        self.alpha = alpha
+#        super(NarccapObliqueMercator,self).__init__()
+#        
+#    @property
+#    def proj4_str(self):
+#        if self._proj4_str is None:
+#            kwds = {}
+#            kwds['lat_0'] = self.latitude_of_projection_origin
+#            kwds['lonc'] = self.longitude_of_central_meridian
+#            kwds['k_0'] = self.scale_factor_at_central_meridian
+#            kwds['x_0'] = self.false_easting
+#            kwds['y_0'] = self.false_northing
+#            kwds['alpha'] = self.alpha
+#            self._proj4_str = self._template.format(**kwds)
+#        return(self._proj4_str)
+#    
+#    @classmethod
+#    def _init_from_variable_(cls,var):
+#        ret = cls(var.latitude_of_projection_origin,var.longitude_of_central_meridian,
+#                 var.scale_factor_at_central_meridian,var.false_easting,var.false_northing)
+#        return(ret)
     
 #    def __init__(self,standard_parallel,latitude_of_projection_origin,straight_vertical_longitude_from_pole,
 #                 false_easting,false_northing,scale_factor=1.0):
