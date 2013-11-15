@@ -8,9 +8,16 @@ from ocgis.util.helpers import itersubclasses
 from collections import OrderedDict
 import csv
 import webbrowser
+from ocgis.api.operations import OcgOperations
 
 
 class Test(TestBase):
+    
+    def test_rotated_pole(self):
+        rd = self.test_data.get_rd('narccap_rotated_pole')
+        ops = OcgOperations(dataset=rd,output_format='shp',snippet=True,abstraction=None)
+        ret = ops.execute()
+        import ipdb;ipdb.set_trace()
 
     def test_read_projections(self):
         
