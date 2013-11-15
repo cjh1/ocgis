@@ -179,17 +179,21 @@ class CFCoordinateReferenceSystem(CoordinateReferenceSystem):
         self.projection_x_coordinate = kwds.pop('projection_x_coordinate',None)
         self.projection_y_coordinate = kwds.pop('projection_y_coordinate',None)
         
-        assert_raise(set(kwds.keys()) == set(self.map_parameters.keys()),logger='crs',
-                     exc=ValueError('Proper keyword arguments are: {0}'.format(self.map_parameters.keys())))
+        check_keys = kwds.keys()
+        for key in kwds.keys():
+            check_keys.remove(key)
+        if len(check_keys) > 0:
+            exc = ValueError('The keyword parameter(s) "{0}" was/were not provided.'.format(check_keys))
+            ocgis_lh(exc=exc,logger='crs')
         
         self.map_parameters_values = kwds
         crs = {'proj':self.proj_name}
-        for k,v in kwds.iteritems():
+        for k in self.map_parameters.keys():
             if k in self.iterable_parameters:
-                v = getattr(self,self.iterable_parameters[k])(v)
+                v = getattr(self,self.iterable_parameters[k])(kwds[k])
                 crs.update(v)
             else:
-                crs.update({self.map_parameters[k]:v})
+                crs.update({k:kwds[k]})
                 
         super(CFCoordinateReferenceSystem,self).__init__(crs=crs)
             
@@ -314,3 +318,52 @@ class CFLambertConformal(CFCoordinateReferenceSystem):
     @classmethod
     def _load_from_metadata_finalize_(cls,kwds,var,meta):
         kwds['units'] = meta['variables'][kwds['projection_x_coordinate']]['attrs'].get('units')
+        
+        
+class CFPolarStereographic(CFCoordinateReferenceSystem):
+    grid_mapping_name = 'polar_stereographic'
+    map_parameters = {'standard_parallel':'lat_ts',
+                      'latitude_of_projection_origin':'lat_0',
+                      'straight_vertical_longitude_from_pole':'lon_0',
+                      'false_easting':'x_0',
+                      'false_northing':'y_0',
+                      'scale_factor':'k_0'}
+    proj_name = 'stere'
+    iterable_parameters = {}
+    
+    def __init__(self,*args,**kwds):
+        if 'scale_factor' not in kwds:
+            kwds['scale_factor'] = 1.0
+#        self.scale_factor = kwds.pop('scale_factor',1.0)
+#        import ipdb;ipdb.set_trace()
+        super(CFPolarStereographic,self).__init__(*args,**kwds)
+    
+#    def __init__(self,standard_parallel,latitude_of_projection_origin,straight_vertical_longitude_from_pole,
+#                 false_easting,false_northing,scale_factor=1.0):
+#        self.standard_parallel = standard_parallel
+#        self.latitude_of_projection_origin = latitude_of_projection_origin
+#        self.straight_vertical_longitude_from_pole = straight_vertical_longitude_from_pole
+#        self.false_easting = false_easting
+#        self.false_northing = false_northing
+#        self.scale_factor = scale_factor
+#        super(PolarStereographic,self).__init__()
+#        
+#    @property
+#    def proj4_str(self):
+#        if self._proj4_str is None:
+#            kwds = {}
+#            kwds['latitude_natural'] = self.standard_parallel
+#            kwds['lat_0'] = self.latitude_of_projection_origin
+#            kwds['longitude_natural'] = self.straight_vertical_longitude_from_pole
+#            kwds['scale_factor'] = self.scale_factor
+#            kwds['false_easting'] = self.false_easting
+#            kwds['false_northing'] = self.false_northing
+#            self._proj4_str = self._template.format(**kwds)
+#        return(self._proj4_str)
+#    
+#    @classmethod
+#    def _init_from_variable_(cls,var):
+#        ret = cls(var.standard_parallel,var.latitude_of_projection_origin,
+#                  var.straight_vertical_longitude_from_pole,var.false_easting,
+#                  var.false_northing)
+#        return(ret)
