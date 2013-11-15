@@ -379,6 +379,19 @@ class TestSpatialDimension(TestSpatialBase):
 
 class TestSpatialGridDimension(TestSpatialBase):
     
+    def test_grid_without_row_and_column(self):
+        row = np.arange(39,42.5,0.5)
+        col = np.arange(-104,-95,0.5)
+        x,y = np.meshgrid(col,row)
+        value = np.zeros([2]+list(x.shape))
+        value = np.ma.array(value,mask=False)
+        value[0,:,:] = y
+        value[1,:,:] = x
+        minx,miny,maxx,maxy = x.min(),y.min(),x.max(),y.max()
+        grid = SpatialGridDimension(value=value)
+        sub = grid.get_subset_bbox(minx,miny,maxx,maxy)
+        import ipdb;ipdb.set_trace()
+    
     def test_load_from_source_grid_slicing(self):
         row = VectorDimension(src_idx=[10,20,30,40],name='row',data='foo')
         self.assertEqual(row.name,'row')
