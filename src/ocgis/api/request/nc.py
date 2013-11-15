@@ -1,6 +1,6 @@
 from ocgis.exc import DefinitionValidationError, ProjectionDoesNotMatch,\
     DimensionNotFound
-from copy import deepcopy
+from copy import deepcopy, copy
 import inspect
 import os
 from ocgis import env, constants
@@ -15,7 +15,8 @@ from ocgis.interface.nc.temporal import NcTemporalDimension
 import numpy as np
 from ocgis.interface.base.dimension.spatial import SpatialGridDimension,\
     SpatialDimension
-from ocgis.interface.base.crs import CFCoordinateReferenceSystem, CFWGS84
+from ocgis.interface.base.crs import CFCoordinateReferenceSystem, CFWGS84,\
+    CFRotatedPole
 from ocgis.interface.nc.dimension import NcVectorDimension
 from ocgis.interface.nc.field import NcField
 from ocgis.interface.base.variable import Variable, VariableCollection
@@ -88,9 +89,15 @@ class NcRequestDataset(object):
         self.did = did
         self.meta = meta or {}
         
-        self.s_abstraction = s_abstraction or 'polygon'
-        self.s_abstraction = self.s_abstraction.lower()
-        assert(self.s_abstraction in ('point','polygon'))
+        self.s_abstraction = s_abstraction
+        try:
+            self.s_abstraction = self.s_abstraction.lower()
+            assert(self.s_abstraction in ('point','polygon'))
+        except AttributeError:
+            if s_abstraction is None:
+                pass
+            else:
+                raise
         
         self._format_()
         
@@ -190,6 +197,15 @@ class NcRequestDataset(object):
             ocgis_lh('No "grid_mapping" attribute available assuming WGS84: {0}'.format(self.uri),
                      'request',logging.WARN)
             crs = CFWGS84()
+            
+        ## rotated pole coordinate systems require transforming the coordinates to
+        ## WGS84 before they may be loaded.
+        if isinstance(crs,CFRotatedPole):
+            msg = 'CFRotatedPole projection found. Transforming coordinates to WGS84 and replacing the CRS with CFWGS84'
+            ocgis_lh(msg=msg,logger='request.nc',level=logging.WARN)
+            grid = get_rotated_pole_spatial_grid_dimension(crs,grid)
+            crs = CFWGS84()
+            
         spatial = SpatialDimension(name_uid='gid',grid=grid,crs=crs,abstraction=self.s_abstraction)
         
         variable_meta = self._source_metadata['variables'][self.variable]
@@ -413,7 +429,66 @@ class NcRequestDataset(object):
                 '      Time Calendar: {0}'.format(self.t_calendar)]
         return(rows)
     
-    
+
+def get_rotated_pole_spatial_grid_dimension(crs,grid):
+        import csv
+        import itertools
+        import subprocess
+        import tempfile
+        class ProjDialect(csv.excel):
+            lineterminator = '\n'
+            delimiter = '\t'
+        f = tempfile.NamedTemporaryFile()
+        writer = csv.writer(f,dialect=ProjDialect)
+        _row = grid.row.value
+        _col = grid.col.value
+#        real_idx = []
+        shp = (_row.shape[0],_col.shape[0])
+        uid = np.arange(1,(shp[0]*shp[1])+1,dtype=int).reshape(*shp)
+        uid = np.ma.array(data=uid,mask=False)
+        for row_idx,col_idx in itertools.product(range(_row.shape[0]),range(_col.shape[0])):
+#            real_idx.append([col_idx,row_idx])
+            writer.writerow([_col[col_idx],_row[row_idx]])
+        f.flush()
+        cmd = crs._trans_proj.split(' ')
+        cmd.append(f.name)
+        cmd = ['proj','-f','"%.6f"','-m','57.2957795130823'] + cmd
+        capture = subprocess.check_output(cmd)
+        f.close()
+        coords = capture.split('\n')
+        new_coords = []
+        for ii,coord in enumerate(coords):
+            coord = coord.replace('"','')
+            coord = coord.split('\t')
+            try:
+                coord = map(float,coord)
+            ## likely empty string
+            except ValueError:
+                if coord[0] == '':
+                    continue
+                else:
+                    raise
+            new_coords.append(coord)
+            
+        new_coords = np.array(new_coords)
+#        real_idx = np.array(real_idx)
+        new_row = new_coords[:,1].reshape(*shp)
+        new_col = new_coords[:,0].reshape(*shp)
+#        new_real_row_idx = real_idx[:,1].reshape(*shp)
+#        new_real_column_idx = real_idx[:,0].reshape(*shp)
+        
+        new_grid = copy(grid)
+        new_grid.row._value = None
+        new_grid.row.bounds = None
+        new_grid.col._value = None
+        new_grid.col.bounds = None
+        new_value = np.zeros([2]+list(new_row.shape))
+        new_value = np.ma.array(new_value,mask=False)
+        new_value[0,:,:] = new_row
+        new_value[1,:,:] = new_col
+        new_grid._value = new_value
+                
+        return(new_grid)
     
 def get_axis(dimvar,dims,dim):
     try:

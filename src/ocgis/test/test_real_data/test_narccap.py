@@ -14,8 +14,10 @@ from ocgis.api.operations import OcgOperations
 class Test(TestBase):
     
     def test_rotated_pole(self):
+        ## TODO: it cannot be written to netCDF
         rd = self.test_data.get_rd('narccap_rotated_pole')
-        ops = OcgOperations(dataset=rd,output_format='shp',snippet=True,abstraction=None)
+        ops = OcgOperations(dataset=rd,output_format='shp',snippet=True,abstraction=None,
+                            geom='state_boundaries',select_ugid=[16])
         ret = ops.execute()
         import ipdb;ipdb.set_trace()
 

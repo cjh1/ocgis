@@ -215,37 +215,37 @@ class SubsetOperation(object):
                     
             ## if there is a snippet, return the first realization, time, and level
             if self.ops.snippet:
-                sfield = field[0,0,0,:,:]
-            ## if there is a slice, use it to subset the field
+                field = field[0,0,0,:,:]
+            ## if there is a slice, use it to subset the field.
             elif self.ops.slice is not None:
-                sfield = field.__getitem__(self.ops.slice)
+                field = field.__getitem__(self.ops.slice)
+                
+            ## see if the selection crs matches the field's crs
+            if crs is not None and crs != field.spatial.crs:
+                geom = project_shapely_geometry(geom,crs.sr,field.spatial.crs.sr)
+                crs = field.spatial.crs
+            ## unwrap the data if it is geographic and 360
+            if geom is not None and crs == CFWGS84():
+                if CFWGS84.get_is_360(field.spatial):
+                    ocgis_lh('unwrapping selection geometry',self._subset_log,alias=alias,ugid=ugid)
+                    geom = Wrapper().unwrap(geom)
+            ## perform the spatial operation
+            if geom is not None:
+                try:
+                    if self.ops.spatial_operation == 'intersects':
+                        sfield = field.get_intersects(geom)
+                    elif self.ops.spatial_operation == 'clip':
+                        sfield = field.get_clip(geom)
+                    else:
+                        ocgis_lh(exc=NotImplementedError(self.ops.spatial_operation))
+                except EmptySubsetError as e:
+                    if self.ops.allow_empty:
+                        ocgis_lh(alias=alias,ugid=ugid,msg='empty geometric operation but empty returns allowed',level=logging.WARN)
+                        sfield = None
+                    else:
+                        ocgis_lh(exc=ExtentError(message=str(e)),alias=alias,logger=self._subset_log)
             else:
-                ## see if the selection crs matches the field's crs
-                if crs is not None and crs != field.spatial.crs:
-                    geom = project_shapely_geometry(geom,crs.sr,field.spatial.crs.sr)
-                    crs = field.spatial.crs
-                ## unwrap the data if it is geographic and 360
-                if geom is not None and crs == CFWGS84():
-                    if CFWGS84.get_is_360(field.spatial):
-                        ocgis_lh('unwrapping selection geometry',self._subset_log,alias=alias,ugid=ugid)
-                        geom = Wrapper().unwrap(geom)
-                ## perform the spatial operation
-                if geom is not None:
-                    try:
-                        if self.ops.spatial_operation == 'intersects':
-                            sfield = field.get_intersects(geom)
-                        elif self.ops.spatial_operation == 'clip':
-                            sfield = field.get_clip(geom)
-                        else:
-                            ocgis_lh(exc=NotImplementedError(self.ops.spatial_operation))
-                    except EmptySubsetError as e:
-                        if self.ops.allow_empty:
-                            ocgis_lh(alias=alias,ugid=ugid,msg='empty geometric operation but empty returns allowed',level=logging.WARN)
-                            sfield = None
-                        else:
-                            ocgis_lh(exc=ExtentError(message=str(e)),alias=alias,logger=self._subset_log)
-                else:
-                    sfield = field
+                sfield = field
             
             ## if empty returns are allowed, there be an empty field
             if sfield is not None:
