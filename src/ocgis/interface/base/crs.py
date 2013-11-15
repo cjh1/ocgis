@@ -175,6 +175,10 @@ class WGS84(CoordinateReferenceSystem):
 class CFCoordinateReferenceSystem(CoordinateReferenceSystem):
     __metaclass__ = abc.ABCMeta
     
+    ## if False, no attempt to read projection coordinates will be made. they
+    ## will be set to a None default.
+    _find_projection_coordinates = True
+    
     def __init__(self,**kwds):
         self.projection_x_coordinate = kwds.pop('projection_x_coordinate',None)
         self.projection_y_coordinate = kwds.pop('projection_y_coordinate',None)
@@ -234,7 +238,6 @@ class CFCoordinateReferenceSystem(CoordinateReferenceSystem):
             ocgis_lh(logger='crs',exc=ProjectionCoordinateNotFound(key))
             
         r_var = meta['variables'][var]
-        
         try:
             ## look for the grid_mapping attribute on the target variable
             r_grid_mapping = meta['variables'][r_var['attrs']['grid_mapping']]
@@ -247,7 +250,12 @@ class CFCoordinateReferenceSystem(CoordinateReferenceSystem):
             raise(ProjectionDoesNotMatch)
         if grid_mapping_name != cls.grid_mapping_name:
             raise(ProjectionDoesNotMatch)
-        pc_x,pc_y = [_get_projection_coordinate_(target,meta) for target in ['x','y']]
+        
+        ## get the projection coordinates if not turned off by class attribute.
+        if cls._find_projection_coordinates:
+            pc_x,pc_y = [_get_projection_coordinate_(target,meta) for target in ['x','y']]
+        else:
+            pc_x,pc_y = None,None
         
         ## this variable name is used by the netCDF converter
         meta['grid_mapping_variable_name'] = r_grid_mapping['name']
@@ -352,6 +360,48 @@ class CFNarccapObliqueMercator(CFCoordinateReferenceSystem):
         if 'alpha' not in kwds:
             kwds['alpha'] = 360
         super(CFNarccapObliqueMercator,self).__init__(*args,**kwds)
+        
+
+class CFRotatedPole(CFCoordinateReferenceSystem):
+    grid_mapping_name = 'rotated_latitude_longitude'
+    map_parameters = {'grid_north_pole_longitude':None,
+                      'grid_north_pole_latitude':None}
+    proj_name = 'omerc'
+    iterable_parameters = {}
+    _template = '+proj=ob_tran +o_proj=latlon +o_lon_p={lon_pole} +o_lat_p={lat_pole} +lon_0=180'
+    _find_projection_coordinates = False
+    
+    def __init__(self,*args,**kwds):
+        super(CFRotatedPole,self).__init__(*args,**kwds)
+        self._trans_proj = self._template.format(lon_pole=kwds['grid_north_pole_longitude'],
+                                                 lat_pole=kwds['grid_north_pole_latitude'])
+        
+#    @classmethod
+#    def _load_from_metadata_finalize_(cls,kwds,var,meta):
+#        import ipdb;ipdb.set_trace()
+        
+        
+#class RotatedPole(DatasetSpatialReference):
+#    _names = ['rotated_pole']
+#    _template = '+proj=ob_tran +o_proj=latlon +o_lon_p={lon_pole} +o_lat_p={lat_pole} +lon_0=180'
+#    
+#    def __init__(self,grid_north_pole_longitude,grid_north_pole_latitude):
+#        self.grid_north_pole_longitude = grid_north_pole_longitude
+#        self.grid_north_pole_latitude = grid_north_pole_latitude
+#        self._trans_proj = self._template.format(lon_pole=self.grid_north_pole_longitude,
+#                                                 lat_pole=self.grid_north_pole_latitude)
+#        super(RotatedPole,self).__init__()
+#        
+#    @property
+#    def proj4_str(self):
+#        if self._proj4_str is None:
+#            self._proj4_str = WGS84().sr.ExportToProj4()
+#        return(self._proj4_str)
+#    
+#    @classmethod
+#    def _init_from_variable_(cls,var):
+#        ret = cls(var.grid_north_pole_longitude,var.grid_north_pole_latitude)
+#        return(ret)
       
         
 #class NarccapObliqueMercator(DatasetSpatialReference):

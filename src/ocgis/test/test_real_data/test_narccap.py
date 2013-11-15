@@ -26,8 +26,8 @@ class Test(TestBase):
         for uri in os.listdir(data_dir):
             if uri.endswith('nc'):
                 
-#                if uri != 'pr_WRFG_ccsm_1986010103.nc':
-#                    continue
+                if uri != 'pr_HRM3_gfdl_1981010103.nc':
+                    continue
                 
                 variable = uri.split('_')[0]
                 rd = RequestDataset(uri=uri,variable=variable)
