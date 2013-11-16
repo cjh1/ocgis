@@ -23,6 +23,14 @@ class Max(base.AbstractUnivariateSetFunction):
     def _calculate_(self,values):
         return(np.ma.max(values,axis=0))
 
+
+class Min(base.AbstractUnivariateSetFunction):
+    description = 'Min value for the series.'
+    key = 'min'
+    
+    def _calculate_(self,values):
+        return(np.ma.min(values,axis=0))
+
     
 class Mean(base.AbstractUnivariateSetFunction):
     description = 'Compute mean value of the set.'
@@ -30,6 +38,14 @@ class Mean(base.AbstractUnivariateSetFunction):
     
     def calculate(self,values):
         return(np.ma.mean(values,axis=0))
+    
+    
+class Median(base.AbstractUnivariateSetFunction):
+    description = 'Compute median value of the set.'
+    key = 'median'
+    
+    def calculate(self,values):
+        return(np.ma.median(values,axis=0))
     
     
 class StandardDeviation(base.AbstractUnivariateSetFunction):

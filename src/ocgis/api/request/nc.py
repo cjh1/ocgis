@@ -107,7 +107,7 @@ class NcRequestDataset(object):
         try:
             ret = nc.Dataset(self.uri,'r')
         except TypeError:
-            ret = nc.MFDataset(self.uri,'r')
+            ret = nc.MFDataset(self.uri)
         return(ret)
             
     @property
@@ -552,7 +552,7 @@ def get_dimension_map(ds,var,metadata):
             ## if no bounds variable is found for time, it may be a climatological.
             if key == 'T':
                 try:
-                    bounds_var = ds.variables[getattr(value['variable'],'climatology')]
+                    bounds_var = getattr(ds.variables[value['variable']],'climatology')
                     ocgis_lh('Climatological bounds found for variable: {0}'.format(var._name),
                              logger='request.nc',
                              level=logging.INFO)

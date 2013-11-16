@@ -1,7 +1,7 @@
 #from ocgis.interface.shp import ShpDataset
 import numpy as np
 from ocgis.util.helpers import format_bool, iter_array, validate_time_subset,\
-    get_formatted_slice
+    get_formatted_slice, get_is_date_between
 import itertools
 from ocgis.test.base import TestBase
 #from ocgis.util.spatial.wrap import Wrapper
@@ -10,6 +10,20 @@ from datetime import datetime as dt
 
 class TestHelpers(TestBase):
     
+    def test_get_is_date_between(self):
+        lower = dt(1971,1,1)
+        upper = dt(2000,2,1)
+        self.assertFalse(get_is_date_between(lower,upper,month=6))
+        self.assertFalse(get_is_date_between(lower,upper,month=2))
+        self.assertTrue(get_is_date_between(lower,upper,month=1))
+        
+        self.assertFalse(get_is_date_between(lower,upper,year=1968))
+        self.assertTrue(get_is_date_between(lower,upper,year=1995))
+        
+        lower = dt(2013, 1, 1, 0, 0)
+        upper = dt(2013, 1, 2, 0, 0)
+        self.assertTrue(get_is_date_between(lower,upper,year=2013))
+            
     def test_get_formatted_slc(self):
         ret = get_formatted_slice(slice(None,None,None),10)
         self.assertEqual(ret,[slice(None,None,None)]*10)

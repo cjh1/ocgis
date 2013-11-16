@@ -20,14 +20,14 @@ class NcVectorDimension(VectorDimension):
                     var = self._src_idx + 1
                 else:
                     ocgis_lh(logger='interface.nc',exc=e)
-            ## format the slice
-            slc = get_reduced_slice(self._src_idx)
+            # format the slice
+#            slc = get_reduced_slice(self._src_idx)
             ## set the value
-            self._value = var[slc]
+            self._value = var.__getitem__(self._src_idx)
             ## now, we should check for bounds here as the inheritance for making
             ## this process more transparent is not in place.
             bounds_name = self._data._source_metadata['dim_map'][self._axis].get('bounds')
             if bounds_name is not None:
-                self.bounds = ds.variables[bounds_name][slc,:]
+                self.bounds = ds.variables[bounds_name][self._src_idx,:]
         finally:
             ds.close()

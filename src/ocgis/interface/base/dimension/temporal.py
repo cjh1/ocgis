@@ -6,6 +6,7 @@ import datetime
 from ocgis import constants
 from ocgis.util.logging_ocgis import ocgis_lh
 from ocgis.exc import EmptySubsetError
+from ocgis.util.helpers import get_is_date_between
 
 
 class TemporalDimension(base.VectorDimension):
@@ -92,6 +93,10 @@ class TemporalDimension(base.VectorDimension):
         
         ## return the values to use for the temporal region subsetting.
         value = self._get_datetime_value_()
+        bounds = self._get_datetime_bounds_()
+        
+        ## switch to indicate if bounds or centroid datetimes are to be used.
+        use_bounds = False if bounds is None else True
         
         ## remove any none values in the time_region dictionary. this will save
         ## time in iteration.
@@ -108,19 +113,27 @@ class TemporalDimension(base.VectorDimension):
         
         for idx_row in range(select.shape[0]):
             ## do the comparison for each time_region element.
-            row = value[idx_row]
+            if use_bounds:
+                row = bounds[idx_row,:]
+            else:
+                row = value[idx_row]
             for ii,(k,v) in enumerate(time_region.iteritems()):
-                part = getattr(row,k)
-                if part in v:
-                    row_check[ii] = True
+                if use_bounds:
+                    to_include = []
+                    for element in v:
+                        kwds = {k:element}
+                        to_include.append(get_is_date_between(row[0],row[1],**kwds))
+                    fill = any(to_include)
                 else:
-                    row_check[ii] = False
+                    part = getattr(row,k)
+                    fill = True if part in v else False
+                row_check[ii] = fill
             if row_check.all():
                 select[idx_row] = True
-        
+                
         if not select.any():
             ocgis_lh(logger='nc.temporal',exc=EmptySubsetError(origin='temporal'))
-        
+
         ret = self[select]
         
         if return_indices:

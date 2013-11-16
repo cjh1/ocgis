@@ -21,6 +21,22 @@ import fiona
 from shapely.geometry.geo import mapping
 
 
+def get_is_date_between(lower,upper,month=None,year=None):
+    if month is not None:
+        attr = 'month'
+        to_test = month
+    else:
+        attr = 'year'
+        to_test = year
+        
+    part_lower,part_upper = getattr(lower,attr),getattr(upper,attr)
+    if part_lower != part_upper:
+        ret = np.logical_and(to_test >= part_lower,to_test < part_upper)
+    else:
+        ret = np.logical_and(to_test >= part_lower,to_test <= part_upper)
+    return(ret)
+
+
 class FionaMaker(object):
             
             def __init__(self,path,epsg=4326,driver='ESRI Shapefile',geometry='Polygon'):

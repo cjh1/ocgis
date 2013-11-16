@@ -3,20 +3,19 @@ from ocgis.test.base import TestBase
 import itertools
 from unittest.case import SkipTest
 from ocgis.api.operations import OcgOperations
-from ocgis.interface.nc.dataset import NcDataset
 import webbrowser
 from datetime import datetime as dt
 from ocgis.exc import DefinitionValidationError
 import numpy as np
 import datetime
 import netCDF4 as nc
-import os
+import unittest
+from ocgis.interface.base.crs import CFWGS84
 
 
 class Test(TestBase):
     
     def test_qed_multifile(self):
-        raise(SkipTest('dev'))
         ddir = '/usr/local/climate_data/QED-2013/multifile'
         variable = 'txxmmedm'
         ocgis.env.DIR_DATA = ddir
@@ -26,10 +25,10 @@ class Test(TestBase):
                'maurer02v2_median_txxmmedm_march_1971-2000.nc']
         
         rd = ocgis.RequestDataset(uri,variable)
-        ref = rd.ds
+        field = rd.get()
     
     def test_maurer_concatenated_shp(self):
-        raise(SkipTest('dev'))
+#        raise(SkipTest('dev'))
         ocgis.env.DIR_DATA = '/usr/local/climate_data/maurer/2010-concatenated'
 #        filename = 'Maurer02new_OBS_tasmax_daily.1971-2000.nc'
 #        variable = 'tasmax'
@@ -101,15 +100,13 @@ class Test(TestBase):
         _year = [[2011],None,[2012],[2011,2013]]
         
         def run_test(month,year):
-            rd = self.test_data.get_rd('cancm4_rhs')
-            time_region = {'month':month,'year':year}
-            rd.time_region = time_region
-            
+            rd = self.test_data.get_rd('cancm4_rhs',kwds={'time_region':{'month':month,'year':year}})
+                        
             ops = ocgis.OcgOperations(dataset=rd,geom='state_boundaries',
                                       select_ugid=[25])
             ret = ops.execute()
             
-            ret = ret[25].variables['rhs'].temporal.value_datetime
+            ret = ret[25]['rhs'].temporal.value_datetime
             
             years = [dt.year for dt in ret.flat]
             months = [dt.month for dt in ret.flat]
@@ -129,7 +126,7 @@ class Test(TestBase):
         rd = self.test_data.get_rd('cancm4_rhs',kwds=kwds)
         ops = ocgis.OcgOperations(dataset=rd,geom='state_boundaries',select_ugid=[25])
         ret = ops.execute()
-        ref = ret[25].variables['rhs']
+        ref = ret[25]['rhs']
         years = set([obj.year for obj in ref.temporal.value_datetime])
         self.assertFalse(2015 in years)
         
@@ -140,7 +137,7 @@ class Test(TestBase):
             self.test_data.get_rd('cancm4_rhs',kwds=kwds)
             
     def test_maurer_2010(self):
-        raise(SkipTest('dev'))
+#        raise(SkipTest('dev'))
         ## inspect the multi-file maurer datasets
         keys = ['maurer_2010_pr','maurer_2010_tas','maurer_2010_tasmin','maurer_2010_tasmax']
         calc = [{'func':'mean','name':'mean'},{'func':'median','name':'median'}]
@@ -198,8 +195,6 @@ class Test(TestBase):
     def test_narccap_point_subset_small(self):
         rd = self.test_data.get_rd('narccap_pr_wrfg_ncep')
         geom = [-97.74278,30.26694]
-        ocgis.env.WRITE_TO_REFERENCE_PROJECTION = True
-        ocgis.env.VERBOSE = False
     
         calc = [{'func':'mean','name':'mean'},
                 {'func':'median','name':'median'},
@@ -208,11 +203,11 @@ class Test(TestBase):
         calc_grouping = ['month','year']
         ops = ocgis.OcgOperations(dataset=rd,calc=calc,calc_grouping=calc_grouping,
                                   output_format='csv+',geom=geom,abstraction='point',
-                                  snippet=False,allow_empty=False)
+                                  snippet=False,allow_empty=False,output_crs=CFWGS84())
         ret = ops.execute()
     
     def test_narccap_point_subset_long(self):
-        raise(SkipTest('dev'))
+#        raise(SkipTest('dev'))
         import sys
         sys.path.append('/home/local/WX/ben.koziol/links/git/examples/')
         from narccap.co_watersheds_subset import parse_narccap_filenames
@@ -234,19 +229,19 @@ class Test(TestBase):
                                   snippet=snippet,allow_empty=False)
         ret = ops.execute()
 
-    def test_qed_maurer_concatenated(self):
-        raise(SkipTest('dev'))
-        calc = [{'func':'freq_duration','name':'freq_duration','kwds':{'operation':'gt','threshold':15}}]
-        ocgis.env.DIR_DATA = '/usr/local/climate_data/maurer/2010-concatenated'
-        filename = 'Maurer02new_OBS_tasmax_daily.1971-2000.nc'
-        variable = 'tasmax'
-        rd = ocgis.RequestDataset(filename,variable)
-        ocgis.env.VERBOSE = True
-        ops = ocgis.OcgOperations(dataset=rd,geom='gg_city_centroids',select_ugid=None,
-                                  calc=calc,calc_grouping=['month','year'],output_format='csv+')
-        ret = ops.execute()
-        webbrowser.open(ret)
-        import ipdb;ipdb.set_trace()
+#    def test_qed_maurer_concatenated(self):
+##        raise(SkipTest('dev'))
+#        calc = [{'func':'freq_duration','name':'freq_duration','kwds':{'operation':'gt','threshold':15}}]
+#        ocgis.env.DIR_DATA = '/usr/local/climate_data/maurer/2010-concatenated'
+#        filename = 'Maurer02new_OBS_tasmax_daily.1971-2000.nc'
+#        variable = 'tasmax'
+#        rd = ocgis.RequestDataset(filename,variable)
+#        ocgis.env.VERBOSE = True
+#        ops = ocgis.OcgOperations(dataset=rd,geom='gg_city_centroids',select_ugid=None,
+#                                  calc=calc,calc_grouping=['month','year'],output_format='csv+')
+#        ret = ops.execute()
+#        webbrowser.open(ret)
+#        import ipdb;ipdb.set_trace()
         
     def test_time_region_climatology(self):
         ocgis.env.DIR_DATA = '/usr/local/climate_data'
@@ -256,33 +251,35 @@ class Test(TestBase):
         rd = ocgis.RequestDataset(uri,variable,time_region={'year':[1989],'month':[6]})
         ops = ocgis.OcgOperations(dataset=rd,geom='state_boundaries',select_ugid=[16])
         ret = ops.execute()
-        ref = ret[16].variables['climatology_TNn_monthly_max']
+        ref = ret[16]['climatology_TNn_monthly_max']
         self.assertEqual(set([6]),set([dt.month for dt in ref.temporal.value_datetime]))
+        self.assertNumpyAll(np.array([[   151.,  10774.]]),ref.temporal.bounds)
         
         uri = 'climatology_TNn_monthly_max.nc'
         variable = 'climatology_TNn_monthly_max'
         rd = ocgis.RequestDataset(uri,variable,time_region={'year':None,'month':[6]})
         ops = ocgis.OcgOperations(dataset=rd,geom='state_boundaries',select_ugid=[16])
         ret = ops.execute()
-        ref = ret[16].variables['climatology_TNn_monthly_max']
+        ref = ret[16]['climatology_TNn_monthly_max']
         self.assertEqual(set([6]),set([dt.month for dt in ref.temporal.value_datetime]))
         
         rd = ocgis.RequestDataset('climatology_TNn_annual_min.nc','climatology_TNn_annual_min')
         ops = ocgis.OcgOperations(dataset=rd,geom='state_boundaries',select_ugid=[16])
         ret = ops.execute()
-        ref = ret[16].variables['climatology_TNn_annual_min']
+        ref = ret[16]['climatology_TNn_annual_min']
         
         rd = ocgis.RequestDataset('climatology_TasMin_seasonal_max_of_seasonal_means.nc','climatology_TasMin_seasonal_max_of_seasonal_means')#,time_region={'year':[1989]})
         ops = ocgis.OcgOperations(dataset=rd,geom='state_boundaries',select_ugid=[16])
         ret = ops.execute()
-        ref = ret[16].variables['climatology_TasMin_seasonal_max_of_seasonal_means']
+        ref = ret[16]['climatology_TasMin_seasonal_max_of_seasonal_means']
         
         uri = 'climatology_Tas_annual_max_of_annual_means.nc'
         variable = 'climatology_Tas_annual_max_of_annual_means'
         rd = ocgis.RequestDataset(uri,variable)
         ops = ocgis.OcgOperations(dataset=rd,geom='state_boundaries',select_ugid=[16])
         ret = ops.execute()
-        ref = ret[16].variables[variable]
-        
+        ref = ret[16][variable]
+
+
 if __name__ == '__main__':
     unittest.main()

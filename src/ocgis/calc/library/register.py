@@ -10,7 +10,7 @@ class FunctionRegistry(dict):
         
         self.reg = [math.Divide,math.NaturalLogarithm,math.Threshold]
         self.reg += [statistics.FrequencyPercentile,statistics.Mean,statistics.StandardDeviation,
-                     statistics.Max]
+                     statistics.Max,statistics.Median,statistics.Min]
         self.reg += [thresholds.Between]
         
         for cc in self.reg:
