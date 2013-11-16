@@ -197,7 +197,7 @@ class CFCoordinateReferenceSystem(CoordinateReferenceSystem):
                 v = getattr(self,self.iterable_parameters[k])(kwds[k])
                 crs.update(v)
             else:
-                crs.update({k:kwds[k]})
+                crs.update({self.map_parameters[k]:kwds[k]})
                 
         super(CFCoordinateReferenceSystem,self).__init__(crs=crs)
             

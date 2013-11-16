@@ -176,7 +176,7 @@ class SpatialDimension(base.AbstractUidDimension):
                 ret.grid.value.mask[:,:,:] = grid_mask.copy()
         else:
             raise(NotImplementedError)
-            
+        
         if return_indices:
             ret = (ret,slc)
         
@@ -426,11 +426,11 @@ class SpatialGridDimension(base.AbstractUidValueDimension):
         try:
             ret._value.mask = new_mask
         except UnboundLocalError:
-            if self.row is None:
+            if self.row is not None:
                 pass
             else:
                 raise
-        
+            
         if return_indices:
             ret = (ret,(row_slc,col_slc))
             
@@ -570,18 +570,17 @@ class SpatialGeometryPointDimension(base.AbstractUidValueDimension):
 #            obj = prep(polygon)
         elif type(polygon) in (Polygon,MultiPolygon):
             ## construct the spatial index
-            index_grid = build_index_grid(30.0,polygon)
+            index_grid = build_index_grid(None,polygon)
             obj = build_index(polygon,index_grid)
             ref_intersects = _intersects_polygon_
         else:
             raise(NotImplementedError)
         
         ret = copy(self)
-        
         fill = np.ma.array(self.value,mask=True)
         ref_fill_mask = fill.mask
         prepared = prep(polygon)
-
+        
         for (ii,jj),geom in iter_array(self.value,return_value=True):
             if prepared.intersects(geom):
                 ## the mask value is the inverse of the intersects operation

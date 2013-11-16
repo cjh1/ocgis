@@ -7,7 +7,7 @@ from ocgis.conv.meta import MetaConverter
 from ocgis.util.logging_ocgis import ocgis_lh
 from ocgis.calc.base import AbstractMultivariateFunction,\
     AbstractKeyedOutputFunction
-from ocgis.interface.base.crs import CFWGS84
+from ocgis.interface.base.crs import CFWGS84, CFRotatedPole
 
 
 class OcgOperations(object):
@@ -66,7 +66,7 @@ class OcgOperations(object):
     """
     
     def __init__(self, dataset=None, spatial_operation='intersects', geom=None, aggregate=False,
-                 calc=None, calc_grouping=None, calc_raw=False, abstraction='polygon',
+                 calc=None, calc_grouping=None, calc_raw=False, abstraction=None,
                  snippet=False, backend='ocg', prefix=None,
                  output_format='numpy', agg_selection=False, select_ugid=None, 
                  vector_wrap=True, allow_empty=False, dir_output=None, 
@@ -198,6 +198,9 @@ class OcgOperations(object):
         if len(set(projections)) > 1 and self.output_format != 'numpy': #@UndefinedVariable
             if self.output_crs is None:
                 _raise_('Dataset coordinate reference systems must be equivalent if no output CRS is chosen.',obj=OutputCRS)
+        if CFRotatedPole in map(type,projections):
+            if self.output_format == 'nc':
+                _raise_('CFRotatedPole data may not be written to netCDF. Row and columns may not be reconstructed.',obj=OutputFormat)
         
         if self.snippet:
             if self.calc is not None:

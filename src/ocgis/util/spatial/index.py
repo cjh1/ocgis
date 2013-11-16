@@ -4,6 +4,13 @@ from ocgis.util.helpers import make_poly
 
     
 def shapely_grid(dim,rtup,ctup,target=None):
+    
+    if dim is None:
+        ## construct an average of 10 polygons
+        row_dim = abs(rtup[0]-rtup[1])/10.0
+        col_dim = abs(ctup[0]-ctup[1])/10.0
+        dim = np.mean([row_dim,col_dim])
+    
     row_bounds = np.arange(rtup[0],rtup[1]+dim,dim)
     min_row = row_bounds[0:-1]
     max_row = row_bounds[1:]
@@ -29,7 +36,8 @@ def build_index_grid(dim,target):
     bounds = target.bounds
     rtup = (bounds[1],bounds[3])
     ctup = (bounds[0],bounds[2])
-    grid = shapely_grid(float(dim),rtup,ctup,target=target)
+    dim = dim if dim is None else float(dim)
+    grid = shapely_grid(dim,rtup,ctup,target=target)
     return(grid)
 
 def build_index(target,grid):
