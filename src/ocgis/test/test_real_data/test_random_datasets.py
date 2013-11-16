@@ -11,6 +11,7 @@ import datetime
 import netCDF4 as nc
 import unittest
 from ocgis.interface.base.crs import CFWGS84
+import fiona
 
 
 class Test(TestBase):
@@ -51,9 +52,13 @@ class Test(TestBase):
         
         ops = ocgis.OcgOperations(dataset=rds,calc=[{'name': 'Standard Deviation', 'func': 'std', 'kwds': {}}],
          calc_grouping=['month'],calc_raw=False,geom='us_counties',select_ugid=[286],output_format='shp',
-         spatial_operation='clip',headers=['did','ugid','gid','year','month','day','variable','calc_name','value'],
+         spatial_operation='clip',headers=['did','ugid','gid','year','month','day','variable','calc_key','value'],
          abstraction=None)
         ret = ops.execute()
+        
+        with fiona.open(ret) as f:
+            variables = set([row['properties']['VARIABLE'] for row in f])
+        self.assertEqual(variables,set([u'pr', u'tasmax', u'tasmin', u'tas']))
     
     def test_point_shapefile_subset(self):
         _output_format = ['numpy','nc','csv','csv+']
@@ -75,24 +80,23 @@ class Test(TestBase):
         ops = ocgis.OcgOperations(dataset=rd,geom='us_counties',select_ugid=[2778],
                                   output_format='numpy')
         ret = ops.execute()
-        ref = ret[2778].variables['tasmax']
-        years = np.array([dt.year for dt in ret[2778].variables['tasmax'].temporal.value_datetime])
-        months = np.array([dt.month for dt in ret[2778].variables['tasmax'].temporal.value_datetime])
-        select = np.array([dt.month in (6,7,8) and dt.year in (1990,1991,1992,1993,1994,1995,1996,1997,1998,1999) for dt in ret[2778].variables['tasmax'].temporal.value_datetime])
-        time_subset = ret[2778].variables['tasmax'].value[select,:,:,:]
+        ref = ret[2778]['tasmax']
+        years = np.array([dt.year for dt in ret[2778]['tasmax'].temporal.value_datetime])
+        months = np.array([dt.month for dt in ret[2778]['tasmax'].temporal.value_datetime])
+        select = np.array([dt.month in (6,7,8) and dt.year in (1990,1991,1992,1993,1994,1995,1996,1997,1998,1999) for dt in ret[2778]['tasmax'].temporal.value_datetime])
+        time_subset = ret[2778]['tasmax'].variables['tasmax'].value[:,select,:,:,:]
         time_values = ref.temporal.value[select]
         
         rd = ocgis.RequestDataset(filename,variable,time_region={'month':[6,7,8],'year':[1990,1991,1992,1993,1994,1995,1996,1997,1998,1999]})
         ops = ocgis.OcgOperations(dataset=rd,geom='us_counties',select_ugid=[2778],
                                   output_format='numpy')
         ret2 = ops.execute()
-        ref2 = ret2[2778].variables['tasmax']
+        ref2 = ret2[2778]['tasmax']
         
         self.assertEqual(time_values.shape,ref2.temporal.shape)
-        self.assertEqual(time_subset.shape,ref2.value.shape)
-        self.assertNumpyAll(time_subset,ref2.value)
-        self.assertFalse(np.any(ref2.value < 0))
-        
+        self.assertEqual(time_subset.shape,ref2.variables['tasmax'].value.shape)
+        self.assertNumpyAll(time_subset,ref2.variables['tasmax'].value)
+        self.assertFalse(np.any(ref2.variables['tasmax'].value < 0))
     
     def test_time_region_subset(self):
         
@@ -137,7 +141,6 @@ class Test(TestBase):
             self.test_data.get_rd('cancm4_rhs',kwds=kwds)
             
     def test_maurer_2010(self):
-#        raise(SkipTest('dev'))
         ## inspect the multi-file maurer datasets
         keys = ['maurer_2010_pr','maurer_2010_tas','maurer_2010_tasmin','maurer_2010_tasmax']
         calc = [{'func':'mean','name':'mean'},{'func':'median','name':'median'}]
@@ -151,15 +154,16 @@ class Test(TestBase):
             ops = ocgis.OcgOperations(dataset=rd,snippet=True,select_ugid=[10,15],
                    output_format='numpy',geom='state_boundaries')
             ret = ops.execute()
-            self.assertTrue(ret[10].variables[rd.variable].value.sum() != 0)
-            self.assertTrue(ret[15].variables[rd.variable].value.sum() != 0)
+            self.assertTrue(ret.gvu(10,rd.variable).sum() != 0)
+            self.assertTrue(ret.gvu(15,rd.variable).sum() != 0)
             
             ops = ocgis.OcgOperations(dataset=rd,snippet=False,select_ugid=[10,15],
                    output_format='numpy',geom='state_boundaries',calc=calc,
                    calc_grouping=calc_grouping)
             ret = ops.execute()
-            for calc_name in ['mean','median','n']:
-                self.assertEqual(ret[10].calc[rd.variable][calc_name].shape[0],12)
+            for calc_name in ['mean','median']:
+                calc_name = calc_name+'_'+rd.alias
+                self.assertEqual(ret[10][rd.alias].variables[calc_name].value.shape[1],12)
                 
             ops = ocgis.OcgOperations(dataset=rd,snippet=False,select_ugid=[10,15],
                    output_format='csv+',geom='state_boundaries',calc=calc,
@@ -175,26 +179,27 @@ class Test(TestBase):
                             aggregate=False,spatial_operation='clip',output_format='csv+')
         ret = ops.execute()
             
-    def test_QED_2013(self):
-        variable = 'rx1dayamina'
-        uri = '/home/local/WX/ben.koziol/climate_data/QED-2013/maurer02v2_min_rx1dayamina_annual_1971-2000.nc'
-        
-        rd = ocgis.RequestDataset(uri,variable,time_region={'year':[1991],'month':[5]},
-                                  time_range=[datetime.datetime(1971, 1, 1, 0, 0), datetime.datetime(2001, 1, 1, 0, 0)])
-        
-        ops = ocgis.OcgOperations(dataset=rd)
-        ret = ops.execute()
-        ref = ret[1].variables['rx1dayamina']
-        ds = nc.Dataset('/home/local/WX/ben.koziol/climate_data/QED-2013/maurer02v2_min_rx1dayamina_annual_1971-2000.nc')
-        try:
-            ref2 = ds.variables['rx1dayamina'][:]
-            self.assertNumpyAll(ref.value,ref2)
-        finally:
-            ds.close()
+#    def test_QED_2013(self):
+#        variable = 'rx1dayamina'
+#        uri = '/home/local/WX/ben.koziol/climate_data/QED-2013/maurer02v2_min_rx1dayamina_annual_1971-2000.nc'
+#        
+#        rd = ocgis.RequestDataset(uri,variable,time_region={'year':[1991],'month':[5]},
+#                                  time_range=[datetime.datetime(1971, 1, 1, 0, 0), datetime.datetime(2001, 1, 1, 0, 0)])
+#        
+#        ops = ocgis.OcgOperations(dataset=rd)
+#        ret = ops.execute()
+#        ref = ret[1].variables['rx1dayamina']
+#        ds = nc.Dataset('/home/local/WX/ben.koziol/climate_data/QED-2013/maurer02v2_min_rx1dayamina_annual_1971-2000.nc')
+#        try:
+#            ref2 = ds.variables['rx1dayamina'][:]
+#            self.assertNumpyAll(ref.value,ref2)
+#        finally:
+#            ds.close()
         
     def test_narccap_point_subset_small(self):
         rd = self.test_data.get_rd('narccap_pr_wrfg_ncep')
         geom = [-97.74278,30.26694]
+#        ocgis.env.VERBOSE = True
     
         calc = [{'func':'mean','name':'mean'},
                 {'func':'median','name':'median'},
@@ -202,32 +207,36 @@ class Test(TestBase):
                 {'func':'min','name':'min'}]
         calc_grouping = ['month','year']
         ops = ocgis.OcgOperations(dataset=rd,calc=calc,calc_grouping=calc_grouping,
-                                  output_format='csv+',geom=geom,abstraction='point',
+                                  output_format='numpy',geom=geom,abstraction='point',
                                   snippet=False,allow_empty=False,output_crs=CFWGS84())
         ret = ops.execute()
+        ref = ret[1]['pr']
+        self.assertEqual(set(ref.variables.keys()),set(['mean_pr', 'median_pr', 'max_pr', 'min_pr']))
     
-    def test_narccap_point_subset_long(self):
-#        raise(SkipTest('dev'))
-        import sys
-        sys.path.append('/home/local/WX/ben.koziol/links/git/examples/')
-        from narccap.co_watersheds_subset import parse_narccap_filenames
-        snippet = False
-        ## city center coordinate
-        geom = [-97.74278,30.26694]
-        ocgis.env.DIR_DATA = '/usr/local/climate_data/narccap'
-        ocgis.env.WRITE_TO_REFERENCE_PROJECTION = True
-        ocgis.env.VERBOSE = True
-        
-        rds = parse_narccap_filenames(ocgis.env.DIR_DATA)
-        calc = [{'func':'mean','name':'mean'},
-                {'func':'median','name':'median'},
-                {'func':'max','name':'max'},
-                {'func':'min','name':'min'}]
-        calc_grouping = ['month','year']
-        ops = ocgis.OcgOperations(dataset=rds,calc=calc,calc_grouping=calc_grouping,
-                                  output_format='csv+',geom=geom,abstraction='point',
-                                  snippet=snippet,allow_empty=False)
-        ret = ops.execute()
+#    def test_narccap_point_subset_long(self):
+##        raise(SkipTest('dev'))
+#        import sys
+#        sys.path.append('/home/local/WX/ben.koziol/links/git/examples/')
+#        from narccap.co_watersheds_subset import parse_narccap_filenames
+#        snippet = False
+#        ## city center coordinate
+#        geom = [-97.74278,30.26694]
+#        ocgis.env.DIR_DATA = '/usr/local/climate_data/narccap'
+##        ocgis.env.WRITE_TO_REFERENCE_PROJECTION = True
+##        ocgis.env.VERBOSE = True
+#        
+#        rds = parse_narccap_filenames(ocgis.env.DIR_DATA)
+#        calc = [{'func':'mean','name':'mean'},
+#                {'func':'median','name':'median'},
+#                {'func':'max','name':'max'},
+#                {'func':'min','name':'min'}]
+#        calc_grouping = ['month','year']
+#        ops = ocgis.OcgOperations(dataset=rds,calc=calc,calc_grouping=calc_grouping,
+#                                  output_format='numpy',geom=geom,abstraction='point',
+#                                  snippet=snippet,allow_empty=False,output_crs=CFWGS84())
+#        ret = ops.execute()
+#        
+#        import ipdb;ipdb.set_trace()
 
 #    def test_qed_maurer_concatenated(self):
 ##        raise(SkipTest('dev'))

@@ -20,7 +20,7 @@ class Max(base.AbstractUnivariateSetFunction):
     description = 'Max value for the series.'
     key = 'max'
     
-    def _calculate_(self,values):
+    def calculate(self,values):
         return(np.ma.max(values,axis=0))
 
 
@@ -28,7 +28,7 @@ class Min(base.AbstractUnivariateSetFunction):
     description = 'Min value for the series.'
     key = 'min'
     
-    def _calculate_(self,values):
+    def calculate(self,values):
         return(np.ma.min(values,axis=0))
 
     

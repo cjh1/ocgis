@@ -186,13 +186,10 @@ class SubsetOperation(object):
             geom = gd.get('geom')
             
             crs = gd.get('crs')
-            ## if the geometry is a point, we need to buffer it...
-            if type(geom) in [Point,MultiPoint]:
-                ocgis_lh(logger=self._subset_log,msg='buffering point geometry',level=logging.DEBUG)
-                geom = geom.buffer(self.ops.search_radius_mult*field.spatial.grid.resolution)
-            try:
+            
+            if 'UGID' in gd['properties']:
                 ugid = gd['properties']['UGID']
-            except KeyError:
+            else:
                 ## try to get lowercase ugid in case the shapefile is not perfectly
                 ## formed. however, if there is no geometry accept the error and
                 ## use the default geometry identifier.
@@ -224,6 +221,10 @@ class SubsetOperation(object):
             if crs is not None and crs != field.spatial.crs:
                 geom = project_shapely_geometry(geom,crs.sr,field.spatial.crs.sr)
                 crs = field.spatial.crs
+            ## if the geometry is a point, we need to buffer it...
+            if type(geom) in [Point,MultiPoint]:
+                ocgis_lh(logger=self._subset_log,msg='buffering point geometry',level=logging.DEBUG)
+                geom = geom.buffer(self.ops.search_radius_mult*field.spatial.grid.resolution)
             ## unwrap the data if it is geographic and 360
             if geom is not None and crs == CFWGS84():
                 if CFWGS84.get_is_360(field.spatial):

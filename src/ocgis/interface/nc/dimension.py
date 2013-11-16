@@ -1,6 +1,7 @@
 from ocgis.interface.base.dimension.base import VectorDimension
 from ocgis.util.logging_ocgis import ocgis_lh
 from ocgis.util.helpers import get_reduced_slice
+import logging
 
 
 class NcVectorDimension(VectorDimension):
@@ -28,6 +29,14 @@ class NcVectorDimension(VectorDimension):
             ## this process more transparent is not in place.
             bounds_name = self._data._source_metadata['dim_map'][self._axis].get('bounds')
             if bounds_name is not None:
-                self.bounds = ds.variables[bounds_name][self._src_idx,:]
+                try:
+                    self.bounds = ds.variables[bounds_name][self._src_idx,:]
+                except ValueError as e:
+                    shape = ds.variables[bounds_name]
+                    if len(shape) != 2 or shape[1] != 2:
+                        msg = 'The bounds variable "{0}" has an improper shape "{1}". Bounds variables should have dimensions (m,2).'.format(bounds_name,shape)
+                        ocgis_lh(msg=msg,logger='interface.nc',level=logging.WARN)
+                    else:
+                        ocgis_lh(exc=e,logger='interface.nc')
         finally:
             ds.close()
