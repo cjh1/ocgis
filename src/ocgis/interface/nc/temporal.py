@@ -18,7 +18,6 @@ class NcTemporalDimension(NcVectorDimension,TemporalDimension):
         NcVectorDimension.__init__(self,*args,**kwds)
         
         assert(self.units != None)
-        assert(self.calendar != None)
         
     @property
     def bounds_datetime(self):

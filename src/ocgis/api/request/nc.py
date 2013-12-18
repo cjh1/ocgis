@@ -94,7 +94,7 @@ class NcRequestDataset(object):
         
         def _get_temporal_adds_(ref_attrs):
             return({'units':self.t_units or ref_attrs['units'],
-                    'calendar':self.t_calendar or ref_attrs['calendar'],
+                    'calendar':self.t_calendar or ref_attrs.get('calendar', None),
                     'format_time':format_time})
         
         ## parameters for the loading loop

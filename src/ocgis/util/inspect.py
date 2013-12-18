@@ -83,7 +83,7 @@ class Inspect(object):
     def get_temporal_report(self):
             
         try:
-            if self._t.format_time:
+            if self._t.calendar and self._t.format_time:
                 res = int(self._t.resolution)
                 try:
                     start_date,end_date = self._t.extent_datetime
